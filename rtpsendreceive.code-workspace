@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"clangd.arguments": [
+			"-clang-tidy",
+			"-background-index",
+			"-compile-commands-dir=build",
+			"-header-insertion=never"
+		]
+	}
+}
