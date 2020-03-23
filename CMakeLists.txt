@@ -34,6 +34,23 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/source/min-lib/CMakeLists.txt")
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/source/min-lib)
 endif ()
 
+### PROJECT_SPECIFIC LIBRARY(FFMPEG)
+
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+find_package(FFmpeg COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE REQUIRED) #add here the list of ffmpeg components required
+
+if(FFMPEG_FOUND)
+#  FFMPEG_INCLUDE_DIRS  - Include directory necessary for using the required components headers.
+#  FFMPEG_LIBRARIES     - Link these to use the required ffmpeg components.
+#  FFMPEG_DEFINITIONS   - Compiler switches required for using the required ffmpeg components.
+    message("FFMPEG_INCLUDE_DIRS = ${FFMPEG_INCLUDE_DIRS} ")
+    message("FFMPEG_LIBRARIES = ${FFMPEG_LIBRARIES} ")
+    message("FFMPEG_DEFINITIONS = ${FFMPEG_DEFINITIONS} ")
+
+    include_directories(${FFMPEG_INCLUDE_DIRS})
+
+endif()
 
 # Generate a project for every folder in the "source/projects" folder
 SUBDIRLIST(PROJECT_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/source/projects)
