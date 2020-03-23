@@ -1,24 +1,33 @@
 /// @file
-///	@ingroup 	minexamples
-///	@copyright	Copyright 2018 The Min-DevKit Authors. All rights reserved.
-///	@license	Use of this source code is governed by the MIT License found in the License.md file.
+///	@ingroup 	rtpsendreceive
+///	@copyright	Copyright 2020 Tomoya Matsuura. All rights reserved.
+///	@license	Use of this source code is governed by the LGPL License found in the License.md file.
 
 #include "c74_min.h"
 
 using namespace c74::min;
 
 
-class hello_world : public object<hello_world> {
+class rtpsend_tilde : public object<rtpsend_tilde> , public mc_operator<>{
 public:
-    MIN_DESCRIPTION	{"Post to the Max Console."};
-    MIN_TAGS		{"utilities"};
-    MIN_AUTHOR		{"Cycling '74"};
-    MIN_RELATED		{"print, jit.print, dict.print"};
+    MIN_DESCRIPTION	{"send audio stream via rtp protocol"};
+    MIN_TAGS		{"Audio"};
+    MIN_AUTHOR		{"Tomoya Matsuura"};
+    MIN_RELATED		{"rtpreceive_tilde"};
 
-    inlet<>  input	{ this, "(bang) post greeting to the max console" };
-    outlet<> output	{ this, "(anything) output the message which is posted to the max console" };
+    inlet<>  m_inlet 			{ this, "(multichannelsignal) input to be transmited" };
+
+    void operator()(audio_bundle input, audio_bundle output) {
+
+        for (auto i = 0; i < input.frame_count(); ++i) {
 
 
+            for (auto channel = 0; channel < input.channel_count(); ++channel) {
+                auto in { input.samples(channel)[i] };
+
+            }
+        }
+    }
     // define an optional argument for setting the message
     argument<symbol> greeting_arg { this, "greeting", "Initial value for the greeting attribute.",
         MIN_ARGUMENT_FUNCTION {
@@ -42,7 +51,6 @@ public:
             symbol the_greeting = greeting;    // fetch the symbol itself from the attribute named greeting
 
             cout << the_greeting << endl;    // post to the max console
-            output.send(the_greeting);       // send out our outlet
             return {};
         }
     };
@@ -59,4 +67,4 @@ public:
 };
 
 
-MIN_EXTERNAL(hello_world);
+MIN_EXTERNAL(rtpsend_tilde);
