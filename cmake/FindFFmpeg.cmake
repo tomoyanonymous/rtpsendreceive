@@ -45,6 +45,7 @@ else()
     PATHS ${_FFMPEG_AVCODEC_INCLUDE_DIRS}
       /usr/include
       /usr/local/include
+      /usr/local/opt/ffmpeg/include
       /opt/local/include
       /sw/include
     PATH_SUFFIXES ffmpeg libav)

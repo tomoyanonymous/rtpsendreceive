@@ -34,8 +34,8 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/source/min-lib/CMakeLists.txt")
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/source/min-lib)
 endif ()
 
-### PROJECT_SPECIFIC LIBRARY(FFMPEG)
 
+### PROJECT_SPECIFIC LIBRARY(FFMPEG)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 find_package(FFmpeg COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE REQUIRED) #add here the list of ffmpeg components required
@@ -47,10 +47,9 @@ if(FFMPEG_FOUND)
     message("FFMPEG_INCLUDE_DIRS = ${FFMPEG_INCLUDE_DIRS} ")
     message("FFMPEG_LIBRARIES = ${FFMPEG_LIBRARIES} ")
     message("FFMPEG_DEFINITIONS = ${FFMPEG_DEFINITIONS} ")
-
-    include_directories(${FFMPEG_INCLUDE_DIRS})
-
 endif()
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/source/rtpsendreceive_lib)
 
 # Generate a project for every folder in the "source/projects" folder
 SUBDIRLIST(PROJECT_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/source/projects)
