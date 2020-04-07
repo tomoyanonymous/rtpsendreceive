@@ -2,6 +2,9 @@
 # Use of this source code is governed by the MIT License found in the License.md file.
 
 cmake_minimum_required(VERSION 3.0)
+set(PROJECT_NAME rtpsendreceive_lib)
+
+project(rtpsendreceive_lib)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 set(CMAKE_MACOSX_RPATH 1)
 endif()
@@ -11,7 +14,8 @@ include_directories(
 )
 
 add_library( 
-	rtpsendreceive 
+	rtpsendreceive
 	STATIC
-	rtpsendreceive_lib
+	rtpsendreceive_lib.cpp
 )
+include(rtpsendreceive_lib_test.cmake)
