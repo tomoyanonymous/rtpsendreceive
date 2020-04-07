@@ -4,42 +4,25 @@
 // This source code is released under LGPL lisence.
 #include "rtpsendreceive_lib.hpp"
 
-RtpSender::RtpSender(size_t bufsize, int samplerate, int channels)
+RtpSRBase::RtpSRBase(size_t bufsize, int samplerate, int channels)
     : bufsize(bufsize), samplerate(samplerate), channels(channels) {}
-void RtpSender::init() {
-  avformatctx = avformat_alloc_context();
-\
-  //   av_sdp_create(avformatctx, int n_files, char *buf, int size);
+RtpSRBase::~RtpSRBase(){
+  
+}
 
-  avioctx = avio_alloc_context(buf_address, bufsize, 0, userdata_address,
-                               RtpSender::readPacket, nullptr, nullptr);
-  avformatctx->pb = avioctx;
-  auto fmt = av_guess_format("rtp", nullptr, "audio/wav");
-  avformatctx->oformat = fmt;
-
-  codec = avcodec_find_encoder(AV_CODEC_ID_PCM_S16BE);
-  auto codecctx = avcodec_alloc_context3(codec);
-  if (codecctx == nullptr) {
-    std::cerr << "avcodec_alloc_context3 failed\n";
-  }
-
-  codecctx->sample_rate = samplerate;
-  codecctx->channels = channels;
-  codecctx->audio_service_type = AV_AUDIO_SERVICE_TYPE_MAIN;
+void RtpSRBase::init() {
+initFormatCtx();
+  initCodecCtx();
   // generate global header when the format requires it
-  if (fmt->flags & AVFMT_GLOBALHEADER) {
-    codecctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+  if (fmt_output->flags & AVFMT_GLOBALHEADER) {
+    avcodecctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
   }
-  AVDictionary *codecoptions = nullptr;
-  // if options are needed....
-  // av_dict_set(&codecoptions,"key","val",0);
 
-  avcodec_open2(codecctx, codec, &codecoptions);
   snprintf(avformatctx->url, sizeof(avformatctx->url), "rtp://%s:%d",
            "127.0.0.1", 30000);
   avstream = avformat_new_stream(avformatctx, codec);
   auto res_setparams =
-      avcodec_parameters_from_context(avstream->codecpar, codecctx);
+      avcodec_parameters_from_context(avstream->codecpar, avcodecctx);
   if (res_setparams < 0) {
     std::cerr << "avcodec_parameters_from_context failed\n";
   }
@@ -60,11 +43,42 @@ void RtpSender::init() {
   av_init_packet(packet);
 }
 
-int RtpSender::readPacket(void *opaque, uint8_t *buf, int buf_size) {
+void RtpSRBase::initCodecCtx(AVDictionary* codecoptions) {
+  codec = avcodec_find_encoder(AV_CODEC_ID_PCM_S16BE);
+  avcodecctx = avcodec_alloc_context3(codec);
+  if (avcodecctx == nullptr) {
+    std::cerr << "avcodec_alloc_context3 failed\n";
+  }
+  avcodecctx->sample_rate = samplerate;
+  avcodecctx->channels = channels;
+  avcodecctx->audio_service_type = AV_AUDIO_SERVICE_TYPE_MAIN;
+  avcodec_open2(avcodecctx, codec, &codecoptions);
+}
+int RtpSRBase::readPacket(void *opaque, uint8_t *buf, int buf_size) {
   return buf_size;
 }
-void RtpSender::sendData(rtpsender::sample_t *input) {
+void RtpSender::sendData(rtpsr::sample_t *input) {
   AVFrame *frame;
   av_read_frame(avformatctx, packet);
-  packet->av_interleaved_write_frame(avformatctx, AVPacket *)
+  // packet->av_interleaved_write_frame(avformatctx, AVPacket *)
+}
+  RtpSender::RtpSender(size_t bufsize , int samplerate, int channels):RtpSRBase(){
+//todo
+  }
+  RtpSender::~RtpSender(){
+//todo
+  }
+
+void RtpSender::init() {
+  std::cerr<< "hogehoge"<<std::endl;
+}
+
+void RtpSender::initFormatCtx() {
+  avformatctx = avformat_alloc_context();
+  avioctx = avio_alloc_context(buf_address, bufsize, 0, userdata_address,
+                               RtpSRBase::readPacket, nullptr, nullptr);
+  avformatctx->pb = avioctx;
+  fmt_output = av_guess_format("rtp", nullptr, "audio/wav");
+  avformatctx->oformat = fmt_output;
+
 }

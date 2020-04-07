@@ -20,13 +20,14 @@ include_directories(
 set( SOURCE_FILES
 	${PROJECT_NAME}.cpp
 )
+# set(RTPSRLIB ${})
 add_library( 
 	${PROJECT_NAME} 
 	MODULE
 	${SOURCE_FILES}
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC rtpsendreceive)
+target_link_libraries(${PROJECT_NAME} PUBLIC rtpsendreceive ${FFMPEG_LIBRARIES})
 
 include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)
 
