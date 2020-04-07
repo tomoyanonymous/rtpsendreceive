@@ -39,7 +39,7 @@ protected:
   AVStream *avstream;
   AVCodec *codec;
   static constexpr char *codec_name = "pcm_s16be";
-  AVPacket *packet;
+  AVPacket* packet;
   AVIOContext *avioctx;
   rtpsr::buffer_data buffer;
   unsigned char *buf_address;
@@ -55,7 +55,6 @@ class RtpSender : public RtpSRBase {
   public:
   RtpSender(size_t bufsize = 128, int samplerate = 48000, int channels = 1);
   ~RtpSender();
-  void init() override;
   void initFormatCtx() override;
   void sendData(rtpsr::sample_t *input);
 

@@ -17,9 +17,7 @@ initFormatCtx();
   if (fmt_output->flags & AVFMT_GLOBALHEADER) {
     avcodecctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
   }
-
-  snprintf(avformatctx->url, sizeof(avformatctx->url), "rtp://%s:%d",
-           "127.0.0.1", 30000);
+  avformatctx->url = (char*)"rtp://127.0.0.1/30000";
   avstream = avformat_new_stream(avformatctx, codec);
   auto res_setparams =
       avcodec_parameters_from_context(avstream->codecpar, avcodecctx);
@@ -39,7 +37,7 @@ initFormatCtx();
   //   if (ret < 0) {
   //     std::cerr << "Could not find stream infos\n";
   //   }
-  av_dump_format(avformatctx, 0, "test_filename", 0);
+  packet = av_packet_alloc();
   av_init_packet(packet);
 }
 
@@ -69,9 +67,9 @@ void RtpSender::sendData(rtpsr::sample_t *input) {
 //todo
   }
 
-void RtpSender::init() {
-  std::cerr<< "hogehoge"<<std::endl;
-}
+// void RtpSender::init() {
+//   std::cerr<< "hogehoge"<<std::endl;
+// }
 
 void RtpSender::initFormatCtx() {
   avformatctx = avformat_alloc_context();

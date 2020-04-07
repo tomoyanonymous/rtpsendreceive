@@ -10,6 +10,15 @@
 			"-background-index",
 			"-compile-commands-dir=build",
 			"-header-insertion=never"
-		]
+		],
+		"cmake.debugConfig": {
+			"stopAtEntry": false,
+			"MIMode": "lldb",
+			"miDebuggerPath": "/Users/tomoya/.vscode/extensions/ms-vscode.cpptools-0.27.0/debugAdapters/lldb-mi/bin/lldb-mi",
+			"logging": {
+				// "trace": true,
+				// "engineLogging": true,
+				// "traceResponse": true
+		}
 	}
 }
