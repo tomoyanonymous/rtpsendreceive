@@ -66,12 +66,15 @@ void RtpSender::sendData(rtpsr::sample_t *input) {
   // av_read_frame(avformatctx, packet);
   // packet->av_interleaved_write_frame(avformatctx, AVPacket *)
 }
-RtpSender::RtpSender(rtpsr::readfn_type callback_read, void *userdata_address,
+RtpSender::RtpSender(rtpsr::readfn_type callback_read,
+                     rtpsr::seekfn_type callback_seek, void *userdata_address,
                      size_t bufsize, int samplerate, int channels)
     : callback_read(callback_read),
+      callback_seek(callback_seek),
       userdata_address(userdata_address),
       RtpSRBase() {
   // todo
+  internalbuf.resize(sizeof(int16_t) * bufsize);
 }
 RtpSender::~RtpSender() {
   // todo
@@ -84,31 +87,48 @@ RtpSender::~RtpSender() {
 void RtpSender::initFormatCtx() {
   // for audio driver->ffmpeg
   input_format_ctx = avformat_alloc_context();
-  avioctx = avio_alloc_context(buf_address, bufsize, 0, userdata_address,
-                               callback_read, nullptr, nullptr);
+  avioctx = avio_alloc_context(internalbuf.data(), sizeof(int16_t) * bufsize, 0,
+                               userdata_address, callback_read, nullptr,
+                               callback_seek);
+  // input_format_ctx->iformat = av_find_input_format("audio/wav");
+  // Determine the input-format:
+  AVProbeData probeData{"", internalbuf.data(),
+                        static_cast<int>(sizeof(int16_t) * bufsize), ""};
+  probeData.buf = internalbuf.data();
   input_format_ctx->pb = avioctx;
+  input_format_ctx->flags |= AVFMT_FLAG_CUSTOM_IO;
+  input_format_ctx->iformat = av_find_input_format("s16be");
+  int inputres = avformat_open_input(&input_format_ctx, "", nullptr, nullptr);
+  if (inputres < 0) {
+    char buf[4096];
+    std::cerr << av_make_error_string(buf, 4096, inputres) << "\n";
+  }
 
   output_format_ctx = avformat_alloc_context();
-  fmt_output = av_guess_format("rtp", "rtp://127.0.0.1/30000", "audio/wav");
-  auto res = avio_open(&rtp_ioctx,"rtp://127.0.0.1/30000",AVIO_FLAG_WRITE);
-  if(res<0){
-    std::cerr<<"avio open error\n";
+  fmt_output = av_guess_format("rtp", "rtp://127.0.0.1/30000", "s16be");
+  auto res = avio_open(&rtp_ioctx, "rtp://127.0.0.1/30000", AVIO_FLAG_WRITE);
+  if (res < 0) {
+    std::cerr << "avio open error\n";
   }
   output_format_ctx->pb = rtp_ioctx;
   output_format_ctx->oformat = fmt_output;
-  auto url  =  new char[]{"rtp://127.0.0.1/30000"};
+  auto url = new char[]{"rtp://127.0.0.1/30000"};
   output_format_ctx->url = url;
-
 }
 
 void RtpSender::start() {
-  av_init_packet(packet);
+  packet = av_packet_alloc();
+  av_new_packet(packet, sizeof(int16_t) * 512);
 
   while (true) {
     auto ret = av_read_frame(input_format_ctx, packet);
-    if (ret < 0) {
+    if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
       break;
+    else if (ret < 0) {
+      fprintf(stderr, "error encoding audio frame\n");
+      exit(1);
     }
+
     av_interleaved_write_frame(output_format_ctx, packet);
     av_packet_unref(packet);
   }

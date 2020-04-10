@@ -8,6 +8,7 @@ extern "C" {
 }
 #include <array>
 #include <iostream>
+#include <vector>
 namespace rtpsr {
 using sample_t = int16_t;
 
@@ -16,10 +17,13 @@ struct buffer_data {
   size_t size;
 };
 using readfn_type = int (*)(void*, uint8_t*, int);
+using seekfn_type = int64_t(*)(void*, int64_t, int);
+
 }  // namespace rtpsr
 class RtpSRBase {
  public:
-  RtpSRBase(size_t bufsize = sizeof(int16_t)*512, int samplerate = 48000, int channels = 1);
+  RtpSRBase(size_t bufsize = sizeof(int16_t) * 512, int samplerate = 48000,
+            int channels = 1);
   ~RtpSRBase();
   virtual void init();
   virtual void initFormatCtx() = 0;
@@ -57,15 +61,20 @@ class RtpSRBase {
 
 class RtpSender : public RtpSRBase {
  public:
-  RtpSender(rtpsr::readfn_type callback_read, void* userdata_address ,size_t bufsize = 128,
+  RtpSender(rtpsr::readfn_type callback_read, rtpsr::seekfn_type,
+            void* userdata_address, size_t bufsize = 128,
             int samplerate = 48000, int channels = 1);
   ~RtpSender();
   void initFormatCtx() override;
   void sendData(rtpsr::sample_t* input);
   void start();
+
  private:
   rtpsr::readfn_type callback_read;
+  rtpsr::seekfn_type callback_seek;
+
   void* userdata_address;
   AVIOContext* rtp_ioctx;
+  std::vector<uint8_t> internalbuf;
   static int readPacket(void* opaque, uint8_t* buf, int buf_size);
 };
