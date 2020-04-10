@@ -5,10 +5,15 @@
 extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
+#include "libavutil/intreadwrite.h"
+#include "libavutil/mathematics.h"
+
 }
 #include <array>
 #include <iostream>
 #include <vector>
+#include <unistd.h>
+
 namespace rtpsr {
 using sample_t = int16_t;
 
@@ -36,26 +41,26 @@ class RtpSRBase {
  protected:
   const int samplerate;
   const int channels;
-  AVFormatContext* input_format_ctx;
-  AVFormatContext* output_format_ctx;
+  AVFormatContext* input_format_ctx=nullptr;
+  AVFormatContext* output_format_ctx=nullptr;
 
-  AVOutputFormat* fmt_output;
-  AVInputFormat* fmt_input;
+  AVOutputFormat* fmt_output=nullptr;
+  AVInputFormat* fmt_input=nullptr;
 
-  AVCodecContext* avcodecctx;
+  AVCodecContext* avcodecctx=nullptr;
 
-  AVStream* instream;
-  AVStream* outstream;
+  AVStream* instream=nullptr;
+  AVStream* outstream=nullptr;
 
-  AVCodec* codec;
+  AVCodec* codec=nullptr;
   static constexpr char* codec_name = "pcm_s16be";
-  AVPacket* packet;
-  AVIOContext* avioctx;
+  AVPacket* packet=nullptr;
+  AVIOContext* avioctx=nullptr;
   rtpsr::buffer_data buffer;
   unsigned char* buf_address;
   const size_t bufsize;
 
-  AVCodecID codecid;
+  // AVCodecID codecid;
   // for reading audio data from streaming, to pass avioctx.
 };
 
@@ -74,7 +79,7 @@ class RtpSender : public RtpSRBase {
   rtpsr::seekfn_type callback_seek;
 
   void* userdata_address;
-  AVIOContext* rtp_ioctx;
+  AVIOContext* rtp_ioctx=nullptr;
   std::vector<uint8_t> internalbuf;
   static int readPacket(void* opaque, uint8_t* buf, int buf_size);
 };
