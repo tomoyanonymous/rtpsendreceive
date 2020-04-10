@@ -12,19 +12,22 @@ class testSineWave {
  public:
   double phase = 0;
   int64_t pos = 0;
-  static constexpr int bufsize = 512;
+  static constexpr int bufsize = 2048;
   size_t buf_size_in_i8;
-  static constexpr double freq = 440.0;
+  static constexpr double freq = 10.0;
   std::array<double, bufsize> buffer;
   std::array<int16_t, bufsize> ibuffer;
 
-  testSineWave() { buf_size_in_i8 = sizeof(int64_t) * bufsize; }
+  testSineWave() { buf_size_in_i8 = sizeof(int16_t) * bufsize; }
   void process(uint8_t *buf) {
+    int count = 0;
     for (auto &elem : buffer) {
       phase = std::fmodl(phase + freq * M_PI * 2 / 48000, M_PI * 2);
-      elem = sin(phase) * INT16_MAX;
+      ibuffer[count] = (int16_t) (sin(phase) * INT16_MAX);
+      // std::cerr<<phase << " :  "<< ibuffer[count] << "\n";
+      count++;
     }
-    std::copy(buffer.begin(), buffer.end(), ibuffer.begin());
+    // std::copy(buffer.begin(), buffer.end(), ibuffer.begin());
     memcpy(buf, ibuffer.data(), buf_size_in_i8);
   }
 };
@@ -44,7 +47,7 @@ int64_t testSeek(void *ptr, int64_t pos, int whence) {
   return sinewave->pos;
 }
 
-SCENARIO("instance is correctly created") {
+TEST_CASE("instance is correctly created") {
   testSineWave sinewave;
   RtpSender sender(&testReadPacket, &testSeek, (void *)(&sinewave));
   try {
@@ -53,11 +56,10 @@ SCENARIO("instance is correctly created") {
     std::cerr << err.what() << "\n";
     std::exit(EXIT_FAILURE);
   }
-  GIVEN("An instance of our object") {
+ 
     // check that default attr values are correct
     // REQUIRE((my_object.greeting == symbol("hello world")));
     // now proceed to testing various sequences of events
-    WHEN("a 'bang' is received") {
       // my_object.bang();
       try {
         sender.start();
@@ -65,9 +67,5 @@ SCENARIO("instance is correctly created") {
         std::cerr << err.what() << "\n";
         exit(9);
       }
-      THEN("our greeting is produced at the outlet") {
         // REQUIRE((output.size() == 1));
-      }
-    }
   }
-}

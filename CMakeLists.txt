@@ -39,7 +39,8 @@ endif ()
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 find_package(FFmpeg COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE REQUIRED) #add here the list of ffmpeg components required
-
+# memo: building barematal ffmpeg for macos
+#  ./configure --prefix=/usr/local/Cellar/ffmpeg/4.2.2_2debug  --disable-avfoundation --disable-iconv --disable-filters --disable-devices --disable-shared --enable-static  --disable-optimizations  --disable-mmx --disable-audiotoolbox --disable-videotoolbox --disable-stripping   --disable-appkit --disable-zlib --disable-coreimage  --disable-bzlib --disable-sdl2 --disable-securetransport --disable-encoder=opus --disable-decoder=opus  --pkg-config-flags=--static --cc=clang --cxx=clang++
 if(FFMPEG_FOUND)
 #  FFMPEG_INCLUDE_DIRS  - Include directory necessary for using the required components headers.
 #  FFMPEG_LIBRARIES     - Link these to use the required ffmpeg components.

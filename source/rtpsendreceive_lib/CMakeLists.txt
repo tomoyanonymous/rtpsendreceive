@@ -24,5 +24,5 @@ add_library(
 	rtpsendreceive_lib.cpp
 )
 target_link_directories(rtpsendreceive PUBLIC "/usr/local/lib")
-target_link_libraries(rtpsendreceive avcodec avformat avutil)
+target_link_libraries(rtpsendreceive ${FFMPEG_LIBRARIES})
 include(rtpsendreceive_lib_test.cmake)

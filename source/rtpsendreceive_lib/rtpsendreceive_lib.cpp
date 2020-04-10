@@ -15,8 +15,7 @@ RtpSRBase::RtpSRBase(size_t bufsize, int samplerate, int channels)
       instream(nullptr),
       outstream(nullptr),
       avioctx(nullptr),
-      packet(nullptr)
-{}
+      packet(nullptr) {}
 RtpSRBase::~RtpSRBase() {
   avcodec_free_context(&avcodecctx);
   avformat_free_context(output_format_ctx);
@@ -96,18 +95,17 @@ void RtpSender::sendData(rtpsr::sample_t *input) {
 RtpSender::RtpSender(rtpsr::readfn_type callback_read,
                      rtpsr::seekfn_type callback_seek, void *userdata_address,
                      size_t bufsize, int samplerate, int channels)
-    :
-    rtp_ioctx(nullptr), 
-    callback_read(callback_read),
+    : rtp_ioctx(nullptr),
+      callback_read(callback_read),
       callback_seek(callback_seek),
       userdata_address(userdata_address),
       RtpSRBase() {
   // todo
-  internalbuf.resize(sizeof(int16_t) * bufsize);
 }
 RtpSender::~RtpSender() {
   // todo
   avio_close(rtp_ioctx);
+  av_free(internalbuf);
 }
 
 // void RtpSender::init() {
@@ -116,22 +114,18 @@ RtpSender::~RtpSender() {
 
 void RtpSender::initFormatCtx() {
   // for audio driver->ffmpeg
-  input_format_ctx = avformat_alloc_context();
-  output_format_ctx = avformat_alloc_context();
-
-  avioctx = avio_alloc_context(internalbuf.data(), sizeof(int16_t) * 512, 0,
-                               userdata_address, callback_read, nullptr,
-                               callback_seek);
+  auto size = sizeof(int16_t) * 512;
+  internalbuf = (uint8_t *)av_malloc(4096);
+  avioctx = avio_alloc_context(internalbuf, 4096, 0, userdata_address,
+                               callback_read, nullptr, callback_seek);
   // Determine the input-format:
-  AVProbeData probeData{"", internalbuf.data(),
-                        static_cast<int>(sizeof(int16_t) * 512), "audio/L16"};
-  probeData.buf = internalbuf.data();
+  AVProbeData probeData{"", internalbuf, 512, "audio/L16"};
+  probeData.buf = internalbuf;
+  input_format_ctx = avformat_alloc_context();
   input_format_ctx->pb = avioctx;
   input_format_ctx->flags |= AVFMT_FLAG_CUSTOM_IO;
-
   input_format_ctx->iformat = av_probe_input_format(&probeData, 1);
-  // input_format_ctx->iformat = av_find_input_format("s16be");
-  usleep(100000);
+  // input_format_ctx->iformat = av_find_input_format("audio/L16");
   int inputres = avformat_open_input(&input_format_ctx, "", nullptr, nullptr);
   if (inputres < 0) {
     char buf[4096];
@@ -139,11 +133,13 @@ void RtpSender::initFormatCtx() {
   }
   usleep(100000);
   fmt_output = av_guess_format("rtp", "rtp://127.0.0.1:30000", "audio/L16");
-  auto res = avio_open(&rtp_ioctx, "rtp://127.0.0.1:30000", AVIO_FLAG_WRITE);
+  output_format_ctx = avformat_alloc_context();
+  output_format_ctx->pb = rtp_ioctx;
+  auto res = avio_open(&output_format_ctx->pb, "rtp://127.0.0.1:30000",
+                       AVIO_FLAG_WRITE);
   if (res < 0) {
     std::cerr << "avio open error\n";
   }
-  output_format_ctx->pb = rtp_ioctx;
   output_format_ctx->oformat = fmt_output;
 
   auto url = new char[]{"rtp://127.0.0.1:30000"};
@@ -152,10 +148,19 @@ void RtpSender::initFormatCtx() {
 
 void RtpSender::start() {
   packet = av_packet_alloc();
-  av_new_packet(packet, sizeof(int16_t) * 512);
-  int count= 0;
+  av_new_packet(packet, 4096);
+  int count = 0;
   while (true) {
     auto ret = av_read_frame(input_format_ctx, packet);
+    std::cerr << "streamindex: " << packet->stream_index << "\n";
+    auto *stream = input_format_ctx->streams[packet->stream_index];
+    packet->pts = av_rescale_q_rnd(packet->pts, instream->time_base,
+                                   outstream->time_base, AV_ROUND_PASS_MINMAX);
+    packet->dts = av_rescale_q_rnd(packet->dts, instream->time_base,
+                                   outstream->time_base, AV_ROUND_PASS_MINMAX);
+    packet->duration = av_rescale_q(packet->duration, instream->time_base,
+                                    outstream->time_base);
+    packet->pos=-1;
     if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
       break;
     else if (ret < 0) {
@@ -165,8 +170,9 @@ void RtpSender::start() {
     std::cout << "buffer count : " << count++ << "\n";
     usleep(100000);
     av_interleaved_write_frame(output_format_ctx, packet);
-    
-    av_packet_unref(packet);
+    // av_interleaved_write_uncoded_frame(output_format_ctx, 0, packet)
+
+        av_packet_unref(packet);
   }
 }
 

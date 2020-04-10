@@ -80,6 +80,6 @@ class RtpSender : public RtpSRBase {
 
   void* userdata_address;
   AVIOContext* rtp_ioctx=nullptr;
-  std::vector<uint8_t> internalbuf;
+  uint8_t* internalbuf;
   static int readPacket(void* opaque, uint8_t* buf, int buf_size);
 };
