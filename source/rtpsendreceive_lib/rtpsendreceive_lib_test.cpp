@@ -12,9 +12,10 @@ class testSineWave {
  public:
   double phase = 0;
   int64_t pos = 0;
+  int16_t testcount=365;
   static constexpr int bufsize = 2048;
   size_t buf_size_in_i8;
-  static constexpr double freq = 10.0;
+  static constexpr double freq = 4400.0;
   std::array<double, bufsize> buffer;
   std::array<int16_t, bufsize> ibuffer;
 
@@ -23,11 +24,14 @@ class testSineWave {
     int count = 0;
     for (auto &elem : buffer) {
       phase = std::fmodl(phase + freq * M_PI * 2 / 48000, M_PI * 2);
-      ibuffer[count] = (int16_t) (sin(phase) * INT16_MAX);
+      ibuffer[count] = (int16_t) (0.3* sin(phase) * (double)INT16_MAX);
       // std::cerr<<phase << " :  "<< ibuffer[count] << "\n";
+      // ibuffer[count] = (testcount % INT16_MAX);
+      // testcount++;
       count++;
     }
     // std::copy(buffer.begin(), buffer.end(), ibuffer.begin());
+    // av_samples_fill_arrays((uint8_t **)(ibuffer.data())), int *linesize, const uint8_t *buf, int nb_channels, int nb_samples, enum AVSampleFormat sample_fmt, int align)
     memcpy(buf, ibuffer.data(), buf_size_in_i8);
   }
 };

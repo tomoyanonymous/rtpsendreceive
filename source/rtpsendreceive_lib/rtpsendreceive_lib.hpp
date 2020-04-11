@@ -37,8 +37,10 @@ class RtpSRBase {
   const size_t getBufsizeInRawBytes() {
     return sizeof(rtpsr::sample_t) * bufsize;
   }
-
+  static void dumpAvError(int error_code);
  protected:
+ int decode(AVFormatContext* fmtctx,AVStream* instream,AVStream* outstream,AVCodecContext* cdcctx,AVFrame* frame,AVPacket* packet,int stream_index);
+  int encode(AVFormatContext* fmtctx,AVStream* instream,AVStream* outstream,AVCodecContext* cdcctx,AVFrame* frame,AVPacket* packet, int stream_index);
   const int samplerate;
   const int channels;
   AVFormatContext* input_format_ctx=nullptr;
@@ -47,14 +49,16 @@ class RtpSRBase {
   AVOutputFormat* fmt_output=nullptr;
   AVInputFormat* fmt_input=nullptr;
 
-  AVCodecContext* avcodecctx=nullptr;
+  AVCodecContext* codecctx_dec=nullptr;
+  AVCodecContext* codecctx_enc=nullptr;
 
   AVStream* instream=nullptr;
   AVStream* outstream=nullptr;
 
-  AVCodec* codec=nullptr;
-  static constexpr char* codec_name = "pcm_s16be";
+  AVCodec* codec_dec=nullptr;
+  AVCodec* codec_enc=nullptr;
   AVPacket* packet=nullptr;
+  AVFrame* frame = nullptr;
   AVIOContext* avioctx=nullptr;
   rtpsr::buffer_data buffer;
   unsigned char* buf_address;
