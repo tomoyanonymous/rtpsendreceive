@@ -35,7 +35,7 @@ class testSineWave {
     memcpy(buf, ibuffer.data(), buf_size_in_i8);
   }
 };
-int testReadPacket(void *opaque, uint8_t *buf, int buf_size) {
+int testReadPacket(void *opaque, unsigned char *buf, int buf_size) {
   auto *sinewave = reinterpret_cast<testSineWave *>(opaque);
   sinewave->process(buf);
   return buf_size;
@@ -53,7 +53,7 @@ int64_t testSeek(void *ptr, int64_t pos, int whence) {
 
 TEST_CASE("instance is correctly created") {
   testSineWave sinewave;
-  RtpSender sender(&testReadPacket, &testSeek, (void *)(&sinewave));
+  RtpSender sender(128,48000, 1,"127.0.0.1",30000,&testReadPacket, nullptr, (void *)(&sinewave));
   try {
     sender.init();
   } catch (std::exception &err) {

@@ -4,6 +4,8 @@
 // This source code is released under LGPL lisence.
 #include "rtpsendreceive_lib.hpp"
 
+#include <utility>
+
 RtpSRBase::RtpSRBase(size_t bufsize, int samplerate, int channels)
     : bufsize(bufsize),
       samplerate(samplerate),
@@ -24,7 +26,7 @@ RtpSRBase::~RtpSRBase() {
   avformat_free_context(input_format_ctx);
   avio_context_free(&avioctx);
 }
-void RtpSRBase::dumpAvError(int error_code){
+void RtpSRBase::dumpAvError(int error_code) {
   char str[4096];
   av_make_error_string(str, 4096, error_code);
   std::cerr << str << "\n";
@@ -73,7 +75,7 @@ void RtpSRBase::init() {
   av_sdp_create(&output_format_ctx, 1, testchar.data(), testchar.size());
 
   std::string teststr = testchar.data();
-  std::cout << "----sdp-----\nSDP:\n"<< teststr <<  "---------\n" <<std::endl;
+  std::cout << "----sdp-----\nSDP:\n" << teststr << "---------\n" << std::endl;
 }
 
 void RtpSRBase::initCodecCtx(AVDictionary* codecoptions) {
@@ -97,10 +99,9 @@ void RtpSRBase::initCodecCtx(AVDictionary* codecoptions) {
   // codecctx_dec->time_base = av_inv_q(samplerate);
   // codecctx_dec->time_base = (AVRational){ 1, u8fps};
   int ret = avcodec_open2(codecctx_enc, codec_enc, &codecoptions);
-  if(ret<0){
+  if (ret < 0) {
     dumpAvError(ret);
   }
-
 }
 
 int RtpSRBase::decode(AVFormatContext* fmtctx, AVStream* instream,
@@ -135,23 +136,24 @@ int RtpSRBase::encode(AVFormatContext* fmtctx, AVStream* instream,
   return 0;
 }
 
-void RtpSender::sendData(rtpsr::sample_t* input) {
-  AVFrame* frame;
-  // av_read_frame(avformatctx, packet);
-  // packet->av_interleaved_write_frame(avformatctx, AVPacket *)
-}
-RtpSender::RtpSender(rtpsr::readfn_type callback_read,
-                     rtpsr::seekfn_type callback_seek, void* userdata_address,
-                     size_t bufsize, int samplerate, int channels)
+RtpSender::RtpSender(int bufsize, int samplerate, int channels,
+                     const std::string&  address, const int port,
+                     rtpsr::readfn_type callback_read,
+                     rtpsr::seekfn_type callback_seek, void* userdata)
     : rtp_ioctx(nullptr),
+    address(std::move(address)),
+    port(port),
       callback_read(callback_read),
       callback_seek(callback_seek),
-      userdata_address(userdata_address),
       RtpSRBase() {
+  if (userdata == nullptr) {
+    userdata_address = (void*)this;
+  }
   // todo
 }
 RtpSender::~RtpSender() {
   // todo
+  av_packet_unref(packet);
   avio_close(rtp_ioctx);
   av_free(internalbuf);
 }
@@ -162,6 +164,7 @@ RtpSender::~RtpSender() {
 
 void RtpSender::initFormatCtx() {
   // for audio driver->ffmpeg
+  std::string destination = "rtp://" + address + ":" + std::to_string(port);
   auto size = sizeof(int16_t) * 512;
   internalbuf = (uint8_t*)av_malloc(4096);
   avioctx = avio_alloc_context(internalbuf, 4096, 0, userdata_address,
@@ -178,23 +181,31 @@ void RtpSender::initFormatCtx() {
   if (inputres < 0) {
     dumpAvError(inputres);
   }
-  usleep(100000);
-  fmt_output = av_guess_format("rtp", "rtp://127.0.0.1:30000", "audio/L16");
+  // usleep(100000);
+  fmt_output = av_guess_format("rtp", destination.c_str(), "audio/L16");
   output_format_ctx = avformat_alloc_context();
   output_format_ctx->pb = rtp_ioctx;
-  auto res = avio_open(&output_format_ctx->pb, "rtp://127.0.0.1:30000",
-                       AVIO_FLAG_WRITE);
+  auto res =
+      avio_open(&output_format_ctx->pb, destination.c_str(), AVIO_FLAG_WRITE);
   if (res < 0) {
     std::cerr << "avio open error\n";
   }
   output_format_ctx->oformat = fmt_output;
-
-  auto url = new char[]{"rtp://127.0.0.1:30000"};
+  auto url = new char[destination.size() + 1];
+  std::char_traits<char>::copy(url, destination.c_str(),
+                               destination.size() + 1);
   output_format_ctx->url = url;
+  // delete url;
+  av_new_packet(packet, 4096);
+}
+
+void RtpSender::setDestination(std::string& ad, int po) {
+  address = ad;
+  port = po;
 }
 
 void RtpSender::start() {
-  av_new_packet(packet, 4096);
+  // av_new_packet(packet, 4096);
   int count = 0;
   while (true) {
     auto ret = av_read_frame(input_format_ctx, packet);
@@ -218,11 +229,9 @@ void RtpSender::start() {
 
     // // auto* stream = input_format_ctx->streams[packet->stream_index];
     packet->pts = av_rescale_q_rnd(packet->pts, instream->time_base,
-                                   outstream->time_base,
-                                   AV_ROUND_PASS_MINMAX);
+                                   outstream->time_base, AV_ROUND_PASS_MINMAX);
     packet->dts = av_rescale_q_rnd(packet->dts, instream->time_base,
-                                   outstream->time_base,
-                                   AV_ROUND_PASS_MINMAX);
+                                   outstream->time_base, AV_ROUND_PASS_MINMAX);
     packet->duration = av_rescale_q(packet->duration, instream->time_base,
                                     outstream->time_base);
     packet->pos = -1;
@@ -231,12 +240,34 @@ void RtpSender::start() {
     av_packet_rescale_ts(packet, instream->time_base, outstream->time_base);
 
     av_interleaved_write_frame(output_format_ctx, packet);
-            usleep(512 * 1000000./48000);
-
-    av_packet_unref(packet);
+    usleep(512 * 1000000. / 48000);
   }
 }
 
-int RtpSender::readPacket(void* opaque, uint8_t* buf, int buf_size) {
-  return buf_size;
+void RtpSender::writeBuffer(double sample, int pos, int channel_idx) {
+  buffer[pos + channel_idx] = static_cast<rtpsr::sample_t>(sample);
+}
+
+void RtpSender::sendData() {
+  av_init_packet(packet);
+  auto ret = av_read_frame(input_format_ctx, packet);
+  packet->pts = av_rescale_q_rnd(packet->pts, instream->time_base,
+                                 outstream->time_base, AV_ROUND_PASS_MINMAX);
+  packet->dts = av_rescale_q_rnd(packet->dts, instream->time_base,
+                                 outstream->time_base, AV_ROUND_PASS_MINMAX);
+  packet->duration =
+      av_rescale_q(packet->duration, instream->time_base, outstream->time_base);
+  packet->pos = -1;
+
+  av_packet_rescale_ts(packet, instream->time_base, outstream->time_base);
+  av_interleaved_write_frame(output_format_ctx, packet);
+
+  av_packet_unref(packet);
+}
+
+int RtpSender::readPacketSelf(void* userdata, uint8_t* buf, int buf_size) {
+  auto* sender = reinterpret_cast<RtpSender*>(userdata);
+  auto* address = sender->getBuffer_ptr();
+  memcpy(buf, address, buf_size);
+  return 0;
 }

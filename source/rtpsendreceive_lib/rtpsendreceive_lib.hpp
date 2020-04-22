@@ -21,6 +21,9 @@ struct buffer_data {
   sample_t* ptr;
   size_t size;
 };
+
+using buffertype = std::vector<sample_t>;
+
 using readfn_type = int (*)(void*, uint8_t*, int);
 using seekfn_type = int64_t(*)(void*, int64_t, int);
 
@@ -60,7 +63,7 @@ class RtpSRBase {
   AVPacket* packet=nullptr;
   AVFrame* frame = nullptr;
   AVIOContext* avioctx=nullptr;
-  rtpsr::buffer_data buffer;
+  rtpsr::buffertype buffer;
   unsigned char* buf_address;
   const size_t bufsize;
 
@@ -70,20 +73,25 @@ class RtpSRBase {
 
 class RtpSender : public RtpSRBase {
  public:
-  RtpSender(rtpsr::readfn_type callback_read, rtpsr::seekfn_type,
-            void* userdata_address, size_t bufsize = 128,
-            int samplerate = 48000, int channels = 1);
+  RtpSender(int bufsize = 128,
+            int samplerate = 48000, int channels = 1,const std::string& address="127.0.0.1",const int port=30000 ,rtpsr::readfn_type callback_read = readPacketSelf,rtpsr::seekfn_type callback_seek=nullptr,
+            void* userdata=nullptr);
   ~RtpSender();
   void initFormatCtx() override;
-  void sendData(rtpsr::sample_t* input);
+  void sendData();
   void start();
-
+  void writeBuffer(double sample,int pos,int channel_idx);
+  auto* getBuffer_ptr(){
+    return reinterpret_cast<uint8_t*>(buffer.data());
+  }
+  void setDestination(std::string& ad,int po);
  private:
   rtpsr::readfn_type callback_read;
   rtpsr::seekfn_type callback_seek;
-
+  std::string address;
+  int port;
   void* userdata_address;
   AVIOContext* rtp_ioctx=nullptr;
   uint8_t* internalbuf;
-  static int readPacket(void* opaque, uint8_t* buf, int buf_size);
+  static int readPacketSelf(void* userdata, uint8_t* buf, int buf_size);
 };
