@@ -27,7 +27,11 @@ add_library(
 	${SOURCE_FILES}
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC rtpsendreceive ${FFMPEG_LIBRARIES})
+set(RTPSR_LIB "rtpsendreceive")
+
+message(STATUS testlib!${RTPSR_LIB})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${RTPSR_LIB})
+target_link_libraries(${PROJECT_NAME} PUBLIC  ${FFMPEG_LIBRARIES})
 
 include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)
 
@@ -36,4 +40,4 @@ include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)
 # UNIT TEST
 #############################################################
 
-include(${C74_MIN_API_DIR}/test/min-object-unittest.cmake)
+include(rtpsendreceive.mc.rtpsend_tilde_test.cmake)

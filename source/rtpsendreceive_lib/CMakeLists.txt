@@ -20,7 +20,7 @@ include_directories(
 
 add_library( 
 	rtpsendreceive
-	SHARED
+	STATIC
 	rtpsendreceive_lib.cpp
 )
 target_link_directories(rtpsendreceive PUBLIC "/usr/local/lib")
