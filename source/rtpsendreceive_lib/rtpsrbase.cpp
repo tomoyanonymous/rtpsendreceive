@@ -7,6 +7,8 @@ RtpSRBase::RtpSRBase(int framesize, int samplerate, int channels)
       channels(channels),
       input_format_ctx(nullptr),
       output_format_ctx(nullptr),
+      fmt_output(nullptr),
+      fmt_input(nullptr),
       codecctx_dec(nullptr),
       codecctx_enc(nullptr),
       codec_enc(nullptr),
@@ -14,7 +16,8 @@ RtpSRBase::RtpSRBase(int framesize, int samplerate, int channels)
       instream(nullptr),
       outstream(nullptr),
       avioctx(nullptr),
-      packet(nullptr) {
+      packet(nullptr),
+      frame(nullptr) {
         buffer.resize(framesize*channels);
       }
 RtpSRBase::~RtpSRBase() {
