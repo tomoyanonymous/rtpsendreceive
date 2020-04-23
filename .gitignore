@@ -16,5 +16,7 @@ tmp
 .DS_Store
 .vscode/
 
+test_patch/*.mxo
+
 package-info.json
 
