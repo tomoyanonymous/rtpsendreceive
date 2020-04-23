@@ -39,6 +39,17 @@
 		"subpatcher_template" : "",
 		"boxes" : [ 			{
 				"box" : 				{
+					"id" : "obj-2",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 169.0, 208.0, 100.0, 22.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
 					"data" : 					{
 						"clips" : [ 							{
 								"absolutepath" : "drumLoop.aif",
@@ -46,21 +57,21 @@
 								"filekind" : "audiofile",
 								"loop" : 0,
 								"content_state" : 								{
-									"slurtime" : [ 0.0 ],
-									"play" : [ 0 ],
-									"mode" : [ "basic" ],
 									"originaltempo" : [ 120.0 ],
-									"speed" : [ 1.0 ],
 									"pitchshift" : [ 1.0 ],
 									"quality" : [ "basic" ],
-									"pitchcorrection" : [ 0 ],
-									"basictuning" : [ 440 ],
+									"mode" : [ "basic" ],
 									"originallength" : [ 0.0, "ticks" ],
+									"pitchcorrection" : [ 0 ],
 									"originallengthms" : [ 0.0 ],
+									"basictuning" : [ 440 ],
 									"timestretch" : [ 0 ],
-									"followglobaltempo" : [ 0 ],
 									"formant" : [ 1.0 ],
-									"formantcorrection" : [ 0 ]
+									"followglobaltempo" : [ 0 ],
+									"formantcorrection" : [ 0 ],
+									"play" : [ 0 ],
+									"slurtime" : [ 0.0 ],
+									"speed" : [ 1.0 ]
 								}
 
 							}
@@ -88,12 +99,12 @@
 					"patching_rect" : [ 69.0, 290.0, 48.0, 136.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
-							"parameter_mmin" : -70.0,
-							"parameter_longname" : "mc.live.gain~",
 							"parameter_mmax" : 6.0,
 							"parameter_shortname" : "mc.live.gain~",
 							"parameter_type" : 0,
-							"parameter_unitstyle" : 4
+							"parameter_unitstyle" : 4,
+							"parameter_mmin" : -70.0,
+							"parameter_longname" : "mc.live.gain~"
 						}
 
 					}
@@ -128,12 +139,11 @@
 , 			{
 				"box" : 				{
 					"id" : "obj-1",
-					"linecount" : 3,
 					"maxclass" : "newobj",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 69.0, 476.0, 332.0, 49.0 ],
-					"text" : "/Users/tomoya/codes/rtpsendreceive/externals/rtpsendreceive.mc.rtpsend~.mxo @channels 2 @address 127.0.0.1 @port 30000"
+					"patching_rect" : [ 69.0, 476.0, 359.0, 22.0 ],
+					"text" : "mc.rtpsend~.mxo @channels 2 @address 127.0.0.1 @port 30000"
 				}
 
 			}
@@ -182,7 +192,7 @@
 				"implicit" : 1
 			}
 , 			{
-				"name" : "rtpsendreceive.mc.rtpsend~.mxo",
+				"name" : "mc.rtpsend~.mxo",
 				"type" : "iLaX"
 			}
  ],

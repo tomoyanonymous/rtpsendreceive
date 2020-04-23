@@ -13,27 +13,33 @@ include(${C74_MIN_API_DIR}/script/min-pretarget.cmake)
 
 
 include_directories( 
-	"${C74_INCLUDES}"
+	"${C74_INCLUDES}" 
+	"${FFMPEG_INCLUDE_DIR}" 
+	${CMAKE_CURRENT_SOURCE_DIR}/../../rtpsendreceive_lib
 )
-
 
 set( SOURCE_FILES
 	${PROJECT_NAME}.cpp
 )
-
-
+# set(RTPSRLIB ${})
 add_library( 
 	${PROJECT_NAME} 
 	MODULE
 	${SOURCE_FILES}
 )
 
+set(RTPSR_LIB "rtpsendreceive")
+
+message(STATUS testlib!${RTPSR_LIB})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${RTPSR_LIB})
+target_link_libraries(${PROJECT_NAME} PUBLIC  ${FFMPEG_LIBRARIES})
 
 include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)
-
+message(STATUS ${CMAKE_SOURCE_DIR}/externals/mc.rtpsend~.mxo)
+execute_process(COMMAND ln -s ${CMAKE_SOURCE_DIR}/externals/mc.rtpsend~.mxo ${CMAKE_SOURCE_DIR}/test_patch/)
 
 #############################################################
 # UNIT TEST
 #############################################################
 
-include(${C74_MIN_API_DIR}/test/min-object-unittest.cmake)
+include(mc.rtpsend_tilde_test.cmake)

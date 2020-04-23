@@ -35,11 +35,11 @@ target_link_libraries(${PROJECT_NAME} PUBLIC ${RTPSR_LIB})
 target_link_libraries(${PROJECT_NAME} PUBLIC  ${FFMPEG_LIBRARIES})
 
 include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)
-message(STATUS ${CMAKE_SOURCE_DIR}/externals/rtpsendreceive.mc.rtpsend~.mxo)
-execute_process(COMMAND ln -s ${CMAKE_SOURCE_DIR}/externals/rtpsendreceive.mc.rtpsend~.mxo ${CMAKE_SOURCE_DIR}/test_patch/)
+message(STATUS ${CMAKE_SOURCE_DIR}/externals/mc.rtpreceive~.mxo)
+execute_process(COMMAND ln -s ${CMAKE_SOURCE_DIR}/externals/mc.rtpreceive~.mxo ${CMAKE_SOURCE_DIR}/test_patch/)
 
 #############################################################
 # UNIT TEST
 #############################################################
 
-include(rtpsendreceive.mc.rtpsend_tilde_test.cmake)
+include(mc.rtpreceive_tilde_test.cmake)

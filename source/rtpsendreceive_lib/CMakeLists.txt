@@ -21,7 +21,7 @@ include_directories(
 add_library( 
 	rtpsendreceive
 	STATIC
-	rtpsrbase.cpp rtpsender.cpp
+	rtpsrbase.cpp rtpsender.cpp rtpreceiver.cpp
 )
 target_link_directories(rtpsendreceive PUBLIC "/usr/local/lib")
 target_link_libraries(rtpsendreceive ${FFMPEG_LIBRARIES})
