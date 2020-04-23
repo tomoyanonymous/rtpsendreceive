@@ -4,7 +4,7 @@
 ///	@license	Use of this source code is governed by the LGPL License
 /// found in the License.md file.
 
-#include <rtpsendreceive_lib.hpp>
+#include <rtpsender.hpp>
 
 #include "c74_max.h"
 #include "c74_min.h"
