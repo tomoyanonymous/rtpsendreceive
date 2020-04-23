@@ -1,11 +1,17 @@
-# rtpsendreceive
-This package was created using the Min-DevKit for Max, an API and supporting tools for writing externals in modern C++.
+# mc.rtpsend~ / mc.rtpreceive~
 
+An modern alternative to netsend~ & netreceive~ objects using rtp protocol.
 
+## notes
+
+Currently number of channels are fixed by an attribute "channels", an auto-adaptation depending on input channels is not available due to a limitation of min-api.
+
+A codec is also fixed to Linear PCM 16bit(Machine Native Endianess).
 
 ## Prerequisites
 
 You can use the objects provided in this package as-is.
+
 
 To code your own objects, or to re-compile existing objects, you will need a compiler:
 
@@ -14,15 +20,34 @@ To code your own objects, or to re-compile existing objects, you will need a com
 
 You will also need the Min-DevKit, available from the Package Manager inside of Max or [directly from Github](https://github.com/Cycling74/min-devkit).
 
+### ffmpeg
+
+This object uses ffmpeg(libav) as its backend. To link it statically, you need to prepare static-library version of ffmpeg. Most of 3rd-party libraries are disabled in configuration.
+
+```bash
+
+git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg && cd ffmpeg
+
+./configure --prefix={enter installation path}  --disable-avfoundation --disable-iconv --disable-filters --disable-devices --disable-shared --enable-static  --disable-optimizations  --disable-mmx --disable-audiotoolbox --disable-videotoolbox --disable-stripping   --disable-appkit --disable-zlib --disable-coreimage  --disable-bzlib --disable-securetransport --disable-sdl2 --disable-encoder=opus --disable-decoder=opus  --pkg-config-flags=--static --cc=clang --cxx=clang++ 
+
+make -j
+
+make install
+
+```
+
+## License
+
+[LGPL v3.0](./License.md)
+
+## Author
+
+Tomoya Matsuura
+
+https://matsuuratomoya.com
+
+## Acknowledgements
+
+The objects are originally made for works cooparated with [stu.inc](http://stu.inc/).
 
 
-
-## Contributors / Acknowledgements
-
-The rtpsendreceive is the work of some amazing and creative artists, researchers, and coders.
-
-
-
-## Support
-
-For support, please contact the developer of this package.
