@@ -6,8 +6,9 @@
 
 #include <utility>
 
-RtpSRBase::RtpSRBase(size_t bufsize, int samplerate, int channels)
-    : bufsize(bufsize),
+RtpSRBase::RtpSRBase(int framesize, int samplerate, int channels)
+    : framesize(framesize),
+      bufsize(sizeof(typeof(framesize))*framesize),
       samplerate(samplerate),
       channels(channels),
       input_format_ctx(nullptr),
@@ -19,9 +20,11 @@ RtpSRBase::RtpSRBase(size_t bufsize, int samplerate, int channels)
       instream(nullptr),
       outstream(nullptr),
       avioctx(nullptr),
-      packet(nullptr) {}
+      packet(nullptr) {
+        buffer.resize(framesize*channels);
+      }
 RtpSRBase::~RtpSRBase() {
-  avcodec_free_context(&codecctx_enc);
+  // avcodec_free_context(&codecctx_enc);
   avformat_free_context(output_format_ctx);
   avformat_free_context(input_format_ctx);
   avio_context_free(&avioctx);
@@ -34,6 +37,7 @@ void RtpSRBase::dumpAvError(int error_code) {
 
 void RtpSRBase::init() {
   packet = av_packet_alloc();
+   
   frame = av_frame_alloc();
   initFormatCtx();
   initCodecCtx();
@@ -79,7 +83,7 @@ void RtpSRBase::init() {
 }
 
 void RtpSRBase::initCodecCtx(AVDictionary* codecoptions) {
-  codec_enc = avcodec_find_encoder(AV_CODEC_ID_PCM_S16LE);
+  codec_enc = avcodec_find_encoder(AV_CODEC_ID_PCM_S16BE);
 
   codecctx_enc = avcodec_alloc_context3(codec_enc);
   if (codecctx_enc == nullptr) {
@@ -95,7 +99,8 @@ void RtpSRBase::initCodecCtx(AVDictionary* codecoptions) {
   codecctx_enc->sample_fmt = AV_SAMPLE_FMT_S16;
   codecctx_enc->codec_type = AVMEDIA_TYPE_AUDIO;
   codecctx_enc->audio_service_type = AV_AUDIO_SERVICE_TYPE_MAIN;
-  codecctx_enc->channel_layout = AV_CH_LAYOUT_MONO;
+  auto layout =av_get_default_channel_layout(channels);
+  codecctx_enc->channel_layout =   layout;
   // codecctx_dec->time_base = av_inv_q(samplerate);
   // codecctx_dec->time_base = (AVRational){ 1, u8fps};
   int ret = avcodec_open2(codecctx_enc, codec_enc, &codecoptions);
@@ -136,7 +141,7 @@ int RtpSRBase::encode(AVFormatContext* fmtctx, AVStream* instream,
   return 0;
 }
 
-RtpSender::RtpSender(int bufsize, int samplerate, int channels,
+RtpSender::RtpSender(int framesize, int samplerate, int channels,
                      const std::string&  address, const int port,
                      rtpsr::readfn_type callback_read,
                      rtpsr::seekfn_type callback_seek, void* userdata)
@@ -145,7 +150,7 @@ RtpSender::RtpSender(int bufsize, int samplerate, int channels,
     port(port),
       callback_read(callback_read),
       callback_seek(callback_seek),
-      RtpSRBase() {
+      RtpSRBase(framesize,samplerate,channels) {
   if (userdata == nullptr) {
     userdata_address = (void*)this;
   }
@@ -155,7 +160,7 @@ RtpSender::~RtpSender() {
   // todo
   av_packet_unref(packet);
   avio_close(rtp_ioctx);
-  av_free(internalbuf);
+  av_free(avio_buffer);
 }
 
 // void RtpSender::init() {
@@ -165,13 +170,12 @@ RtpSender::~RtpSender() {
 void RtpSender::initFormatCtx() {
   // for audio driver->ffmpeg
   std::string destination = "rtp://" + address + ":" + std::to_string(port);
-  auto size = sizeof(int16_t) * 512;
-  internalbuf = (uint8_t*)av_malloc(4096);
-  avioctx = avio_alloc_context(internalbuf, 4096, 0, userdata_address,
+  avio_buffer = (uint8_t*)av_malloc(bufsize);
+  avioctx = avio_alloc_context(avio_buffer, bufsize, 0, userdata_address,
                                callback_read, nullptr, callback_seek);
   // Determine the input-format:
-  AVProbeData probeData{"", internalbuf, 512, "audio/L16"};
-  probeData.buf = internalbuf;
+  AVProbeData probeData{"", avio_buffer, 512, "audio/L16"};
+  probeData.buf = avio_buffer;
   input_format_ctx = avformat_alloc_context();
   input_format_ctx->pb = avioctx;
   input_format_ctx->flags |= AVFMT_FLAG_CUSTOM_IO;
@@ -196,7 +200,7 @@ void RtpSender::initFormatCtx() {
                                destination.size() + 1);
   output_format_ctx->url = url;
   // delete url;
-  av_new_packet(packet, 4096);
+  av_new_packet(packet, bufsize);
 }
 
 void RtpSender::setDestination(std::string& ad, int po) {
@@ -245,7 +249,7 @@ void RtpSender::start() {
 }
 
 void RtpSender::writeBuffer(double sample, int pos, int channel_idx) {
-  buffer[pos + channel_idx] = static_cast<rtpsr::sample_t>(sample);
+  buffer[pos*channels + channel_idx] = static_cast<rtpsr::sample_t>(sample* INT16_MAX);
 }
 
 void RtpSender::sendData() {
@@ -265,9 +269,9 @@ void RtpSender::sendData() {
   av_packet_unref(packet);
 }
 
-int RtpSender::readPacketSelf(void* userdata, uint8_t* buf, int buf_size) {
+int RtpSender::readPacketSelf(void* userdata, uint8_t* avio_buf, int buf_size) {
   auto* sender = reinterpret_cast<RtpSender*>(userdata);
   auto* address = sender->getBuffer_ptr();
-  memcpy(buf, address, buf_size);
-  return 0;
+  memcpy(avio_buf, address, buf_size);
+  return buf_size;
 }

@@ -30,7 +30,7 @@ using seekfn_type = int64_t(*)(void*, int64_t, int);
 }  // namespace rtpsr
 class RtpSRBase {
  public:
-  RtpSRBase(size_t bufsize = sizeof(int16_t) * 512, int samplerate = 48000,
+  RtpSRBase(int bufsize = 128, int samplerate = 48000,
             int channels = 1);
   ~RtpSRBase();
   virtual void init();
@@ -46,8 +46,12 @@ class RtpSRBase {
   int encode(AVFormatContext* fmtctx,AVStream* instream,AVStream* outstream,AVCodecContext* cdcctx,AVFrame* frame,AVPacket* packet, int stream_index);
   const int samplerate;
   const int channels;
-  AVFormatContext* input_format_ctx=nullptr;
-  AVFormatContext* output_format_ctx=nullptr;
+  rtpsr::buffertype buffer;
+  unsigned char* buf_address;
+  const size_t bufsize; // buffer size in byte
+  int framesize;//buffer size for each channels
+  AVFormatContext* input_format_ctx;
+  AVFormatContext* output_format_ctx;
 
   AVOutputFormat* fmt_output=nullptr;
   AVInputFormat* fmt_input=nullptr;
@@ -63,9 +67,7 @@ class RtpSRBase {
   AVPacket* packet=nullptr;
   AVFrame* frame = nullptr;
   AVIOContext* avioctx=nullptr;
-  rtpsr::buffertype buffer;
-  unsigned char* buf_address;
-  const size_t bufsize;
+
 
   // AVCodecID codecid;
   // for reading audio data from streaming, to pass avioctx.
@@ -73,7 +75,7 @@ class RtpSRBase {
 
 class RtpSender : public RtpSRBase {
  public:
-  RtpSender(int bufsize = 128,
+  RtpSender(int framesize = 128,
             int samplerate = 48000, int channels = 1,const std::string& address="127.0.0.1",const int port=30000 ,rtpsr::readfn_type callback_read = readPacketSelf,rtpsr::seekfn_type callback_seek=nullptr,
             void* userdata=nullptr);
   ~RtpSender();
@@ -92,6 +94,6 @@ class RtpSender : public RtpSRBase {
   int port;
   void* userdata_address;
   AVIOContext* rtp_ioctx=nullptr;
-  uint8_t* internalbuf;
-  static int readPacketSelf(void* userdata, uint8_t* buf, int buf_size);
+  uint8_t* avio_buffer;
+  static int readPacketSelf(void* userdata, uint8_t* avio_buf, int buf_size);
 };

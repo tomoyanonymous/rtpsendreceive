@@ -25,19 +25,19 @@ class rtpsend_tilde : public object<rtpsend_tilde>, public mc_operator<> {
 
   inlet<> m_inlet{this, "(multichannelsignal) input to be transmited"};
 
-  static long inputChanged(rtpsend_tilde* s, long index, long count) {
-    if (count != s->channels) {
-      s->channels = count;
-      s->resetSender();
-      return true;
-    } else
-      return false;
-  }
-
+  // static long inputChanged(rtpsend_tilde* s, long index, long count) {
+  //   if (count != s->channels) {
+  //     s->channels = count;
+  //     s->resetSender();
+  //     return true;
+  //   } else
+  //     return false;
+  // }
   message<> maxclass_setup{this, "maxclass_setup",
-                           MIN_FUNCTION{c74::max::t_class* c = args[0];
-  c74::max::class_addmethod(c, (c74::max::method)inputChanged, "inputchanged",
-                            c74::max::A_CANT, 0);
+                           MIN_FUNCTION{
+                            //  c74::max::t_class* c = args[0];
+  // c74::max::class_addmethod(c, (c74::max::method)inputChanged, "inputchanged",
+                            // c74::max::A_CANT, 0);
   return {};
 }
 }
@@ -54,9 +54,9 @@ return {};
 ;
 
 void operator()(audio_bundle input, audio_bundle output) {
-  int channels = std::min<int>(input.channel_count(), channels);
+  int chs = std::min<int>(input.channel_count(), channels.get());
   for (auto i = 0; i < input.frame_count(); ++i) {
-    for (auto channel = 0; channel < channels; ++channel) {
+    for (auto channel = 0; channel < chs; ++channel) {
       auto in{input.samples(channel)[i]};
       rtpsender->writeBuffer(in, i, channel);
     }
@@ -71,6 +71,7 @@ void resetSender() {
   std::string address_str(address.get().c_str());
   rtpsender = std::make_unique<RtpSender>(vector_size(), samplerate(), channels,
                                           address_str, port);
+  rtpsender->init();
 }
 }
 ;
