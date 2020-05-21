@@ -24,13 +24,8 @@ RtpSender::~RtpSender() {
   av_free(avio_buffer);
 }
 
-// void RtpSender::init() {
-//   std::cerr<< "hogehoge"<<std::endl;
-// }
-
 void RtpSender::initFormatCtx() {
   // for audio driver->ffmpeg
-  std::string destination = "rtp://" + address + ":" + std::to_string(port);
   avio_buffer = (uint8_t*)av_malloc(bufsize);
   avioctx = avio_alloc_context(avio_buffer, bufsize, 0, userdata_address,
                                callback_read, nullptr, callback_seek);
@@ -46,7 +41,8 @@ void RtpSender::initFormatCtx() {
   if (inputres < 0) {
     dumpAvError(inputres);
   }
-  // usleep(100000);
+  // output
+  std::string destination = "rtp://" + address + ":" + std::to_string(port);
   fmt_output = av_guess_format("rtp", destination.c_str(), "audio/L16");
   output_format_ctx = avformat_alloc_context();
   output_format_ctx->pb = rtp_ioctx;
@@ -55,6 +51,7 @@ void RtpSender::initFormatCtx() {
   if (res < 0) {
     std::cerr << "avio open error\n";
   }
+
   output_format_ctx->oformat = fmt_output;
   char* url = new char[destination.size() + 1];
   std::char_traits<char>::copy(url, destination.c_str(),

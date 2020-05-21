@@ -33,6 +33,7 @@ void RtpSRBase::dumpAvError(int error_code) {
 }
 
 void RtpSRBase::init() {
+  avformat_network_init();
   packet = av_packet_alloc();
    
   frame = av_frame_alloc();
