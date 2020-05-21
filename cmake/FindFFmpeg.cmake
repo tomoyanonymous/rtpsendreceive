@@ -35,14 +35,16 @@ else()
   # in the FIND_PATH() and FIND_LIBRARY() calls
   find_package(PkgConfig)
   if(PKG_CONFIG_FOUND)
-    pkg_check_modules(_FFMPEG_AVCODEC libavcodec)
-    pkg_check_modules(_FFMPEG_AVFORMAT libavformat)
-    pkg_check_modules(_FFMPEG_AVUTIL libavutil)
+    pkg_search_module(_FFMPEG_AVCODEC /usr/local/Cellar/ffmpeg/4.2.2_2debug/lib/pkgconfig/libavcodec.pc libavcodec)
+    pkg_search_module(_FFMPEG_AVFORMAT /usr/local/Cellar/ffmpeg/4.2.2_2debug/lib/pkgconfig/libavformat.pc libavformat)
+    pkg_search_module(_FFMPEG_AVUTIL /usr/local/Cellar/ffmpeg/4.2.2_2debug/lib/pkgconfig/libavutil.pc libavutil)
   endif()
 
   find_path(FFMPEG_AVCODEC_INCLUDE_DIR
     NAMES libavcodec/avcodec.h
-    PATHS ${_FFMPEG_AVCODEC_INCLUDE_DIRS}
+    PATHS 
+      /usr/local/Cellar/ffmpeg/4.2.2_2debug/include
+      ${_FFMPEG_AVCODEC_INCLUDE_DIRS}
       /usr/include
       /usr/local/include
       /usr/local/opt/ffmpeg/include
@@ -52,23 +54,31 @@ else()
 
   find_library(FFMPEG_LIBAVCODEC
     NAMES avcodec
-    PATHS ${_FFMPEG_AVCODEC_LIBRARY_DIRS}
+    PATHS 
+      /usr/local/Cellar/ffmpeg/4.2.2_2debug/lib
+      ${_FFMPEG_AVCODEC_LIBRARY_DIRS}
       /usr/lib
       /usr/local/lib
       /opt/local/lib
-      /sw/lib)
+      /sw/lib
+      )
 
   find_library(FFMPEG_LIBAVFORMAT
     NAMES avformat
-    PATHS ${_FFMPEG_AVFORMAT_LIBRARY_DIRS}
+    PATHS
+      /usr/local/Cellar/ffmpeg/4.2.2_2debug/lib
+      ${_FFMPEG_AVFORMAT_LIBRARY_DIRS}
       /usr/lib
       /usr/local/lib
       /opt/local/lib
-      /sw/lib)
+      /sw/lib
+      )
 
   find_library(FFMPEG_LIBAVUTIL
     NAMES avutil
-    PATHS ${_FFMPEG_AVUTIL_LIBRARY_DIRS}
+    PATHS 
+      /usr/local/Cellar/ffmpeg/4.2.2_2debug/lib
+      ${_FFMPEG_AVUTIL_LIBRARY_DIRS}
       /usr/lib
       /usr/local/lib
       /opt/local/lib
