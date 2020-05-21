@@ -2,7 +2,7 @@
 //  written in C++.
 // Copyright 2020 Tomoya Matsuura All rights Reserved.
 // This source code is released under LGPL lisence.
-#include "rtpsendreceive_lib.hpp"
+#include "rtpsender.hpp"
 
 #include <cmath>
 

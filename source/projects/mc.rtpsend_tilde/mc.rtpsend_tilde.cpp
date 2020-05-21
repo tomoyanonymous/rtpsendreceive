@@ -34,11 +34,11 @@ class rtpsend_tilde : public object<rtpsend_tilde>, public mc_operator<> {
   //     return false;
   // }
   message<> maxclass_setup{this, "maxclass_setup",
-                           MIN_FUNCTION{
-                            //  c74::max::t_class* c = args[0];
-  // c74::max::class_addmethod(c, (c74::max::method)inputChanged, "inputchanged",
-                            // c74::max::A_CANT, 0);
-  return {};
+                           MIN_FUNCTION{//  c74::max::t_class* c = args[0];
+                                        // c74::max::class_addmethod(c,
+                                        // (c74::max::method)inputChanged,
+                                        // "inputchanged", c74::max::A_CANT, 0);
+                                        return {};
 }
 }
 ;
