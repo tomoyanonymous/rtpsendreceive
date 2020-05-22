@@ -49,7 +49,8 @@ void RtpSender::initFormatCtx() {
   auto res =
       avio_open(&output_format_ctx->pb, destination.c_str(), AVIO_FLAG_WRITE);
   if (res < 0) {
-    std::cerr << "avio open error\n";
+    dumpAvError(res);
+    // std::cerr << "avio open error\n";
   }
 
   output_format_ctx->oformat = fmt_output;

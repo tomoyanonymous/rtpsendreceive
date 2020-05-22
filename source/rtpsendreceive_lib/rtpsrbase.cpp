@@ -33,16 +33,15 @@ void RtpSRBase::dumpAvError(int error_code) {
 }
 
 void RtpSRBase::init() {
-  avformat_network_init();
   packet = av_packet_alloc();
    
   frame = av_frame_alloc();
   initFormatCtx();
   initCodecCtx();
-  //  generate global header when the format requires it
-  if (fmt_output->flags & AVFMT_GLOBALHEADER) {
-    codecctx_enc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-  }
+  // //  generate global header when the format requires it
+  // if (fmt_output->flags & AVFMT_GLOBALHEADER) {
+  //   codecctx_enc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+  // }
   // being freed by avformat_free_context
   instream = avformat_new_stream(input_format_ctx, codec_enc);
   outstream = avformat_new_stream(output_format_ctx, codec_enc);
@@ -64,7 +63,7 @@ void RtpSRBase::init() {
   if (res_writeheader < 0) {
     std::cerr << "avformat_write_header failed\n";
   }
-  av_dump_format(output_format_ctx, 0, output_format_ctx->url, 1);
+  // av_dump_format(output_format_ctx, 0, output_format_ctx->url, 1);
   //   int ret = avformat_open_input(&avformatctx, nullptr, nullptr, nullptr);
   // if (ret < 0) {
   //     std::cerr << "Could not open input\n";

@@ -13,7 +13,7 @@ class RtpReceiver : public RtpSRBase {
   explicit RtpReceiver(int framesize = 128, int samplerate = 48000,
                        int channels = 1, std::string address = "127.0.0.1",
                        int port = 30000,
-                       rtpsr::readfn_type callback_read = writePacketSelf,
+                       rtpsr::readfn_type callback_write = writePacketSelf,
                        rtpsr::seekfn_type callback_seek = nullptr,
                        void* userdata = nullptr);
   ~RtpReceiver();
@@ -28,7 +28,7 @@ class RtpReceiver : public RtpSRBase {
   void play();
   void pause();
  private:
-  rtpsr::readfn_type callback_read;
+  rtpsr::readfn_type callback_write;
   rtpsr::seekfn_type callback_seek;
   std::string address;
   int port;

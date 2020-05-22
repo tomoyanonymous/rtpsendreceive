@@ -2,12 +2,12 @@
 
 RtpReceiver::RtpReceiver(int framesize, int samplerate, int channels,
                          std::string address, int port,
-                         rtpsr::readfn_type callback_read,
+                         rtpsr::readfn_type callback_write,
                          rtpsr::seekfn_type callback_seek, void* userdata)
     : sdp_ioctx(nullptr),
       address(std::move(address)),
       port(port),
-      callback_read(callback_read),
+      callback_write(callback_write),
       callback_seek(callback_seek),
       RtpSRBase(framesize, samplerate, channels),
       avio_buffer(nullptr) {
@@ -18,20 +18,27 @@ RtpReceiver::RtpReceiver(int framesize, int samplerate, int channels,
 }
 RtpReceiver::~RtpReceiver() {
   // todo
+
+  if(packet){
   av_packet_unref(packet);
+  }
   auto opaque = static_cast<SdpOpaque*>(input_format_ctx->pb->opaque);
   delete opaque;
   input_format_ctx->pb->opaque =nullptr;
+  avformat_close_input(&input_format_ctx);
+
   avio_close(sdp_ioctx);
   av_free(avio_buffer);
-  av_free(sdpio_buffer);
+
 }
 
 void RtpReceiver::initInputFormat() {
   input_format_ctx = avformat_alloc_context();
+  avformat_network_init();
   sdpio_buffer = (uint8_t*)av_malloc(bufsize);
 
   auto opaque = new SdpOpaque();
+  makeDummySdp();
   auto sdp = sdp_content.c_str();
   opaque->data = SdpOpaque::Vector(sdp, sdp + strlen(sdp));
   opaque->pos = opaque->data.begin();
@@ -50,18 +57,15 @@ void RtpReceiver::initInputFormat() {
 void RtpReceiver::initOutputFormat() {
   avio_buffer = (uint8_t*)av_malloc(bufsize);
   avioctx = avio_alloc_context(avio_buffer, bufsize, 0, userdata_address,
-                               callback_read, nullptr, callback_seek);
+                               nullptr, callback_write, callback_seek);
   // Determine the input-format:
   AVProbeData probe_data{"", avio_buffer, 512, "audio/L16"};
   probe_data.buf = avio_buffer;
   output_format_ctx = avformat_alloc_context();
   output_format_ctx->pb = avioctx;
   output_format_ctx->flags |= AVFMT_FLAG_CUSTOM_IO;
-  auto res = avio_open(&output_format_ctx->pb, "", AVIO_FLAG_WRITE);
-  if (res < 0) {
-    std::cerr << "avio open error\n";
-  }
-  // output_format_ctx->oformat = av_guess_format(nullptr,nullptr,"audio/L16");
+  fmt_output = av_guess_format("s16be", "", "audio/L16");
+  output_format_ctx->oformat = fmt_output;
   av_new_packet(packet, bufsize);
 }
 
@@ -145,14 +149,14 @@ s=DUMMY SDP
 c=IN IP4 127.0.0.1
 t=0 0
 a=tool:libavformat 58.29.100
-m=audio $port$ RTP/AVP 97
+m=audio $port$ RTP/AVP 97
 b=AS:$bitrate$
 a=rtpmap:97 L16/$samplerate$/$channels$)";
   std::vector<std::pair<std::string, std::string>> replace_pairs = {
-      {"$port$", std::to_string(port)},
-      {"$channels$", std::to_string(channels)},
-      {"$bitrate$", std::to_string((samplerate / 1000) * 16 * channels)},
-      {"$samplerate$", std::to_string(samplerate)}};
+      {"\\$port\\$", std::to_string(port)},
+      {"\\$channels\\$", std::to_string(channels)},
+      {"\\$bitrate\\$", std::to_string((samplerate / 1000) * 16 * channels)},
+      {"\\$samplerate\\$", std::to_string(samplerate)}};
   std::for_each(replace_pairs.begin(), replace_pairs.end(), [&](auto pair) {
     sdp_content =
         std::regex_replace(sdp_content, std::regex(pair.first), pair.second);
