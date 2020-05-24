@@ -2,11 +2,15 @@
 
 An modern alternative to netsend~ & netreceive~ objects using rtp protocol.
 
+![](./screenshot.jpg)
+
 ## notes
 
 Currently number of channels are fixed by an attribute "channels", an auto-adaptation depending on input channels is not available due to a limitation of min-api.
 
-A codec is also fixed to Linear PCM 16bit(Machine Native Endianess).
+A codec is also fixed to Linear PCM 16bit(Big Endian).
+
+
 
 ## Prerequisites
 
