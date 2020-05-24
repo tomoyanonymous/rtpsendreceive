@@ -2,7 +2,7 @@
 
 RtpSRBase::RtpSRBase(int framesize, int samplerate, int channels)
     : framesize(framesize),
-      bufsize(sizeof(typeof(int16_t))*framesize*channels),
+      bufsize(sizeof(typeof(int16_t)) * framesize * channels),
       samplerate(samplerate),
       channels(channels),
       input_format_ctx(nullptr),
@@ -18,14 +18,13 @@ RtpSRBase::RtpSRBase(int framesize, int samplerate, int channels)
       avioctx(nullptr),
       packet(nullptr),
       frame(nullptr) {
-        buffer.resize(framesize*channels);
-      }
+  buffer.resize(framesize * channels);
+}
 RtpSRBase::~RtpSRBase() {
   // avcodec_free_context(&codecctx_enc);
   avformat_free_context(output_format_ctx);
   avformat_free_context(input_format_ctx);
   avio_context_free(&avioctx);
-  
 }
 void RtpSRBase::dumpAvError(int error_code) {
   char str[4096];
@@ -35,10 +34,11 @@ void RtpSRBase::dumpAvError(int error_code) {
 
 void RtpSRBase::init() {
   packet = av_packet_alloc();
-   
+
   frame = av_frame_alloc();
   initFormatCtx();
-  initCodecCtx();
+  initDecoder();
+  initEncoder();
   // //  generate global header when the format requires it
   // if (fmt_output->flags & AVFMT_GLOBALHEADER) {
   //   codecctx_enc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -48,8 +48,11 @@ void RtpSRBase::init() {
   outstream = avformat_new_stream(output_format_ctx, nullptr);
   outstream->time_base = codecctx_enc->time_base;
   instream->time_base = codecctx_enc->time_base;
-  instream->start_time=0;
-  outstream->start_time=0;
+  codecctx_dec->frame_size=framesize;
+  codecctx_enc->frame_size=framesize;
+
+  instream->start_time = 0;
+  outstream->start_time = 0;
   auto in_setparams =
       avcodec_parameters_from_context(instream->codecpar, codecctx_enc);
   auto res_setparams =
@@ -61,7 +64,7 @@ void RtpSRBase::init() {
   // if (res_setparams < 0) {
   //   std::cerr << "avcodec_parameters_from_context failed\n";
   // }
-  AVDictionary *options = nullptr;
+  AVDictionary* options = nullptr;
   av_dict_set(&options, "live", "1", 0);
   auto res_writeheader = avformat_write_header(output_format_ctx, &options);
   if (res_writeheader < 0) {
@@ -82,62 +85,76 @@ void RtpSRBase::init() {
   std::string teststr = testchar.data();
   std::cout << "----sdp-----\nSDP:\n" << teststr << "---------\n" << std::endl;
 }
-
-void RtpSRBase::initCodecCtx(AVDictionary* codecoptions) {
+void RtpSRBase::initDecoder() {
+  codec_dec = avcodec_find_decoder(AV_CODEC_ID_PCM_S16BE);
+  codecctx_dec = avcodec_alloc_context3(codec_dec);
+  initCodecCtx(codecctx_dec, codec_dec, nullptr);
+}
+void RtpSRBase::initEncoder() {
   codec_enc = avcodec_find_encoder(AV_CODEC_ID_PCM_S16BE);
-
   codecctx_enc = avcodec_alloc_context3(codec_enc);
-  if (codecctx_enc == nullptr) {
+  initCodecCtx(codecctx_enc, codec_enc, nullptr);
+}
+void RtpSRBase::initCodecCtx(AVCodecContext* ctx, AVCodec* codec,
+                             AVDictionary* codecoptions) {
+
+  if (ctx == nullptr) {
     std::cerr << "avcodec_alloc_context3 failed\n";
   }
-  // codec_dec = avcodec_find_decoder(AV_CODEC_ID_PCM_S16BE);
-  // codecctx_dec = avcodec_alloc_context3(codec_dec);
-  // if (codecctx_dec == nullptr) {
-  //   std::cerr << "avcodec_alloc_context3 failed\n";
-  // }
-  codecctx_enc->sample_rate = samplerate;
-  codecctx_enc->channels = channels;
-  codecctx_enc->sample_fmt = AV_SAMPLE_FMT_S16;
-  codecctx_enc->codec_type = AVMEDIA_TYPE_AUDIO;
-  codecctx_enc->audio_service_type = AV_AUDIO_SERVICE_TYPE_MAIN;
-  auto layout =av_get_default_channel_layout(channels);
-  codecctx_enc->channel_layout =   layout;
+  ctx->sample_rate = samplerate;
+  ctx->channels = channels;
+  ctx->frame_size = framesize;
+  ctx->sample_fmt = AV_SAMPLE_FMT_S16;
+  ctx->codec_type = AVMEDIA_TYPE_AUDIO;
+  ctx->audio_service_type = AV_AUDIO_SERVICE_TYPE_MAIN;
+  auto layout = av_get_default_channel_layout(channels);
+  ctx->channel_layout = layout;
   // codecctx_dec->time_base = av_inv_q(samplerate);
   // codecctx_dec->time_base = (AVRational){ 1, u8fps};
-  int ret = avcodec_open2(codecctx_enc, codec_enc, &codecoptions);
+  int ret = avcodec_open2(ctx, codec, &codecoptions);
   if (ret < 0) {
     dumpAvError(ret);
   }
 }
 
-int RtpSRBase::decode(AVFormatContext* fmtctx, AVStream* instream,
-                      AVStream* outstream, AVCodecContext* cdcctx,
-                      AVFrame* frame, AVPacket* packet, int stream_index) {
-  return 0;
-}
-int RtpSRBase::encode(AVFormatContext* fmtctx, AVStream* instream,
-                      AVStream* outstream, AVCodecContext* cdcctx,
-                      AVFrame* frame, AVPacket* packet, int stream_index) {
-  AVPacket* output_packet = av_packet_alloc();
-  int response = avcodec_send_frame(cdcctx, frame);
+// decode from packet and return one frame;
 
+int RtpSRBase::decode() {
+  auto res = avcodec_send_packet(codecctx_dec, packet);
+  if (res < 0) {
+    dumpAvError(res);
+  }
+  res = avcodec_receive_frame(codecctx_dec, frame);
+  return res;
+}
+
+// encode single frame and create packet
+
+int RtpSRBase::encode() {
+  int response = avcodec_send_frame(codecctx_enc, frame);
   while (response >= 0) {
-    response = avcodec_receive_packet(cdcctx, output_packet);
+    response = avcodec_receive_packet(codecctx_enc, output_packet);
     if (response == AVERROR(EAGAIN) || response == AVERROR_EOF) {
       break;
-    } else if (response < 0) {
-      return -1;
     }
-    output_packet->stream_index = stream_index;
-    output_packet->duration =
-        instream->time_base.den / outstream->time_base.num /
-        instream->avg_frame_rate.num * instream->avg_frame_rate.den;
-
-    av_packet_rescale_ts(output_packet, instream->time_base,
-                         outstream->time_base);
-    response = av_interleaved_write_frame(fmtctx, output_packet);
+    if (response < 0) {
+      dumpAvError(response);
+    } else {
+      auto itb = instream->time_base;
+      auto otb = outstream->time_base;
+      output_packet->pts =
+          av_rescale_q_rnd(output_packet->pts, itb, otb, AV_ROUND_PASS_MINMAX);
+      output_packet->dts =
+          av_rescale_q_rnd(output_packet->dts, itb, otb, AV_ROUND_PASS_MINMAX);
+      output_packet->duration = av_rescale_q(output_packet->duration, itb, otb);
+      output_packet->pos = -1;
+      av_interleaved_write_frame(output_format_ctx, output_packet);
+      av_packet_unref(packet);
+    }
   }
-  av_packet_unref(output_packet);
-  av_packet_free(&output_packet);
-  return 0;
+  return response;
 }
+
+int RtpSRBase::getBytesFromSamples(int samples,int chs){
+  return sizeof(int16_t)*chs*samples;
+ }

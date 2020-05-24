@@ -12,7 +12,8 @@ RtpSender::RtpSender(int framesize, int samplerate, int channels,
       callback_seek(callback_seek),
       RtpSRBase(framesize, samplerate, channels),
       avio_buffer(nullptr),
-      timecount(0) {
+      timecount(0),
+      iformat(std::make_unique<AVInputFormat>(ff_pcm_s16_custom_demuxer)) {
   if (userdata == nullptr) {
     userdata_address = reinterpret_cast<void*>(this);
   }
@@ -37,7 +38,8 @@ void RtpSender::initFormatCtx() {
   input_format_ctx = avformat_alloc_context();
   input_format_ctx->flags |= AVFMT_FLAG_CUSTOM_IO;
   input_format_ctx->pb = avioctx;
-  input_format_ctx->iformat = av_probe_input_format(&probe_data, 1);
+  // input_format_ctx->iformat = av_probe_input_format(&probe_data, 1);
+  input_format_ctx->iformat = iformat.get();
   input_format_ctx->iformat->flags |= AVFMT_NOFILE;
   AVDictionary *options = NULL;
   av_dict_set(&options, "samplerate", std::to_string(samplerate).c_str(), 0);
@@ -80,27 +82,40 @@ void RtpSender::writeBuffer(double sample, int pos, int channel_idx) {
 }
 
 void RtpSender::sendData() {
+  read_flag = true;
+  remain=framesize;
+  int64_t offset = 0;
+  while(read_flag){
   av_init_packet(packet);
   auto ret = av_read_frame(input_format_ctx, packet);
-
-  packet->pts = av_rescale_q_rnd(packet->pts, instream->time_base,
-                                 outstream->time_base, AV_ROUND_PASS_MINMAX);
-  packet->dts = av_rescale_q_rnd(packet->dts, instream->time_base,
-                                 outstream->time_base, AV_ROUND_PASS_MINMAX);
-  packet->duration =
-      av_rescale_q(packet->duration, instream->time_base, outstream->time_base);
-  packet->pos = -1;
-
-  av_interleaved_write_frame(output_format_ctx, packet);
-
-  av_packet_unref(packet);
+  remain = timecount - (packet->pts + framesize);
+  read_offset = framesize - remain;
+  // auto decoderes = decode();
+  // auto encoderes = encode();
+        auto itb = instream->time_base;
+      auto otb = outstream->time_base;
+      packet->pts =
+          av_rescale_q_rnd(packet->pts, itb, otb, AV_ROUND_PASS_MINMAX);
+      packet->dts =
+          av_rescale_q_rnd(packet->dts, itb, otb, AV_ROUND_PASS_MINMAX);
+      packet->duration = av_rescale_q(packet->duration, itb, otb);
+      packet->pos = -1;
+      av_interleaved_write_frame(output_format_ctx, packet);
+      av_packet_unref(packet);
+  }
 }
 
 int RtpSender::readPacketSelf(void* userdata, uint8_t* avio_buf, int buf_size) {
   auto* sender = reinterpret_cast<RtpSender*>(userdata);
-  auto* address = sender->getBufferPtr();
-  memcpy(avio_buf, address, sender->bufsize);
-  return sender->bufsize;
+  auto* address = sender->getBufferPtr(); 
+  int8_t offset = getBytesFromSamples(sender->read_offset, sender->channels);
+  int remain_bytes = getBytesFromSamples(sender->remain, sender->channels);
+  int read_size = std::min(buf_size,remain_bytes);
+  memcpy(avio_buf, address+offset, read_size);
+  if(read_size-remain_bytes==0){//finished reading in this term
+    sender->read_flag = false;
+  }
+  return read_size;
 }
 void RtpSender::incrementTime(int64_t count){
   timecount+=count;

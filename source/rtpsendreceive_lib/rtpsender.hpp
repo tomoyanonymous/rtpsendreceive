@@ -26,6 +26,10 @@ class RtpSender : public RtpSRBase {
   AVIOContext* rtp_ioctx;
   uint8_t* avio_buffer;
   std::vector<uint8_t> testbuf;
+  std::unique_ptr<AVInputFormat> iformat;
   int64_t timecount;
+  int64_t read_offset;
+  int64_t remain;
+  bool read_flag;
   static int readPacketSelf(void* userdata, uint8_t* avio_buf, int buf_size);
 };

@@ -8,11 +8,14 @@ class RtpSRBase {
   ~RtpSRBase();
   virtual void init();
   virtual void initFormatCtx() = 0;
-  void initCodecCtx(AVDictionary* codecoptions = nullptr);
+  void initCodecCtx(AVCodecContext* ctx,AVCodec* codec,AVDictionary* codecoptions = nullptr);
+  void initEncoder();
+  void initDecoder();
   static void dumpAvError(int error_code);
  protected:
- int decode(AVFormatContext* fmtctx,AVStream* instream,AVStream* outstream,AVCodecContext* cdcctx,AVFrame* frame,AVPacket* packet,int stream_index);
-  int encode(AVFormatContext* fmtctx,AVStream* instream,AVStream* outstream,AVCodecContext* cdcctx,AVFrame* frame,AVPacket* packet, int stream_index);
+ static int getBytesFromSamples(int samples,int chs);
+ int decode();
+  int encode();
   const int samplerate;
   const int channels;
   rtpsr::buffertype buffer;
@@ -32,7 +35,10 @@ class RtpSRBase {
 
   AVCodec* codec_dec;
   AVCodec* codec_enc;
+
   AVPacket* packet;
+  AVPacket* output_packet;
+
   AVFrame* frame;
   AVIOContext* avioctx;
 
