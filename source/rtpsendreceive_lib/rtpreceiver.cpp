@@ -56,7 +56,7 @@ void RtpReceiver::initInputFormat() {
 }
 void RtpReceiver::initOutputFormat() {
   avio_buffer = (uint8_t*)av_malloc(bufsize);
-  avioctx = avio_alloc_context(avio_buffer, bufsize, 0, userdata_address,
+  avioctx = avio_alloc_context(avio_buffer, bufsize, 1, userdata_address,
                                nullptr, callback_write, callback_seek);
   // Determine the input-format:
   AVProbeData probe_data{"", avio_buffer, 512, "audio/L16"};
@@ -66,7 +66,11 @@ void RtpReceiver::initOutputFormat() {
   output_format_ctx->flags |= AVFMT_FLAG_CUSTOM_IO;
   fmt_output = av_guess_format("s16be", "", "audio/L16");
   output_format_ctx->oformat = fmt_output;
+  AVDictionary *options = NULL;
+av_dict_set(&options, "live", "1", 0);
+  auto res = avformat_write_header(output_format_ctx, &options);
   av_new_packet(packet, bufsize);
+
 }
 
 void RtpReceiver::initFormatCtx() {
@@ -120,7 +124,7 @@ int RtpReceiver::writePacketSelf(void* userdata, uint8_t* avio_buf,
                                  int buf_size) {
   auto* receiver = reinterpret_cast<RtpReceiver*>(userdata);
   auto* address = receiver->getBufferPtr();
-  memcpy(avio_buf, address, buf_size);
+  memcpy(address, avio_buf,buf_size);
   return buf_size;
 }
 

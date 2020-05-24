@@ -37,6 +37,7 @@ class RtpReceiver : public RtpSRBase {
   uint8_t* sdpio_buffer;
 
   uint8_t* avio_buffer;
+  std::vector<int16_t> avio_vector;
   std::string sdp_content;
   void makeDummySdp();
   static int writePacketSelf(void* userdata, uint8_t* avio_buf, int buf_size);
