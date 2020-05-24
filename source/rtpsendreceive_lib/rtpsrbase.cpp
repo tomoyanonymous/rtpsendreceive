@@ -2,7 +2,7 @@
 
 RtpSRBase::RtpSRBase(int framesize, int samplerate, int channels)
     : framesize(framesize),
-      bufsize(sizeof(typeof(framesize))*framesize),
+      bufsize(sizeof(typeof(int16_t))*framesize*channels),
       samplerate(samplerate),
       channels(channels),
       input_format_ctx(nullptr),
@@ -25,6 +25,7 @@ RtpSRBase::~RtpSRBase() {
   avformat_free_context(output_format_ctx);
   avformat_free_context(input_format_ctx);
   avio_context_free(&avioctx);
+  
 }
 void RtpSRBase::dumpAvError(int error_code) {
   char str[4096];
@@ -43,23 +44,26 @@ void RtpSRBase::init() {
   //   codecctx_enc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
   // }
   // being freed by avformat_free_context
-  instream = avformat_new_stream(input_format_ctx, codec_enc);
-  outstream = avformat_new_stream(output_format_ctx, codec_enc);
+  instream = avformat_new_stream(input_format_ctx, nullptr);
+  outstream = avformat_new_stream(output_format_ctx, nullptr);
   outstream->time_base = codecctx_enc->time_base;
   instream->time_base = codecctx_enc->time_base;
+  instream->start_time=0;
+  outstream->start_time=0;
   auto in_setparams =
       avcodec_parameters_from_context(instream->codecpar, codecctx_enc);
-
   auto res_setparams =
       avcodec_parameters_from_context(outstream->codecpar, codecctx_enc);
 
-  if (in_setparams < 0) {
-    std::cerr << "avcodec_parameters_from_context failed\n";
-  }
-  if (res_setparams < 0) {
-    std::cerr << "avcodec_parameters_from_context failed\n";
-  }
-  auto res_writeheader = avformat_write_header(output_format_ctx, nullptr);
+  // if (in_setparams < 0) {
+  //   std::cerr << "avcodec_parameters_from_context failed\n";
+  // }
+  // if (res_setparams < 0) {
+  //   std::cerr << "avcodec_parameters_from_context failed\n";
+  // }
+  AVDictionary *options = nullptr;
+  av_dict_set(&options, "live", "1", 0);
+  auto res_writeheader = avformat_write_header(output_format_ctx, &options);
   if (res_writeheader < 0) {
     std::cerr << "avformat_write_header failed\n";
   }

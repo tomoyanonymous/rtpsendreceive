@@ -61,6 +61,7 @@ void operator()(audio_bundle input, audio_bundle output) {
       rtpsender->writeBuffer(in, i, channel);
     }
   }
+  rtpsender->incrementTime(input.frame_count());
   rtpsender->sendData();
 }
 

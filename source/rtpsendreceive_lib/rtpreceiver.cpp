@@ -66,9 +66,6 @@ void RtpReceiver::initOutputFormat() {
   output_format_ctx->flags |= AVFMT_FLAG_CUSTOM_IO;
   fmt_output = av_guess_format("s16be", "", "audio/L16");
   output_format_ctx->oformat = fmt_output;
-  AVDictionary *options = NULL;
-av_dict_set(&options, "live", "1", 0);
-  auto res = avformat_write_header(output_format_ctx, &options);
   av_new_packet(packet, bufsize);
 
 }
@@ -115,7 +112,7 @@ void RtpReceiver::receiveData() {
   packet->pos = -1;
 
   av_packet_rescale_ts(packet, instream->time_base, outstream->time_base);
-  av_interleaved_write_frame(output_format_ctx, packet);
+  auto res= av_interleaved_write_frame(output_format_ctx, packet);
 
   av_packet_unref(packet);
 }
