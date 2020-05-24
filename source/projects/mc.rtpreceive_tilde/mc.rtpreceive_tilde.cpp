@@ -83,7 +83,7 @@ void operator()(audio_bundle input, audio_bundle output) {
     rtpreceiver->receiveData();
     for (auto i = 0; i < output.frame_count(); ++i) {
       for (auto channel = 0; channel < chs; ++channel) {
-        output.samples(channels)[i] = rtpreceiver->readBuffer(i, channel);
+        output.samples(channel)[i] = rtpreceiver->readBuffer(i, channel);
       }
     }
   } else {
