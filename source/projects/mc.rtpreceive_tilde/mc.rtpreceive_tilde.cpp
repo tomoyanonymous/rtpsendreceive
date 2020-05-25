@@ -5,11 +5,10 @@
 ///	@license	Use of this source code is governed by the MIT License
 /// found in the License.md file.
 
-#include "c74_min.h"
 #include "rtpreceiver.hpp"
+#include "c74_min.h"
 
 using namespace c74::min;
-namespace max = c74::max;
 
 class rtpreceive_tilde : public object<rtpreceive_tilde>, public mc_operator<> {
  private:
@@ -44,9 +43,9 @@ class rtpreceive_tilde : public object<rtpreceive_tilde>, public mc_operator<> {
 // post to max window == but only when the class is loaded the first time
 message<> maxclass_setup{this, "maxclass_setup",
                          MIN_FUNCTION{
-    const auto ns = max::gensym("box");
-    auto c = max::class_findbyname(ns, max::gensym("mc.rtpreceive~"));
-    max::class_addmethod(c,(max::method)setOutChans,"multichanneloutputs",max::A_CANT, 0);
+    const auto ns = c74::max::gensym("box");
+    auto c = c74::max::class_findbyname(ns, c74::max::gensym("mc.rtpreceive~"));
+    c74::max::class_addmethod(c,(c74::max::method)setOutChans,"multichanneloutputs",c74::max::A_CANT, 0);
                                       return {};
 }
 }
@@ -106,7 +105,7 @@ void resetReceiver() {
   rtpreceiver->init();
 }
 static long setOutChans(void* obj, long outletindex) {
-    auto chs = max::object_attr_getlong(obj, max::gensym("channels"));
+    auto chs = c74::max::object_attr_getlong(obj, c74::max::gensym("channels"));
   return chs;
 }
 }

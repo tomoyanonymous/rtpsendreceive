@@ -3,10 +3,11 @@
 // Copyright 2020 Tomoya Matsuura All rights Reserved.
 // This source code is released under LGPL lisence.
 #include "rtpsender.hpp"
+#include "rtpreceiver.hpp"
 
 #include <cmath>
 
-#include "c74_min_unittest.h"  // required unit test header
+#include "catch.hpp"  // required unit test header
 
 class testSineWave {
  public:
@@ -51,25 +52,27 @@ int64_t testSeek(void *ptr, int64_t pos, int whence) {
   return sinewave->pos;
 }
 
-TEST_CASE("instance is correctly created") {
-  testSineWave sinewave;
-  RtpSender sender(128,48000, 1,"127.0.0.1",30000,&testReadPacket, nullptr, (void *)(&sinewave));
+TEST_CASE("RTP sender instance") {
+  // testSineWave sinewave;
+  RtpSender sender(128,48000, 1,"127.0.0.1",30000);
   try {
     sender.init();
+    std::exit(EXIT_SUCCESS);
   } catch (std::exception &err) {
     std::cerr << err.what() << "\n";
     std::exit(EXIT_FAILURE);
   }
- 
-    // check that default attr values are correct
-    // REQUIRE((my_object.greeting == symbol("hello world")));
-    // now proceed to testing various sequences of events
-      // my_object.bang();
-      try {
-        sender.start();
-      } catch (std::exception &err) {
-        std::cerr << err.what() << "\n";
-        exit(9);
-      }
-        // REQUIRE((output.size() == 1));
+
+  }
+TEST_CASE("RTP receiver instance") {
+  // testSineWave sinewave;
+  RtpReceiver receiver(128,48000, 1,"127.0.0.1",30000);
+  try {
+    receiver.init();
+    std::exit(EXIT_SUCCESS);
+  } catch (std::exception &err) {
+    std::cerr << err.what() << "\n";
+    std::exit(EXIT_FAILURE);
+  }
+
   }

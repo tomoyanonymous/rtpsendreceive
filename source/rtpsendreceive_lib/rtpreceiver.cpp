@@ -81,6 +81,7 @@ void RtpReceiver::setSource(std::string& ad, int po) {
 }
 
 void RtpReceiver::play(){
+
   av_read_play(input_format_ctx);
 }
 void RtpReceiver::pause(){
@@ -103,17 +104,10 @@ double RtpReceiver::readBuffer(int pos, int channel_idx){
 void RtpReceiver::receiveData() {
   av_init_packet(packet);
   auto ret = av_read_frame(input_format_ctx, packet);
-  packet->pts = av_rescale_q_rnd(packet->pts, instream->time_base,
-                                 outstream->time_base, AV_ROUND_PASS_MINMAX);
-  packet->dts = av_rescale_q_rnd(packet->dts, instream->time_base,
-                                 outstream->time_base, AV_ROUND_PASS_MINMAX);
-  packet->duration =
-      av_rescale_q(packet->duration, instream->time_base, outstream->time_base);
-  packet->pos = -1;
-
   av_packet_rescale_ts(packet, instream->time_base, outstream->time_base);
+  packet->pos = -1;
   auto res= av_interleaved_write_frame(output_format_ctx, packet);
-
+  
   av_packet_unref(packet);
 }
 

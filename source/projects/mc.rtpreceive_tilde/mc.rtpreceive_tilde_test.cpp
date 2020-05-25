@@ -1,34 +1,34 @@
 /// @file
 ///	@ingroup 	minexamples
-///	@copyright	Copyright 2018 The Min-DevKit Authors. All rights reserved.
-///	@license	Use of this source code is governed by the MIT License found in the License.md file.
+///	@copyright	Copyright 2018 The Min-DevKit Authors. All rights
+/// reserved.
+///	@license	Use of this source code is governed by the MIT License
+/// found in the License.md file.
+#include "c74_min_unittest.h"  // required unit test header
 
-#include "c74_min_unittest.h"     // required unit test header
-#include "mc.rtpreceive_tilde.cpp"    // need the source of our object so that we can access it
+#include "mc.rtpreceive_tilde.cpp"  // need the source of our object so that we can access it
 
-// Unit tests are written using the Catch framework as described at
-// https://github.com/philsquared/Catch/blob/master/docs/tutorial.md
+//Instantiation of mc.rtpreceive~ requires calling Max API directly, which is not available in min-unittest framework currently
 
-SCENARIO("object produces correct output") {
-    ext_main(nullptr);    // every unit test must call ext_main() once to configure the class
+// SCENARIO("object produces correct output") {
+//   ext_main(nullptr);  // every unit test must call ext_main() once to configure
+//                       // the class
 
-    GIVEN("An instance of our object") {
+//   GIVEN("An instance of our object") {
+//     test_wrapper<rtpreceive_tilde> an_instance;
+//     rtpreceive_tilde& my_object = an_instance;
+//     // check that default attr values are correct
+//     // REQUIRE((my_object.greeting == symbol("hello world")));
 
-        test_wrapper<hello_world> an_instance;
-        hello_world&              my_object = an_instance;
+//     // now proceed to testing various sequences of events
+//     WHEN("toggle 1 is received") {
+//       my_object.toggle(1);
 
-        // check that default attr values are correct
-        REQUIRE((my_object.greeting == symbol("hello world")));
-
-        // now proceed to testing various sequences of events
-        WHEN("a 'bang' is received") {
-            my_object.bang();
-            THEN("our greeting is produced at the outlet") {
-                auto& output = *c74::max::object_getoutput(my_object, 0);
-                REQUIRE((output.size() == 1));
-                REQUIRE((output[0].size() == 1));
-                REQUIRE((output[0][0] == symbol("hello world")));
-            }
-        }
-    }
-}
+//       THEN("internal play flag is activated") {
+//         c74::max::t_atom_long attr =
+//             c74::max::object_attr_getlong(my_object.maxobj(), symbol("play"));
+//         REQUIRE(attr == 1);
+//       }
+//     }
+//   }
+// }
