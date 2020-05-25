@@ -4,6 +4,9 @@ project(Rtpsendreceive)
 string(REGEX REPLACE "(.*)/" "" THIS_PACKAGE_NAME "${CMAKE_CURRENT_SOURCE_DIR}")
 
 
+set (CMAKE_CXX_STANDARD 17)
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
+
 if (${CMAKE_GENERATOR} MATCHES "Xcode")
          if (${XCODE_VERSION} VERSION_LESS 10)
               message(STATUS "Xcode 10 or higher is required. Please install from the Mac App Store.")
