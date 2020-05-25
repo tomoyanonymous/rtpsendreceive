@@ -7,7 +7,7 @@
 
 #include <cmath>
 
-#include "catch.hpp"  // required unit test header
+#include "c74_min_unittest.h"  // required unit test header
 
 class testSineWave {
  public:
