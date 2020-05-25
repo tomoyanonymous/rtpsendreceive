@@ -25,7 +25,7 @@ matrix:
 before_script:
   - git clone https://git.ffmpeg.org/ffmpeg.git /tmp/ffmpeg
   - pushd /tmp/ffmpeg
-  - ./configure --prefix=/usr/local  --disable-avfoundation --disable-iconv --disable-filters --disable-devices --disable-shared --enable-static  --disable-optimizations  --disable-mmx --disable-audiotoolbox --disable-videotoolbox --disable-stripping   --disable-appkit --disable-zlib --disable-coreimage  --disable-bzlib --disable-securetransport --disable-sdl2 --disable-encoder=opus --disable-decoder=opus  --pkg-config-flags=--static --cc=clang --cxx=clang++
+  - ./configure --prefix=/usr/local  --disable-avfoundation --disable-iconv --disable-filters --disable-devices --disable-shared --enable-static  --disable-optimizations  --disable-mmx --disable-audiotoolbox --disable-videotoolbox --disable-stripping   --disable-appkit --disable-zlib --disable-coreimage  --disable-bzlib --disable-securetransport --disable-sdl2 --disable-encoder=opus --disable-decoder=opus --disable-lzma --pkg-config-flags=--static --cc=clang --cxx=clang++
   - make -j
   - sudo make install
   - popd
