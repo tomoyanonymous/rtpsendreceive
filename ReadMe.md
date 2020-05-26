@@ -12,35 +12,40 @@ Currently number of channels are fixed by an attribute "channels", an auto-adapt
 
 A codec is also fixed to Linear PCM 16bit(Big Endian).
 
-
-
-## Prerequisites
-
-You can use the objects provided in this package as-is.
-
-
-To code your own objects, or to re-compile existing objects, you will need a compiler:
-
-* On the Mac this means **Xcode 9 or later** (you can get from the App Store for free). 
-* On Windows this means **Visual Studio 2017** (you can download a free version from Microsoft). The installer for Visual Studio 2017 offers an option to install Git, which you should choose to do.
-
-You will also need the Min-DevKit, available from the Package Manager inside of Max or [directly from Github](https://github.com/Cycling74/min-devkit).
-
 ### ffmpeg
 
-This object uses ffmpeg(libav) as its backend. To link it statically, you need to prepare static-library version of ffmpeg. Most of 3rd-party libraries are disabled in configuration.
+The objects use ffmpeg(libav) as its backend. To link it statically, you need to prepare static-library version of ffmpeg. Most of 3rd-party libraries are disabled in configuration.
 
 ```bash
 
 git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg && cd ffmpeg
 
-./configure --prefix={enter installation path}  --disable-avfoundation --disable-iconv --disable-filters --disable-devices --disable-shared --enable-static  --disable-optimizations  --disable-mmx --disable-audiotoolbox --disable-videotoolbox --disable-stripping   --disable-appkit --disable-zlib --disable-coreimage  --disable-bzlib --disable-securetransport --disable-sdl2 --disable-encoder=opus --disable-decoder=opus  --pkg-config-flags=--static --cc=clang --cxx=clang++ 
+./configure --prefix={enter installation path}  --disable-avfoundation --disable-iconv --disable-filters --disable-devices --disable-shared --enable-static  --disable-optimizations --disable-mmx --disable-audiotoolbox --disable-videotoolbox --disable-stripping --disable-appkit --disable-zlib --disable-coreimage  --disable-bzlib --disable-securetransport --disable-sdl2 --disable-encoder=opus --disable-decoder=opus --disable-lzma --pkg-config-flags=--static 
 
 make -j
 
 make install
 
 ```
+
+For those who use homebrew in macOS, specifying installation prefix to `/usr/local/Cellar/ffmpeg/[version_name]_static` is convinient to switch between other version with a command like `brew switch ffmpeg 4.2.2_static`.
+
+### build from source
+
+You need to cmake and C,C++ compiler.
+
+```bash
+
+# make sure to clone all submodules including min-devkit, min-api and Max api.
+git clone https://github.com/tomoyanonymous/rtpsendreceive.git --recursive
+
+cmake .
+
+cmake --build . --target all
+
+```
+
+After build process, copy whole directory into your Max package directory (for macOS, `~/Documents/Max 8/Packages`)if you don't need source anymore, you can delete files other than in `external`,`docs`,`help` directories.
 
 ## License
 
