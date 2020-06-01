@@ -25,7 +25,7 @@ class rtpreceive_tilde : public object<rtpreceive_tilde>, public mc_operator<> {
     m_initialized = true;
   }
 
-  // attribute<symbol> address{this, "address", "127.0.0.1"};
+  attribute<symbol> address{this, "address", "127.0.0.1"};
   attribute<int> port{this, "port", 30000};
   attribute<bool> play{this, "play", false};
   inlet<> input{this, "(int) toggle subscription"};
@@ -95,13 +95,13 @@ std::shared_ptr<RtpReceiver> rtpreceiver{nullptr};
 
 void resetChannel(int channel) {
   rtpreceiver = std::make_shared<RtpReceiver>(vector_size(), samplerate(),
-                                              channel, "127.0.0.1", port.get());
+                                              channel, address.get(), port.get());
   rtpreceiver->init();
 }
 
 void resetReceiver() {
   rtpreceiver = std::make_shared<RtpReceiver>(
-      vector_size(), samplerate(), channels.get(), "127.0.0.1", port);
+      vector_size(), samplerate(), channels.get(), address.get(), port);
   rtpreceiver->init();
 }
 static long setOutChans(void* obj, long outletindex) {

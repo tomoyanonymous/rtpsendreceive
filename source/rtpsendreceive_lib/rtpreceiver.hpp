@@ -1,7 +1,8 @@
 #pragma once
 #include <regex>
-
+#include <chrono>
 #include "rtpsrbase.hpp"
+
 struct SdpOpaque {
   using Vector = std::vector<uint8_t>;
   Vector data;
@@ -35,11 +36,14 @@ class RtpReceiver : public RtpSRBase {
   void* userdata_address;
   AVIOContext* sdp_ioctx;
   uint8_t* sdpio_buffer;
-
+  char* ts_string;
   uint8_t* avio_buffer;
+  std::chrono::time_point<std::chrono::system_clock> clock;
+
   std::vector<int16_t> avio_vector;
   std::string sdp_content;
   void makeDummySdp();
   static int writePacketSelf(void* userdata, uint8_t* avio_buf, int buf_size);
   static int readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size);
+  static int checkTimeout(void* opaque);
 };

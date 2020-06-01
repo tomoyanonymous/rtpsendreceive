@@ -180,20 +180,20 @@
 								"loop" : 1,
 								"content_state" : 								{
 									"quality" : [ "basic" ],
-									"play" : [ 0 ],
-									"timestretch" : [ 0 ],
-									"pitchshift" : [ 1.0 ],
-									"followglobaltempo" : [ 0 ],
+									"originallength" : [ 0.0, "ticks" ],
+									"pitchcorrection" : [ 0 ],
+									"basictuning" : [ 440 ],
 									"mode" : [ "basic" ],
+									"play" : [ 0 ],
+									"pitchshift" : [ 1.0 ],
+									"timestretch" : [ 0 ],
+									"followglobaltempo" : [ 0 ],
 									"formant" : [ 1.0 ],
 									"formantcorrection" : [ 0 ],
-									"originaltempo" : [ 120.0 ],
 									"slurtime" : [ 0.0 ],
-									"pitchcorrection" : [ 0 ],
-									"originallengthms" : [ 0.0 ],
-									"basictuning" : [ 440 ],
 									"speed" : [ 1.0 ],
-									"originallength" : [ 0.0, "ticks" ]
+									"originaltempo" : [ 120.0 ],
+									"originallengthms" : [ 0.0 ]
 								}
 
 							}
@@ -219,20 +219,20 @@
 								"loop" : 1,
 								"content_state" : 								{
 									"quality" : [ "basic" ],
-									"play" : [ 0 ],
-									"timestretch" : [ 0 ],
-									"pitchshift" : [ 1.0 ],
-									"followglobaltempo" : [ 0 ],
+									"originallength" : [ 0.0, "ticks" ],
+									"pitchcorrection" : [ 0 ],
+									"basictuning" : [ 440 ],
 									"mode" : [ "basic" ],
+									"play" : [ 0 ],
+									"pitchshift" : [ 1.0 ],
+									"timestretch" : [ 0 ],
+									"followglobaltempo" : [ 0 ],
 									"formant" : [ 1.0 ],
 									"formantcorrection" : [ 0 ],
-									"originaltempo" : [ 120.0 ],
 									"slurtime" : [ 0.0 ],
-									"pitchcorrection" : [ 0 ],
-									"originallengthms" : [ 0.0 ],
-									"basictuning" : [ 440 ],
 									"speed" : [ 1.0 ],
-									"originallength" : [ 0.0, "ticks" ]
+									"originaltempo" : [ 120.0 ],
+									"originallengthms" : [ 0.0 ]
 								}
 
 							}
@@ -311,13 +311,12 @@
 , 			{
 				"box" : 				{
 					"id" : "obj-4",
-					"linecount" : 2,
 					"maxclass" : "newobj",
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "multichannelsignal" ],
-					"patching_rect" : [ 418.0, 195.0, 201.0, 35.0 ],
-					"text" : "mc.rtpreceive~ @channels 2 @port 30000"
+					"patching_rect" : [ 418.0, 195.0, 346.0, 22.0 ],
+					"text" : "mc.rtpreceive~ @address 127.0.0.1 @channels 2 @port 30000"
 				}
 
 			}
@@ -483,8 +482,8 @@
 			}
  ],
 		"parameters" : 		{
-			"obj-9" : [ "mc.live.gain~[1]", "mc.live.gain~", 0 ],
 			"obj-7" : [ "mc.live.gain~", "mc.live.gain~", 0 ],
+			"obj-9" : [ "mc.live.gain~[1]", "mc.live.gain~", 0 ],
 			"parameterbanks" : 			{
 
 			}

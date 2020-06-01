@@ -14,6 +14,8 @@ RtpReceiver::RtpReceiver(int framesize, int samplerate, int channels,
   if (userdata == nullptr) {
     userdata_address = reinterpret_cast<void*>(this);
   }
+  ts_string  = (char*)av_malloc(AV_TS_MAX_STRING_SIZE);
+  
   // todo
 }
 RtpReceiver::~RtpReceiver() {
@@ -26,10 +28,8 @@ RtpReceiver::~RtpReceiver() {
   delete opaque;
   input_format_ctx->pb->opaque =nullptr;
   avformat_close_input(&input_format_ctx);
-
   avio_close(sdp_ioctx);
   av_free(avio_buffer);
-
 }
 
 void RtpReceiver::initInputFormat() {
@@ -46,9 +46,16 @@ void RtpReceiver::initInputFormat() {
   sdp_ioctx = avio_alloc_context(sdpio_buffer, bufsize, 0, opaque, readDummySdp,
                                  nullptr, nullptr);
   input_format_ctx->pb = sdp_ioctx;
+  input_format_ctx->flags |= AVFMT_FLAG_NONBLOCK;
+  input_format_ctx->interrupt_callback.opaque = this;
+  input_format_ctx->interrupt_callback.callback = checkTimeout;
+
   auto infmt = av_find_input_format("sdp");
+  AVDictionary* opts = NULL;
+
   int inputres =
-      avformat_open_input(&input_format_ctx, "internal.sdp", infmt, nullptr);
+      avformat_open_input(&input_format_ctx, "internal.sdp", infmt, &opts);
+
   if (inputres < 0) {
     dumpAvError(inputres);
   }
@@ -102,12 +109,18 @@ double RtpReceiver::readBuffer(int pos, int channel_idx){
 
 
 void RtpReceiver::receiveData() {
+ clock = std::chrono::system_clock::now();
   av_init_packet(packet);
   auto ret = av_read_frame(input_format_ctx, packet);
+  if(ret<0){
+    dumpAvError(ret);
+  }
   av_packet_rescale_ts(packet, instream->time_base, outstream->time_base);
   packet->pos = -1;
+    // avcodec_send_packet(codecctx_dec , packet);
+  // av_ts_make_string(ts_string,frame->pts);
+  // std::cerr << "Timestamp: " << ts_string <<"\n";
   auto res= av_interleaved_write_frame(output_format_ctx, packet);
-  
   av_packet_unref(packet);
 }
 
@@ -139,9 +152,9 @@ void RtpReceiver::makeDummySdp() {
 
   sdp_content = R"(SDP:
 v=0
-o=- 0 0 IN IP4 127.0.0.1
+o=- 0 0 IN IP4 $address$
 s=DUMMY SDP
-c=IN IP4 127.0.0.1
+c=IN IP4 $address$
 t=0 0
 a=tool:libavformat 58.29.100
 m=audio $port$ RTP/AVP 97
@@ -149,6 +162,7 @@ b=AS:$bitrate$
 a=rtpmap:97 L16/$samplerate$/$channels$)";
   std::vector<std::pair<std::string, std::string>> replace_pairs = {
       {"\\$port\\$", std::to_string(port)},
+      {"\\$address\\$", address},
       {"\\$channels\\$", std::to_string(channels)},
       {"\\$bitrate\\$", std::to_string((samplerate / 1000) * 16 * channels)},
       {"\\$samplerate\\$", std::to_string(samplerate)}};
@@ -156,4 +170,15 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
     sdp_content =
         std::regex_replace(sdp_content, std::regex(pair.first), pair.second);
   });
+
+
+}  
+int RtpReceiver::checkTimeout(void* opaque){
+    auto receiver = reinterpret_cast<RtpReceiver*>(opaque);
+    auto now = std::chrono::system_clock::now();
+    std::chrono::duration<double>  diff = now - receiver->clock;
+    double sec = diff.count();
+    double timeout = (double)receiver->framesize/(double)receiver->samplerate*4;
+    auto res =  ( sec>timeout)? 1: 0;
+    return res;
 }
