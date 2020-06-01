@@ -55,7 +55,7 @@ message<> toggle{this, "int", "toggle play and pause",
 bool state = num > 0;
 bool changed = state != play;
 if (changed && state) {
-  rtpreceiver->play();
+  resetReceiver();
 }
 if (changed && (!state)) {
   rtpreceiver->pause();

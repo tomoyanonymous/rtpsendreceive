@@ -15,7 +15,8 @@ RtpReceiver::RtpReceiver(int framesize, int samplerate, int channels,
     userdata_address = reinterpret_cast<void*>(this);
   }
   ts_string  = (char*)av_malloc(AV_TS_MAX_STRING_SIZE);
-  
+  TO = new TimeoutOpaque();
+  TO->timeout = (double)framesize/(double)samplerate;
   // todo
 }
 RtpReceiver::~RtpReceiver() {
@@ -26,6 +27,7 @@ RtpReceiver::~RtpReceiver() {
   }
   auto opaque = static_cast<SdpOpaque*>(input_format_ctx->pb->opaque);
   delete opaque;
+  delete TO;
   input_format_ctx->pb->opaque =nullptr;
   avformat_close_input(&input_format_ctx);
   avio_close(sdp_ioctx);
@@ -47,7 +49,7 @@ void RtpReceiver::initInputFormat() {
                                  nullptr, nullptr);
   input_format_ctx->pb = sdp_ioctx;
   input_format_ctx->flags |= AVFMT_FLAG_NONBLOCK;
-  input_format_ctx->interrupt_callback.opaque = this;
+  input_format_ctx->interrupt_callback.opaque = TO;
   input_format_ctx->interrupt_callback.callback = checkTimeout;
 
   auto infmt = av_find_input_format("sdp");
@@ -88,7 +90,6 @@ void RtpReceiver::setSource(std::string& ad, int po) {
 }
 
 void RtpReceiver::play(){
-
   av_read_play(input_format_ctx);
 }
 void RtpReceiver::pause(){
@@ -109,8 +110,9 @@ double RtpReceiver::readBuffer(int pos, int channel_idx){
 
 
 void RtpReceiver::receiveData() {
- clock = std::chrono::system_clock::now();
   av_init_packet(packet);
+   TO->clock=std::chrono::system_clock::now();
+
   auto ret = av_read_frame(input_format_ctx, packet);
   if(ret<0){
     dumpAvError(ret);
@@ -121,6 +123,9 @@ void RtpReceiver::receiveData() {
   // av_ts_make_string(ts_string,frame->pts);
   // std::cerr << "Timestamp: " << ts_string <<"\n";
   auto res= av_interleaved_write_frame(output_format_ctx, packet);
+  if(res<0){
+    dumpAvError(ret);
+  }
   av_packet_unref(packet);
 }
 
@@ -174,11 +179,14 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 
 }  
 int RtpReceiver::checkTimeout(void* opaque){
-    auto receiver = reinterpret_cast<RtpReceiver*>(opaque);
+    const auto to= reinterpret_cast<TimeoutOpaque*>(opaque);
     auto now = std::chrono::system_clock::now();
-    std::chrono::duration<double>  diff = now - receiver->clock;
+    std::chrono::duration<double>  diff = now - to->clock;
     double sec = diff.count();
-    double timeout = (double)receiver->framesize/(double)receiver->samplerate*4;
-    auto res =  ( sec>timeout)? 1: 0;
+
+    auto res =  ( sec>to->timeout)? 1: 0;
+    if(res){
+      auto timeout = "timeout!";
+    }
     return res;
 }

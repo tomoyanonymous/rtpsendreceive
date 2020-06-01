@@ -8,6 +8,10 @@ struct SdpOpaque {
   Vector data;
   Vector::iterator pos;
 };
+struct TimeoutOpaque{
+  double timeout;
+  std::chrono::time_point<std::chrono::system_clock> clock;
+};
 
 class RtpReceiver : public RtpSRBase {
  public:
@@ -39,10 +43,13 @@ class RtpReceiver : public RtpSRBase {
   char* ts_string;
   uint8_t* avio_buffer;
   std::chrono::time_point<std::chrono::system_clock> clock;
-
+  TimeoutOpaque* TO;
   std::vector<int16_t> avio_vector;
   std::string sdp_content;
   void makeDummySdp();
+  int sampleRate(){return samplerate;}
+  int frameSize(){return framesize;}
+  auto getClock(){return clock;}
   static int writePacketSelf(void* userdata, uint8_t* avio_buf, int buf_size);
   static int readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size);
   static int checkTimeout(void* opaque);
