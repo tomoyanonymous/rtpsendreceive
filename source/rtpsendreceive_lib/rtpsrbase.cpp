@@ -36,6 +36,7 @@ void RtpSRBase::init() {
   packet = av_packet_alloc();
 
   frame = av_frame_alloc();
+  frame->nb_samples=framesize;
   initFormatCtx();
   initDecoder();
   initEncoder();

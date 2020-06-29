@@ -1,6 +1,5 @@
 #include "rtpsender.hpp"
 
-
 RtpSender::RtpSender(int framesize, int samplerate, int channels,
                      std::string address, int port,
                      rtpsr::readfn_type callback_read,
@@ -32,7 +31,7 @@ void RtpSender::initFormatCtx() {
   avio_buffer = (uint8_t*)av_malloc(bufsize);
   avioctx = avio_alloc_context(avio_buffer, bufsize, 0, userdata_address,
                                callback_read, nullptr, callback_seek);
-  avioctx->direct=1;          
+  avioctx->direct = 1;
   // Determine the input-format:
   AVProbeData probe_data{"", avio_buffer, 512, "audio/L16"};
   input_format_ctx = avformat_alloc_context();
@@ -41,20 +40,19 @@ void RtpSender::initFormatCtx() {
   // input_format_ctx->iformat = av_probe_input_format(&probe_data, 1);
   input_format_ctx->iformat = iformat.get();
   input_format_ctx->iformat->flags |= AVFMT_NOFILE;
-  AVDictionary *options = NULL;
+  AVDictionary* options = NULL;
   av_dict_set(&options, "samplerate", std::to_string(samplerate).c_str(), 0);
   av_dict_set(&options, "", "rgb24", 0);
 
-  // int inputres = avformat_open_input(&input_format_ctx, "", nullptr, nullptr);
-  // if (inputres < 0) {
-    // dumpAvError(inputres);
+  // int inputres = avformat_open_input(&input_format_ctx, "", nullptr,
+  // nullptr); if (inputres < 0) { dumpAvError(inputres);
   // }
   // output
   std::string destination = "rtp://" + address + ":" + std::to_string(port);
   fmt_output = av_guess_format("rtp", destination.c_str(), "audio/L16");
   fmt_output->mime_type = "audio/L16";
   fmt_output->audio_codec = AV_CODEC_ID_PCM_S16BE;
-    fmt_output->data_codec = AV_CODEC_ID_PCM_S16BE;
+  fmt_output->data_codec = AV_CODEC_ID_PCM_S16BE;
   output_format_ctx = avformat_alloc_context();
   auto res =
       avio_open(&output_format_ctx->pb, destination.c_str(), AVIO_FLAG_WRITE);
@@ -68,7 +66,7 @@ void RtpSender::initFormatCtx() {
   std::char_traits<char>::copy(url, destination.c_str(),
                                destination.size() + 1);
   output_format_ctx->url = url;
-  delete[] url;
+  // delete[] url;
   av_new_packet(packet, bufsize);
 }
 
@@ -83,43 +81,45 @@ void RtpSender::writeBuffer(double sample, int pos, int channel_idx) {
 
 void RtpSender::sendData() {
   read_flag = true;
-  remain=framesize;
+  remain = framesize;
   int64_t offset = 0;
-  while(read_flag){
-  av_init_packet(packet);
-  auto ret = av_read_frame(input_format_ctx, packet);
-  remain = timecount - (packet->pts + framesize);
-  read_offset = framesize - remain;
-  // auto decoderes = decode();
-  // auto encoderes = encode();
-        auto itb = instream->time_base;
+  int fill_res = avcodec_fill_audio_frame(
+      frame, channels, AV_SAMPLE_FMT_S16, getBufferPtr(),
+      framesize * channels * sizeof(rtpsr::sample_t), 0);
+      frame->pts = timecount;
+      timecount+=framesize;
+  int res = avcodec_send_frame(codecctx_enc, frame);
+  while (read_flag) {
+    av_init_packet(packet);
+    int res = avcodec_receive_packet(codecctx_enc, packet);
+    if (res == AVERROR(EAGAIN)) {
+      read_flag = false;  // frame is fully flushed, finish sending
+    } else {
+      // remain = timecount - (packet->pts + framesize);
+      // read_offset = framesize - remain;
+      auto itb = instream->time_base;
       auto otb = outstream->time_base;
-      packet->pts =
-          av_rescale_q_rnd(packet->pts, itb, otb, AV_ROUND_PASS_MINMAX);
-      packet->dts =
-          av_rescale_q_rnd(packet->dts, itb, otb, AV_ROUND_PASS_MINMAX);
-      packet->duration = av_rescale_q(packet->duration, itb, otb);
+      av_packet_rescale_ts(packet, itb, otb);
       packet->pos = -1;
       av_interleaved_write_frame(output_format_ctx, packet);
-      av_packet_unref(packet);
+    }
+    av_packet_unref(packet);
   }
 }
 
 int RtpSender::readPacketSelf(void* userdata, uint8_t* avio_buf, int buf_size) {
   auto* sender = reinterpret_cast<RtpSender*>(userdata);
-  auto* address = sender->getBufferPtr(); 
+  auto* address = sender->getBufferPtr();
   int8_t offset = getBytesFromSamples(sender->read_offset, sender->channels);
   int remain_bytes = getBytesFromSamples(sender->remain, sender->channels);
-  int read_size = std::min(buf_size,remain_bytes);
-  memcpy(avio_buf, address+offset, read_size);
-  if(read_size-remain_bytes==0){//finished reading in this term
+  int read_size = std::min(buf_size, remain_bytes);
+  memcpy(avio_buf, address + offset, read_size);
+  if (read_size - remain_bytes == 0) {  // finished reading in this term
     sender->read_flag = false;
   }
   return read_size;
 }
-void RtpSender::incrementTime(int64_t count){
-  timecount+=count;
-}
+void RtpSender::incrementTime(int64_t count) { timecount += count; }
 // test function
 
 void RtpSender::start() {

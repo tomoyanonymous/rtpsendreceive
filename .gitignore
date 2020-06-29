@@ -17,6 +17,8 @@ tmp
 .vscode/
 
 test_patch/*.mxo
+.dsp_cache
+
 
 package-info.json
 

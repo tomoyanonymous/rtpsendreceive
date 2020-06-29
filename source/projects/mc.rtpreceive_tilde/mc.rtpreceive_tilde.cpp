@@ -5,8 +5,8 @@
 ///	@license	Use of this source code is governed by the MIT License
 /// found in the License.md file.
 
-#include "rtpreceiver.hpp"
 #include "c74_min.h"
+#include "rtpreceiver.hpp"
 
 using namespace c74::min;
 
@@ -28,6 +28,7 @@ class rtpreceive_tilde : public object<rtpreceive_tilde>, public mc_operator<> {
   attribute<symbol> address{this, "address", "127.0.0.1"};
   attribute<int> port{this, "port", 30000};
   attribute<bool> play{this, "play", false};
+
   inlet<> input{this, "(int) toggle subscription"};
   outlet<> m_output{this, "(multichannelsignal) received output",
                     "multichannelsignal"};
@@ -40,13 +41,14 @@ class rtpreceive_tilde : public object<rtpreceive_tilde>, public mc_operator<> {
 }
 }
 ;
+
 // post to max window == but only when the class is loaded the first time
 message<> maxclass_setup{this, "maxclass_setup",
-                         MIN_FUNCTION{
-    const auto ns = c74::max::gensym("box");
-    auto c = c74::max::class_findbyname(ns, c74::max::gensym("mc.rtpreceive~"));
-    c74::max::class_addmethod(c,(c74::max::method)setOutChans,"multichanneloutputs",c74::max::A_CANT, 0);
-                                      return {};
+                         MIN_FUNCTION{const auto ns = c74::max::gensym("box");
+auto c = c74::max::class_findbyname(ns, c74::max::gensym("mc.rtpreceive~"));
+c74::max::class_addmethod(c, (c74::max::method)setOutChans,
+                          "multichanneloutputs", c74::max::A_CANT, 0);
+return {};
 }
 }
 ;
@@ -55,7 +57,7 @@ message<> toggle{this, "int", "toggle play and pause",
 bool state = num > 0;
 bool changed = state != play;
 if (changed && state) {
-  resetReceiver();
+  resetReceiver(vector_size());
 }
 if (changed && (!state)) {
   rtpreceiver->pause();
@@ -65,12 +67,16 @@ return {};
 }
 }
 ;
-message<> setup{this, "setup", MIN_FUNCTION{resetReceiver();
+message<> setup{this, "setup", MIN_FUNCTION{
+  double newvecsize = args[1];
+  resetReceiver(newvecsize);
 return {};
 }
 }
 ;
-message<> dspsetup{this, "dspsetup", MIN_FUNCTION{resetReceiver();
+message<> dspsetup{this, "dspsetup", MIN_FUNCTION{
+    double newvecsize = args[1];
+  resetReceiver(newvecsize);
 return {};
 }
 }
@@ -92,20 +98,21 @@ void operator()(audio_bundle input, audio_bundle output) {
 
 private:
 std::shared_ptr<RtpReceiver> rtpreceiver{nullptr};
-
+double frame_size = vector_size();
 void resetChannel(int channel) {
-  rtpreceiver = std::make_shared<RtpReceiver>(vector_size(), samplerate(),
-                                              channel, address.get(), port.get());
+  rtpreceiver = std::make_shared<RtpReceiver>(
+     frame_size, samplerate(), channel, address.get(), port.get());
   rtpreceiver->init();
 }
 
-void resetReceiver() {
+void resetReceiver(double newvecsize) {
+  frame_size = newvecsize; 
   rtpreceiver = std::make_shared<RtpReceiver>(
-      vector_size(), samplerate(), channels.get(), address.get(), port);
+      newvecsize, samplerate(), channels.get(), address.get(), port);
   rtpreceiver->init();
 }
 static long setOutChans(void* obj, long outletindex) {
-    auto chs = c74::max::object_attr_getlong(obj, c74::max::gensym("channels"));
+  auto chs = c74::max::object_attr_getlong(obj, c74::max::gensym("channels"));
   return chs;
 }
 }

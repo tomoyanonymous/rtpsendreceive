@@ -14,21 +14,21 @@ RtpReceiver::RtpReceiver(int framesize, int samplerate, int channels,
   if (userdata == nullptr) {
     userdata_address = reinterpret_cast<void*>(this);
   }
-  ts_string  = (char*)av_malloc(AV_TS_MAX_STRING_SIZE);
+  ts_string = (char*)av_malloc(AV_TS_MAX_STRING_SIZE);
   TO = new TimeoutOpaque();
-  TO->timeout = (double)framesize/(double)samplerate;
+  TO->timeout = (double)framesize / (double)samplerate * 3;
   // todo
 }
 RtpReceiver::~RtpReceiver() {
   // todo
 
-  if(packet){
-  av_packet_unref(packet);
+  if (packet) {
+    av_packet_unref(packet);
   }
   auto opaque = static_cast<SdpOpaque*>(input_format_ctx->pb->opaque);
   delete opaque;
   delete TO;
-  input_format_ctx->pb->opaque =nullptr;
+  input_format_ctx->pb->opaque = nullptr;
   avformat_close_input(&input_format_ctx);
   avio_close(sdp_ioctx);
   av_free(avio_buffer);
@@ -48,9 +48,9 @@ void RtpReceiver::initInputFormat() {
   sdp_ioctx = avio_alloc_context(sdpio_buffer, bufsize, 0, opaque, readDummySdp,
                                  nullptr, nullptr);
   input_format_ctx->pb = sdp_ioctx;
-  input_format_ctx->flags |= AVFMT_FLAG_NONBLOCK;
-  input_format_ctx->interrupt_callback.opaque = TO;
-  input_format_ctx->interrupt_callback.callback = checkTimeout;
+  // input_format_ctx->flags |= AVFMT_FLAG_NONBLOCK;
+  // input_format_ctx->interrupt_callback.opaque = TO;
+  // input_format_ctx->interrupt_callback.callback = checkTimeout;
 
   auto infmt = av_find_input_format("sdp");
   AVDictionary* opts = NULL;
@@ -61,7 +61,6 @@ void RtpReceiver::initInputFormat() {
   if (inputres < 0) {
     dumpAvError(inputres);
   }
-
 }
 void RtpReceiver::initOutputFormat() {
   avio_buffer = (uint8_t*)av_malloc(bufsize);
@@ -76,7 +75,6 @@ void RtpReceiver::initOutputFormat() {
   fmt_output = av_guess_format("s16be", "", "audio/L16");
   output_format_ctx->oformat = fmt_output;
   av_new_packet(packet, bufsize);
-
 }
 
 void RtpReceiver::initFormatCtx() {
@@ -88,52 +86,60 @@ void RtpReceiver::setSource(std::string& ad, int po) {
   address = ad;
   port = po;
 }
-
-void RtpReceiver::play(){
-  av_read_play(input_format_ctx);
-}
-void RtpReceiver::pause(){
-  av_read_pause(input_format_ctx);
-}
+void RtpReceiver::setTimeout(double to) { TO->timeout = to; }
+void RtpReceiver::play() { av_read_play(input_format_ctx); }
+void RtpReceiver::pause() { av_read_pause(input_format_ctx); }
 
 // void RtpReceiver::writeBuffer(double sample, int pos, int channel_idx) {
 //   buffer[pos * channels + channel_idx] =
 //       static_cast<rtpsr::sample_t>(sample * INT16_MAX);
 // }
 
-
-double RtpReceiver::readBuffer(int pos, int channel_idx){
-  return static_cast<double>(buffer[pos*channels+channel_idx])/INT16_MAX;
+double RtpReceiver::readBuffer(int pos, int channel_idx) {
+  return static_cast<double>(buffer[pos * channels + channel_idx]) / INT16_MAX;
 }
 
-//static functions
-
+// static functions
 
 void RtpReceiver::receiveData() {
+  int read_count=0;
+  bool finish_read=false;
+  while(!finish_read){
   av_init_packet(packet);
-   TO->clock=std::chrono::system_clock::now();
+  TO->clock = std::chrono::system_clock::now();
 
   auto ret = av_read_frame(input_format_ctx, packet);
-  if(ret<0){
+  if (ret < 0) {
     dumpAvError(ret);
   }
   av_packet_rescale_ts(packet, instream->time_base, outstream->time_base);
   packet->pos = -1;
-    // avcodec_send_packet(codecctx_dec , packet);
-  // av_ts_make_string(ts_string,frame->pts);
-  // std::cerr << "Timestamp: " << ts_string <<"\n";
-  auto res= av_interleaved_write_frame(output_format_ctx, packet);
-  if(res<0){
-    dumpAvError(ret);
+  bool readflag = true;
+  while (readflag) {
+    int res = avcodec_send_packet(codecctx_dec, packet);
+    readflag = (res == AVERROR(EAGAIN));
+    int frameres = avcodec_receive_frame(codecctx_dec, frame);
+    readflag = (frameres == AVERROR(EAGAIN));
+    // av_ts_make_string(ts_string,frame->pts);
+    // std::cerr << "Timestamp: " << ts_string <<"\n";
   }
+  int samples = frame->nb_samples;
+  auto frameref = av_frame_get_plane_buffer(frame, 0);
+  uint8_t offset = read_count  * channels * sizeof(rtpsr::sample_t);
+  memcpy(getBufferPtr()+offset, frameref->data,
+         samples * channels * sizeof(rtpsr::sample_t));
+  read_count+=samples;
+  finish_read = (read_count>= framesize);
+
   av_packet_unref(packet);
+  }
 }
 
 int RtpReceiver::writePacketSelf(void* userdata, uint8_t* avio_buf,
                                  int buf_size) {
   auto* receiver = reinterpret_cast<RtpReceiver*>(userdata);
   auto* address = receiver->getBufferPtr();
-  memcpy(address, avio_buf,buf_size);
+  memcpy(address, avio_buf, buf_size);
   return buf_size;
 }
 
@@ -175,18 +181,16 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
     sdp_content =
         std::regex_replace(sdp_content, std::regex(pair.first), pair.second);
   });
+}
+int RtpReceiver::checkTimeout(void* opaque) {
+  const auto to = reinterpret_cast<TimeoutOpaque*>(opaque);
+  auto now = std::chrono::system_clock::now();
+  std::chrono::duration<double> diff = now - to->clock;
+  double sec = diff.count();
 
-
-}  
-int RtpReceiver::checkTimeout(void* opaque){
-    const auto to= reinterpret_cast<TimeoutOpaque*>(opaque);
-    auto now = std::chrono::system_clock::now();
-    std::chrono::duration<double>  diff = now - to->clock;
-    double sec = diff.count();
-
-    auto res =  ( sec>to->timeout)? 1: 0;
-    if(res){
-      auto timeout = "timeout!";
-    }
-    return res;
+  auto res = (sec > to->timeout) ? 1 : 0;
+  if (res) {
+    auto timeout = "timeout!";
+  }
+  return res;
 }

@@ -42,12 +42,14 @@ class rtpsend_tilde : public object<rtpsend_tilde>, public mc_operator<> {
 }
 }
 ;
-message<> setup{this, "setup", MIN_FUNCTION{resetSender();
+message<> setup{this, "setup", MIN_FUNCTION{double newvecsize = args[1];
+resetSender(newvecsize);
 return {};
 }
 }
 ;
-message<> dspsetup{this, "dspsetup", MIN_FUNCTION{resetSender();
+message<> dspsetup{this, "dspsetup", MIN_FUNCTION{double newvecsize = args[1];
+resetSender(newvecsize);
 return {};
 }
 }
@@ -67,10 +69,11 @@ void operator()(audio_bundle input, audio_bundle output) {
 
 private:
 std::unique_ptr<RtpSender> rtpsender;
-void resetSender() {
+void resetSender(double newvecsize) {
   rtpsender.reset();
   std::string address_str(address.get().c_str());
-  rtpsender = std::make_unique<RtpSender>(vector_size(), samplerate(), channels,
+
+  rtpsender = std::make_unique<RtpSender>(newvecsize, samplerate(), channels,
                                           address_str, port);
   rtpsender->init();
 }

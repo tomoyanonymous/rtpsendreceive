@@ -30,6 +30,7 @@ class RtpReceiver : public RtpSRBase {
   double readBuffer(int pos, int channel_idx);
   auto* getBufferPtr() { return reinterpret_cast<uint8_t*>(buffer.data()); }
   void setSource(std::string& ad, int po);
+  void setTimeout(double to);
   void play();
   void pause();
  private:

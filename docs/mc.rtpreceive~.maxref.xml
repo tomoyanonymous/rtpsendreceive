@@ -41,7 +41,7 @@
 
 	<attributelist>
 
-		<attribute name='port' get='1' set='1' type='long' size='1' >
+		<attribute name='channels' get='1' set='1' type='long' size='1' >
 			<digest></digest>
 			<description></description>
 		</attribute>
@@ -51,7 +51,12 @@
 			<description></description>
 		</attribute>
 
-		<attribute name='channels' get='1' set='1' type='long' size='1' >
+		<attribute name='incoming port' get='1' set='1' type='long' size='1' >
+			<digest></digest>
+			<description></description>
+		</attribute>
+
+		<attribute name='sender address' get='1' set='1' type='symbol' size='1' >
 			<digest></digest>
 			<description></description>
 		</attribute>
