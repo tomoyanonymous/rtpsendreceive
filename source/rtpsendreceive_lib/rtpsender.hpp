@@ -12,7 +12,6 @@ class RtpSender : public RtpSRBase {
   ~RtpSender();
   void initFormatCtx() override;
   void sendData();
-  void start();
   void writeBuffer(double sample, int pos, int channel_idx);
   auto* getBufferPtr() { return reinterpret_cast<uint8_t*>(buffer.data()); }
   void setDestination(std::string& ad, int po);
