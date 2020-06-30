@@ -8,49 +8,32 @@
 #include "rtpreceiver.hpp"
 #include "rtpsender.hpp"
 
-class testSineWave {
- public:
-  double phase = 0;
-  int64_t pos = 0;
-  int16_t testcount = 365;
-  static constexpr int bufsize = 2048;
-  size_t buf_size_in_i8;
-  static constexpr double freq = 4400.0;
-  std::array<double, bufsize> buffer;
-  std::array<int16_t, bufsize> ibuffer;
-
-  testSineWave() { buf_size_in_i8 = sizeof(int16_t) * bufsize; }
-  void process(uint8_t *buf) {
-    int count = 0;
-    for (auto &elem : buffer) {
-      phase = std::fmodl(phase + freq * M_PI * 2 / 48000, M_PI * 2);
-      ibuffer[count] = (int16_t)(0.3 * sin(phase) * (double)INT16_MAX);
-      // std::cerr<<phase << " :  "<< ibuffer[count] << "\n";
-      // ibuffer[count] = (testcount % INT16_MAX);
-      // testcount++;
-      count++;
+bool loopback_test(int channels){
+  bool result=false;
+  RtpSender sender(128, 48000, channels, "127.0.0.1", 30000);
+  RtpReceiver receiver(128, 48000, channels, "127.0.0.1", 30000);
+  try {
+    sender.init();
+    receiver.init();
+    auto *writebuf = reinterpret_cast<rtpsr::sample_t *>(sender.getBufferPtr());
+    for (int i = 0; i < 128*channels; i++) {
+      writebuf[i] = i;
     }
-    // std::copy(buffer.begin(), buffer.end(), ibuffer.begin());
-    // av_samples_fill_arrays((uint8_t **)(ibuffer.data())), int *linesize,
-    // const uint8_t *buf, int nb_channels, int nb_samples, enum AVSampleFormat
-    // sample_fmt, int align)
-    memcpy(buf, ibuffer.data(), buf_size_in_i8);
+    sender.sendData();
+    receiver.receiveData();
+    auto *readbuf =
+        reinterpret_cast<rtpsr::sample_t *>(receiver.getBufferPtr());
+    bool cmp_flag=true;
+    for (int i = 0; i < 128*channels; i++) {
+      auto v = readbuf[i];
+      cmp_flag &= (v==i);
+    }
+    result = cmp_flag;
+  } catch (std::exception &err) {
+    std::cerr << err.what() << "\n";
+    std::exit(EXIT_FAILURE);
   }
-};
-int testReadPacket(void *opaque, unsigned char *buf, int buf_size) {
-  auto *sinewave = reinterpret_cast<testSineWave *>(opaque);
-  sinewave->process(buf);
-  return buf_size;
-}
-int64_t testSeek(void *ptr, int64_t pos, int whence) {
-  auto *sinewave = reinterpret_cast<testSineWave *>(ptr);
-
-  if (whence == AVSEEK_SIZE) {
-    return -1;
-  }
-  sinewave->pos += pos;
-
-  return sinewave->pos;
+  return result;
 }
 
 TEST_CASE("RTP sender instance") {
@@ -76,30 +59,11 @@ TEST_CASE("RTP receiver instance") {
   }
 }
 TEST_CASE("Mono loopback test") {
-  RtpSender sender(128, 48000, 1, "127.0.0.1", 30000);
-  RtpReceiver receiver(128, 48000, 1, "127.0.0.1", 30000);
-  std::vector<int16_t> vec;
-  std::iota(vec.begin(), vec.end(), 0);
-  try {
-    sender.init();
-    receiver.init();
-    double writev = 0;
-    auto *writebuf = reinterpret_cast<rtpsr::sample_t *>(sender.getBufferPtr());
-    for (int i = 0; i < 128; i++) {
-      writebuf[i] = i;
-    }
-    sender.sendData();
-    receiver.receiveData();
-    auto *readbuf =
-        reinterpret_cast<rtpsr::sample_t *>(receiver.getBufferPtr());
-    bool cmp_flag=true;
-    for (int i = 0; i < 128; i++) {
-      auto v = readbuf[i];
-      cmp_flag &= (v==i);
-    }
-    REQUIRE(cmp_flag==true);
-  } catch (std::exception &err) {
-    std::cerr << err.what() << "\n";
-    std::exit(EXIT_FAILURE);
-  }
+  REQUIRE(loopback_test(1)==true);
+}
+TEST_CASE("5ch loopback test") {
+  REQUIRE(loopback_test(5)==true);
+}
+TEST_CASE("Multi-packet per frame test") {
+  REQUIRE(loopback_test(6)==true);
 }
