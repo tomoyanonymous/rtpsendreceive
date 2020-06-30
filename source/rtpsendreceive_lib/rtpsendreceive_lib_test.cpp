@@ -19,7 +19,7 @@ bool loopback_test(int channels){
     for (int i = 0; i < 128*channels; i++) {
       writebuf[i] = i;
     }
-    sender.sendData();
+    sender.sendData();//send one frame
     receiver.receiveData();
     auto *readbuf =
         reinterpret_cast<rtpsr::sample_t *>(receiver.getBufferPtr());
@@ -66,4 +66,6 @@ TEST_CASE("5ch loopback test") {
 }
 TEST_CASE("Multi-packet per frame test") {
   REQUIRE(loopback_test(6)==true);
+  REQUIRE(loopback_test(8)==true);
+  REQUIRE(loopback_test(16)==true);
 }
