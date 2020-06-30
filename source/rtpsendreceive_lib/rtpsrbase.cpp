@@ -84,7 +84,7 @@ void RtpSRBase::init() {
   av_sdp_create(&output_format_ctx, 1, testchar.data(), testchar.size());
 
   std::string teststr = testchar.data();
-  std::cout << "----sdp-----\nSDP:\n" << teststr << "---------\n" << std::endl;
+  // std::cout << "----sdp-----\nSDP:\n" << teststr << "---------\n" << std::endl;
 }
 void RtpSRBase::initDecoder() {
   codec_dec = avcodec_find_decoder(AV_CODEC_ID_PCM_S16BE);
