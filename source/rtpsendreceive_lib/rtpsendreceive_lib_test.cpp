@@ -2,18 +2,17 @@
 //  written in C++.
 // Copyright 2020 Tomoya Matsuura All rights Reserved.
 // This source code is released under LGPL lisence.
-#include "rtpsender.hpp"
-#include "rtpreceiver.hpp"
-
 #include <cmath>
 
 #include "c74_min_unittest.h"  // required unit test header
+#include "rtpreceiver.hpp"
+#include "rtpsender.hpp"
 
 class testSineWave {
  public:
   double phase = 0;
   int64_t pos = 0;
-  int16_t testcount=365;
+  int16_t testcount = 365;
   static constexpr int bufsize = 2048;
   size_t buf_size_in_i8;
   static constexpr double freq = 4400.0;
@@ -25,14 +24,16 @@ class testSineWave {
     int count = 0;
     for (auto &elem : buffer) {
       phase = std::fmodl(phase + freq * M_PI * 2 / 48000, M_PI * 2);
-      ibuffer[count] = (int16_t) (0.3* sin(phase) * (double)INT16_MAX);
+      ibuffer[count] = (int16_t)(0.3 * sin(phase) * (double)INT16_MAX);
       // std::cerr<<phase << " :  "<< ibuffer[count] << "\n";
       // ibuffer[count] = (testcount % INT16_MAX);
       // testcount++;
       count++;
     }
     // std::copy(buffer.begin(), buffer.end(), ibuffer.begin());
-    // av_samples_fill_arrays((uint8_t **)(ibuffer.data())), int *linesize, const uint8_t *buf, int nb_channels, int nb_samples, enum AVSampleFormat sample_fmt, int align)
+    // av_samples_fill_arrays((uint8_t **)(ibuffer.data())), int *linesize,
+    // const uint8_t *buf, int nb_channels, int nb_samples, enum AVSampleFormat
+    // sample_fmt, int align)
     memcpy(buf, ibuffer.data(), buf_size_in_i8);
   }
 };
@@ -54,25 +55,51 @@ int64_t testSeek(void *ptr, int64_t pos, int whence) {
 
 TEST_CASE("RTP sender instance") {
   // testSineWave sinewave;
-  RtpSender sender(128,48000, 1,"127.0.0.1",30000);
+  RtpSender sender(128, 48000, 1, "127.0.0.1", 30000);
   try {
     sender.init();
-    std::exit(EXIT_SUCCESS);
+    // std::exit(EXIT_SUCCESS);
   } catch (std::exception &err) {
     std::cerr << err.what() << "\n";
     std::exit(EXIT_FAILURE);
   }
-
-  }
+}
 TEST_CASE("RTP receiver instance") {
   // testSineWave sinewave;
-  RtpReceiver receiver(128,48000, 1,"127.0.0.1",30000);
+  RtpReceiver receiver(128, 48000, 1, "127.0.0.1", 30000);
   try {
     receiver.init();
-    std::exit(EXIT_SUCCESS);
+    // std::exit(EXIT_SUCCESS);
   } catch (std::exception &err) {
     std::cerr << err.what() << "\n";
     std::exit(EXIT_FAILURE);
   }
-
+}
+TEST_CASE("Mono loopback test") {
+  RtpSender sender(128, 48000, 1, "127.0.0.1", 30000);
+  RtpReceiver receiver(128, 48000, 1, "127.0.0.1", 30000);
+  std::vector<int16_t> vec;
+  std::iota(vec.begin(), vec.end(), 0);
+  try {
+    sender.init();
+    receiver.init();
+    double writev = 0;
+    auto *writebuf = reinterpret_cast<rtpsr::sample_t *>(sender.getBufferPtr());
+    for (int i = 0; i < 128; i++) {
+      writebuf[i] = i;
+    }
+    sender.sendData();
+    receiver.receiveData();
+    auto *readbuf =
+        reinterpret_cast<rtpsr::sample_t *>(receiver.getBufferPtr());
+    bool cmp_flag=true;
+    for (int i = 0; i < 128; i++) {
+      auto v = readbuf[i];
+      cmp_flag &= (v==i);
+    }
+    REQUIRE(cmp_flag==true);
+  } catch (std::exception &err) {
+    std::cerr << err.what() << "\n";
+    std::exit(EXIT_FAILURE);
   }
+}
