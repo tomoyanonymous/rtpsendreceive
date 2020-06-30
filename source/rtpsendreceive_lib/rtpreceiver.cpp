@@ -102,36 +102,36 @@ double RtpReceiver::readBuffer(int pos, int channel_idx) {
 // static functions
 
 void RtpReceiver::receiveData() {
-  int read_count=0;
-  bool finish_read=false;
-  while(!finish_read){
-  av_init_packet(packet);
-  TO->clock = std::chrono::system_clock::now();
+  int read_count = 0;
+  bool finish_read = false;
+  while (!finish_read) {
+    av_init_packet(packet);
+    TO->clock = std::chrono::system_clock::now();
 
-  auto ret = av_read_frame(input_format_ctx, packet);
-  if (ret < 0) {
-    dumpAvError(ret);
-  }
-  av_packet_rescale_ts(packet, instream->time_base, outstream->time_base);
-  packet->pos = -1;
-  bool readflag = true;
-  while (readflag) {
-    int res = avcodec_send_packet(codecctx_dec, packet);
-    readflag = (res == AVERROR(EAGAIN));
-    int frameres = avcodec_receive_frame(codecctx_dec, frame);
-    readflag = (frameres == AVERROR(EAGAIN));
-    // av_ts_make_string(ts_string,frame->pts);
-    // std::cerr << "Timestamp: " << ts_string <<"\n";
-  }
-  int samples = frame->nb_samples;
-  auto frameref = av_frame_get_plane_buffer(frame, 0);
-  int offset = read_count  * channels * sizeof(rtpsr::sample_t);
-  memcpy(getBufferPtr()+offset, frameref->data,
-         samples * channels * sizeof(rtpsr::sample_t));
-  read_count+=samples;
-  finish_read = (read_count>= framesize);
+    auto ret = av_read_frame(input_format_ctx, packet);
+    if (ret < 0) {
+      dumpAvError(ret);
+    }
+    av_packet_rescale_ts(packet, instream->time_base, outstream->time_base);
+    packet->pos = -1;
+    bool readflag = true;
+    while (readflag) {
+      int res = avcodec_send_packet(codecctx_dec, packet);
+      readflag = (res == AVERROR(EAGAIN));
+      int frameres = avcodec_receive_frame(codecctx_dec, frame);
+      readflag = (frameres == AVERROR(EAGAIN));
+      // av_ts_make_string(ts_string,frame->pts);
+      // std::cerr << "Timestamp: " << ts_string <<"\n";
+    }
+    int samples = frame->nb_samples;
+    auto frameref = av_frame_get_plane_buffer(frame, 0);
+    int offset = read_count * channels * sizeof(rtpsr::sample_t);
+    memcpy(getBufferPtr() + offset, frameref->data,
+           samples * channels * sizeof(rtpsr::sample_t));
+    read_count += samples;
+    finish_read = (read_count >= framesize);
 
-  av_packet_unref(packet);
+    av_packet_unref(packet);
   }
 }
 

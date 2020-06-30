@@ -16,7 +16,7 @@
 	},
 	"package_extra" : {
 		"reverse_domain" : "com.cycling74",
-		"copyright" : "Copyright (c) 2018 Cycling '74"
+		"copyright" : "Copyright (c) Tomoya Matsuura"
 	},
 	"tags" : [ ],
 	"version" : "@GIT_VERSION_MAJ@.@GIT_VERSION_MIN@.@GIT_VERSION_SUB@",

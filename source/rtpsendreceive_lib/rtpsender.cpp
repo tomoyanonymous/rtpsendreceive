@@ -106,7 +106,12 @@ void RtpSender::sendData() {
     av_packet_unref(packet);
   }
 }
-
+void RtpSender::writeHeader(){
+    auto headerres = avformat_write_header(output_format_ctx,nullptr);
+    if(headerres<0){
+      dumpAvError(headerres);
+    }
+}
 int RtpSender::readPacketSelf(void* userdata, uint8_t* avio_buf, int buf_size) {
   auto* sender = reinterpret_cast<RtpSender*>(userdata);
   auto* address = sender->getBufferPtr();

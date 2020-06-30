@@ -15,6 +15,7 @@ bool loopback_test(int channels){
   try {
     sender.init();
     receiver.init();
+    sender.writeHeader();
     auto *writebuf = reinterpret_cast<rtpsr::sample_t *>(sender.getBufferPtr());
     for (int i = 0; i < 128*channels; i++) {
       writebuf[i] = i;

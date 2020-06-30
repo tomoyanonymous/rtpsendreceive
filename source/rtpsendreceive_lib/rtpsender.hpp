@@ -17,6 +17,7 @@ class RtpSender : public RtpSRBase {
   auto* getBufferPtr() { return reinterpret_cast<uint8_t*>(buffer.data()); }
   void setDestination(std::string& ad, int po);
   void incrementTime(int64_t count);
+  void writeHeader();
  private:
   rtpsr::readfn_type callback_read;
   rtpsr::seekfn_type callback_seek;
