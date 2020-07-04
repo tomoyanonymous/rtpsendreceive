@@ -36,7 +36,7 @@ script:
 - cd build
 - cmake -G Xcode ..
 - cmake --build . --config ${CONFIG} | sed 's/-Wl,-.*//g'
-- ctest -C ${CONFIG} . -V
+# - ctest -C ${CONFIG} . -V
 - cd ..
 - PACKAGE_NAME=`echo $TRAVIS_REPO_SLUG | sed 's/.*\///g'`
 - PACKAGE_REV=`echo $TRAVIS_COMMIT | sed -e 's/^[[:alnum:]]\{7\}/&-/g' | sed 's/-.*//'`
