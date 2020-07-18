@@ -27,5 +27,118 @@
 				// "traceResponse": true
 			}
 		}
+	},
+	"launch":{
+		"version": "0.2.0",
+		"configurations": [
+	
+			{
+				"type": "lldb",
+				"request": "launch",
+				"name": "Sender Debug",
+				"program": "/Applications/Max.app/Contents/MacOS/Max",
+				"args": ["${workspaceFolder}/test_patch/sender_test.maxpat"],
+				"cwd": "${workspaceFolder}",
+				"preLaunchTask": "build before send_debug"
+			},
+			{
+				"type": "lldb",
+				"request": "launch",
+				"name": "Sender Project Debug",
+				"program": "/Applications/Max.app/Contents/MacOS/Max",
+				"args": ["/Users/${USER}/Documents/Max 8/Projects/rtpsender/rtpsender.maxproj"],
+				"cwd": "${workspaceFolder}",
+				"preLaunchTask": "build before send_debug"
+			},
+			{
+				"type": "lldb",
+				"request": "launch",
+				"name": "Receiver Debug",
+				"program": "/Applications/Max.app/Contents/MacOS/Max",
+				"args": ["${workspaceFolder}/test_patch/receiver_test.maxpat"],
+				"cwd": "${workspaceFolder}",
+				"preLaunchTask": "build before receive_debug"
+			}, 
+			{
+				"type": "lldb",
+				"request": "launch",
+				"name": "Receiver Project Debug",
+				"program": "/Applications/Max.app/Contents/MacOS/Max",
+				"args": ["/Users/${USER}/Documents/Max 8/Projects/rtpreceiver/rtpreceiver.maxproj"],
+				"cwd": "${workspaceFolder}",
+				"preLaunchTask": "build before receive_debug"
+			},
+			{
+				"type": "lldb",
+				"request": "launch",
+				"name": "Self-loop Debug",
+				"program": "/Applications/Max.app/Contents/MacOS/Max",
+				"args": ["${workspaceFolder}/test_patch/self_loop_test.maxpat"],
+				"cwd": "${workspaceFolder}"        },     
+			{
+				"name": "cmake default",
+				"type": "lldb",
+				"request": "launch",
+				"program": "${command:cmake.launchTargetPath}",
+				"args": [],
+				"cwd": "${workspaceFolder}"
+			}
+		]
+	},
+	"tasks":{
+		// See https://go.microsoft.com/fwlink/?LinkId=733558
+		// for the documentation about the tasks.json format
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "copy external into project",
+				"type": "shell",
+				"command": "/bin/zsh",
+				"args": [
+					"${workspaceFolder}/copy_externals.sh"
+				],
+				"problemMatcher": []
+			},
+			{
+				"label": "build before send_debug",
+				"type": "shell",
+				"command": "/usr/local/bin/cmake",
+				"args": [
+					"--build",
+					"${workspaceFolder}/build",
+					"--config",
+					"debug",
+					"--target",
+					"mc.rtpsend_tilde",
+					"-j",
+					"18"
+				],
+				"group": {
+					"kind": "build",
+					"isDefault": true
+				},
+				"problemMatcher": []
+			},
+			{
+				"label": "build before receive_debug",
+				"type": "shell",
+				"command": "/usr/local/bin/cmake",
+				"args": [
+					"--build",
+					"${workspaceFolder}/build",
+					"--config",
+					"debug",
+					"--target",
+					"mc.rtpreceive_tilde",
+					"-j",
+					"18"
+				],
+				"group": {
+					"kind": "build",
+					"isDefault": true
+				},
+				"problemMatcher": []
+			}
+		]
 	}
 }
