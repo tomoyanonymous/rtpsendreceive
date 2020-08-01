@@ -46,7 +46,7 @@
 				"request": "launch",
 				"name": "Sender Project Debug",
 				"program": "/Applications/Max.app/Contents/MacOS/Max",
-				"args": ["/Users/${USER}/Documents/Max 8/Projects/rtpsender/rtpsender.maxproj"],
+				"args": ["/Users/${env:USER}/Documents/Max 8/Projects/rtpsender/rtpsender.maxproj"],
 				"cwd": "${workspaceFolder}",
 				"preLaunchTask": "build before send_debug"
 			},
@@ -64,7 +64,7 @@
 				"request": "launch",
 				"name": "Receiver Project Debug",
 				"program": "/Applications/Max.app/Contents/MacOS/Max",
-				"args": ["/Users/${USER}/Documents/Max 8/Projects/rtpreceiver/rtpreceiver.maxproj"],
+				"args": ["/Users/${env:USER}/Documents/Max 8/Projects/rtpreceiver/rtpreceiver.maxproj"],
 				"cwd": "${workspaceFolder}",
 				"preLaunchTask": "build before receive_debug"
 			},

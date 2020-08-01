@@ -86,9 +86,13 @@ void RtpSender::sendData() {
   int fill_res = avcodec_fill_audio_frame(
       frame, channels, AV_SAMPLE_FMT_S16, getBufferPtr(),
       framesize * channels * sizeof(rtpsr::sample_t), 0);
-      frame->pts = timecount;
-      timecount+=framesize;
+  frame->pts = timecount;
+  frame->format = AV_SAMPLE_FMT_S16;
+  frame->channels = channels;
+  frame->channel_layout = codecctx_enc->channel_layout;
+  timecount += framesize;
   int res = avcodec_send_frame(codecctx_enc, frame);
+  if (res < 0) dumpAvError(res);
   while (read_flag) {
     av_init_packet(packet);
     int res = avcodec_receive_packet(codecctx_enc, packet);
@@ -106,11 +110,11 @@ void RtpSender::sendData() {
     av_packet_unref(packet);
   }
 }
-void RtpSender::writeHeader(){
-    auto headerres = avformat_write_header(output_format_ctx,nullptr);
-    if(headerres<0){
-      dumpAvError(headerres);
-    }
+void RtpSender::writeHeader() {
+  auto headerres = avformat_write_header(output_format_ctx, nullptr);
+  if (headerres < 0) {
+    dumpAvError(headerres);
+  }
 }
 int RtpSender::readPacketSelf(void* userdata, uint8_t* avio_buf, int buf_size) {
   auto* sender = reinterpret_cast<RtpSender*>(userdata);
