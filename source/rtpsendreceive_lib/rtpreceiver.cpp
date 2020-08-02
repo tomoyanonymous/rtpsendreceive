@@ -126,7 +126,7 @@ void RtpReceiver::receiveData() {
     int samples = frame->nb_samples;
     auto frameref = av_frame_get_plane_buffer(frame, 0);
     int offset = read_count * channels * sizeof(rtpsr::sample_t);
-    if(frameref){
+    if(frameref!=nullptr){
     memcpy(getBufferPtr() + offset, frameref->data,
            samples * channels * sizeof(rtpsr::sample_t));
     read_count += samples;

@@ -28,7 +28,6 @@ class rtpreceive_tilde : public object<rtpreceive_tilde>, public mc_operator<> {
   attribute<symbol> address{this, "address", "127.0.0.1"};
   attribute<int> port{this, "port", 30000};
   attribute<bool> play{this, "play", false};
-
   inlet<> input{this, "(int) toggle subscription"};
   outlet<> m_output{this, "(multichannelsignal) received output",
                     "multichannelsignal"};
@@ -57,12 +56,13 @@ message<> toggle{this, "int", "toggle play and pause",
 bool state = num > 0;
 bool changed = state != play;
 if (changed && state) {
-  resetReceiver(vector_size());
+  resetReceiver(frame_size);
 }
 if (changed && (!state)) {
   rtpreceiver->pause();
 }
 play = state;
+
 return {};
 }
 }
