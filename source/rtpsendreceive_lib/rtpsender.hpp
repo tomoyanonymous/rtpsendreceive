@@ -31,5 +31,7 @@ class RtpSender : public RtpSRBase {
   int64_t read_offset;
   int64_t remain;
   bool read_flag;
+  void initInputFormat();
+  void initOutputFormat();
   static int readPacketSelf(void* userdata, uint8_t* avio_buf, int buf_size);
 };

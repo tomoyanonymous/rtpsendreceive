@@ -21,6 +21,17 @@ class rtpsend_tilde : public object<rtpsend_tilde>, public mc_operator<> {
   attribute<int, threadsafe::no, limit::clamp> channels{this, "channels", 1,
                                                         range{1, 16}};
   attribute<symbol> address{this, "address", "127.0.0.1"};
+  attribute<symbol> codec{this, "(symbol)codec (\"pcm_s16be, opus\")", "pcm_s16be",setter{
+    MIN_FUNCTION{
+      auto c = rtpsr::getCodecByName(args[0]);
+      if(c==rtpsr::Codec::INVALID){
+        cerr << "Invalid Codec Name.  Using pcm_s16be" << endl;
+        c = rtpsr::Codec::PCM_s16BE;
+      }
+      return args;
+    }
+  }};
+
   attribute<int> port{this, "port", 30000};
 
   inlet<> m_inlet{this, "(multichannelsignal) input to be transmited"};
@@ -69,15 +80,12 @@ void operator()(audio_bundle input, audio_bundle output) {
 
 private:
 std::unique_ptr<RtpSender> rtpsender;
-void resetSender(double newvecsize) {
+void resetSender(double newvecsize, symbol codec = "pcm_s16be") {
   rtpsender.reset();
-  std::string address_str(address.get().c_str());
-
   rtpsender = std::make_unique<RtpSender>(newvecsize, samplerate(), channels,
-                                          address_str, port);
+                                          address.get(), port,
+                                          rtpsr::getCodecByName(codec));
   rtpsender->init();
-}
-}
-;
+}};
 
 MIN_EXTERNAL(rtpsend_tilde);

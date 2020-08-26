@@ -26,7 +26,7 @@ RtpSender::~RtpSender() {
   av_free(avio_buffer);
 }
 
-void RtpSender::initFormatCtx() {
+void RtpSender::initInputFormat() {
   // for audio driver->ffmpeg
   avio_buffer = (uint8_t*)av_malloc(bufsize);
   avioctx = avio_alloc_context(avio_buffer, bufsize, 0, userdata_address,
@@ -44,15 +44,14 @@ void RtpSender::initFormatCtx() {
   av_dict_set(&options, "samplerate", std::to_string(samplerate).c_str(), 0);
   av_dict_set(&options, "", "rgb24", 0);
 
-  // int inputres = avformat_open_input(&input_format_ctx, "", nullptr,
-  // nullptr); if (inputres < 0) { dumpAvError(inputres);
-  // }
+}
+void RtpSender::initOutputFormat(){
   // output
   std::string destination = "rtp://" + address + ":" + std::to_string(port);
   fmt_output = av_guess_format("rtp", destination.c_str(), "audio/L16");
   fmt_output->mime_type = "audio/L16";
-  fmt_output->audio_codec = AV_CODEC_ID_PCM_S16BE;
-  fmt_output->data_codec = AV_CODEC_ID_PCM_S16BE;
+  fmt_output->audio_codec = codecctx_enc->codec_id;
+
   output_format_ctx = avformat_alloc_context();
   auto res =
       avio_open(&output_format_ctx->pb, destination.c_str(), AVIO_FLAG_WRITE);
@@ -60,12 +59,16 @@ void RtpSender::initFormatCtx() {
     dumpAvError(res);
     // std::cerr << "avio open error\n";
   }
-
   output_format_ctx->oformat = fmt_output;
   char* url = new char[destination.size() + 1];
   std::char_traits<char>::copy(url, destination.c_str(),
                                destination.size() + 1);
   output_format_ctx->url = url;
+}
+
+void RtpSender::initFormatCtx() {
+  initInputFormat();
+  initOutputFormat();
   // delete[] url;
   av_new_packet(packet, bufsize);
 }

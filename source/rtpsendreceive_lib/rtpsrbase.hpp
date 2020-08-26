@@ -22,6 +22,7 @@ class RtpSRBase {
   const size_t bufsize; // buffer size in byte
   int framesize;//buffer size for each channels
   rtpsr::Codec codec;
+  int64_t bitrate = 192000; //bitrate for lossy compression 
 
   AVFormatContext* input_format_ctx;
   AVFormatContext* output_format_ctx;

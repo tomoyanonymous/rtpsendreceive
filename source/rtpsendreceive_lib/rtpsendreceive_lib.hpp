@@ -141,8 +141,7 @@ static AVInputFormat ff_pcm_s16_custom_demuxer = {
     .priv_data_size = sizeof(PCMAudioDemuxerContext_C),
     .read_header = pcm_read_header_custom,
     .read_packet = ff_pcm_read_packet_custom,
-    .read_seek = NULL
-    };
+    .read_seek = NULL};
 
 #include <unistd.h>
 
@@ -164,7 +163,7 @@ using buffertype = std::vector<sample_t>;
 using readfn_type = int (*)(void *, uint8_t *, int);
 using seekfn_type = int64_t (*)(void *, int64_t, int);
 
-enum class Codec { PCM_s16BE, OPUS };
+enum class Codec { PCM_s16BE, OPUS, INVALID = -1 };
 
 inline std::string getCodecName(Codec c) {
   switch (c) {
@@ -179,4 +178,13 @@ inline std::string getCodecName(Codec c) {
   }
 }
 
+inline Codec getCodecByName(const std::string &name) {
+  if (name == "pcm_s16be") {
+    return Codec::PCM_s16BE;
+  }
+  if (name == "opus") {
+    return Codec::OPUS;
+  }
+  return Codec::INVALID;
+}
 }  // namespace rtpsr

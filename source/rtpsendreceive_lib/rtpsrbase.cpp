@@ -38,9 +38,9 @@ void RtpSRBase::init() {
 
   frame = av_frame_alloc();
   frame->nb_samples=framesize;
-  initFormatCtx();
   initDecoder();
   initEncoder();
+  initFormatCtx();
   // //  generate global header when the format requires it
   // if (fmt_output->flags & AVFMT_GLOBALHEADER) {
   //   codecctx_enc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -52,7 +52,6 @@ void RtpSRBase::init() {
   instream->time_base = codecctx_enc->time_base;
   codecctx_dec->frame_size=framesize;
   codecctx_enc->frame_size=framesize;
-
   instream->start_time = 0;
   outstream->start_time = 0;
   auto in_setparams =
@@ -92,11 +91,13 @@ void RtpSRBase::initDecoder() {
 
   codecctx_dec = avcodec_alloc_context3(codec_dec);
   initCodecCtx(codecctx_dec, codec_dec, nullptr);
+  codecctx_enc->bit_rate = bitrate;
 }
 void RtpSRBase::initEncoder() {
   codec_enc = avcodec_find_encoder_by_name(rtpsr::getCodecName(codec).c_str());
   codecctx_enc = avcodec_alloc_context3(codec_enc);
   initCodecCtx(codecctx_enc, codec_enc, nullptr);
+  codecctx_enc->bit_rate = bitrate;
 }
 void RtpSRBase::initCodecCtx(AVCodecContext* ctx, AVCodec* codec,
                              AVDictionary* codecoptions) {
@@ -107,7 +108,7 @@ void RtpSRBase::initCodecCtx(AVCodecContext* ctx, AVCodec* codec,
   ctx->sample_rate = samplerate;
   ctx->channels = channels;
   ctx->frame_size = framesize;
-  ctx->sample_fmt = AV_SAMPLE_FMT_S16;
+  ctx->sample_fmt = codec->sample_fmts[0];
   ctx->codec_type = AVMEDIA_TYPE_AUDIO;
   ctx->audio_service_type = AV_AUDIO_SERVICE_TYPE_MAIN;
   auto layout = av_get_default_channel_layout(channels);
@@ -145,11 +146,7 @@ int RtpSRBase::encode() {
     } else {
       auto itb = instream->time_base;
       auto otb = outstream->time_base;
-      output_packet->pts =
-          av_rescale_q_rnd(output_packet->pts, itb, otb, AV_ROUND_PASS_MINMAX);
-      output_packet->dts =
-          av_rescale_q_rnd(output_packet->dts, itb, otb, AV_ROUND_PASS_MINMAX);
-      output_packet->duration = av_rescale_q(output_packet->duration, itb, otb);
+      av_packet_rescale_ts(output_packet, itb, otb);
       output_packet->pos = -1;
       av_interleaved_write_frame(output_format_ctx, output_packet);
       av_packet_unref(packet);
