@@ -17,7 +17,7 @@ add_definitions(
 add_executable(${TEST_NAME} ${TEST_NAME}.cpp)
 set_property(TARGET ${TEST_NAME} PROPERTY CXX_STANDARD 17)
 set_property(TARGET ${TEST_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
-message(STATUS "test!!!!${FFMPEG_LIBRARIES}")
+
 
 target_link_libraries(${TEST_NAME} PUBLIC "mock_kernel" rtpsendreceive)
 

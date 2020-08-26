@@ -35,15 +35,17 @@ else()
   # in the FIND_PATH() and FIND_LIBRARY() calls
   find_package(PkgConfig)
   if(PKG_CONFIG_FOUND)
-    pkg_search_module(_FFMPEG_AVCODEC /usr/local/Cellar/ffmpeg/4.2.2_2debug/lib/pkgconfig/libavcodec.pc libavcodec)
-    pkg_search_module(_FFMPEG_AVFORMAT /usr/local/Cellar/ffmpeg/4.2.2_2debug/lib/pkgconfig/libavformat.pc libavformat)
-    pkg_search_module(_FFMPEG_AVUTIL /usr/local/Cellar/ffmpeg/4.2.2_2debug/lib/pkgconfig/libavutil.pc libavutil)
+    pkg_search_module(_FFMPEG_AVCODEC /usr/local/opt/ffmpeg/lib/pkgconfig/libavcodec.pc libavcodec)
+    pkg_search_module(_FFMPEG_AVFORMAT /usr/local/opt/ffmpeg/lib/pkgconfig/libavformat.pc libavformat)
+    pkg_search_module(_FFMPEG_AVUTIL /usr/local/opt/ffmpeg/lib/pkgconfig/libavutil.pc libavutil)
+    pkg_search_module(_FFMPEG_SWRESAMPLE /usr/local/opt/ffmpeg/lib/pkgconfig/libswresample.pc libswresample)
+
   endif()
 
   find_path(FFMPEG_AVCODEC_INCLUDE_DIR
     NAMES libavcodec/avcodec.h
     PATHS 
-      /usr/local/Cellar/ffmpeg/4.2.2_2debug/include
+      /usr/local/opt/ffmpeg/include
       ${_FFMPEG_AVCODEC_INCLUDE_DIRS}
       /usr/include
       /usr/local/include
@@ -55,7 +57,7 @@ else()
   find_library(FFMPEG_LIBAVCODEC
     NAMES avcodec
     PATHS 
-      /usr/local/Cellar/ffmpeg/4.2.2_2debug/lib
+      /usr/local/opt/ffmpeg/lib
       ${_FFMPEG_AVCODEC_LIBRARY_DIRS}
       /usr/lib
       /usr/local/lib
@@ -66,7 +68,7 @@ else()
   find_library(FFMPEG_LIBAVFORMAT
     NAMES avformat
     PATHS
-      /usr/local/Cellar/ffmpeg/4.2.2_2debug/lib
+      /usr/local/opt/ffmpeg/lib
       ${_FFMPEG_AVFORMAT_LIBRARY_DIRS}
       /usr/lib
       /usr/local/lib
@@ -77,14 +79,24 @@ else()
   find_library(FFMPEG_LIBAVUTIL
     NAMES avutil
     PATHS 
-      /usr/local/Cellar/ffmpeg/4.2.2_2debug/lib
+      /usr/local/opt/ffmpeg/lib
       ${_FFMPEG_AVUTIL_LIBRARY_DIRS}
       /usr/lib
       /usr/local/lib
       /opt/local/lib
       /sw/lib)
 
-  if(FFMPEG_LIBAVCODEC AND FFMPEG_LIBAVFORMAT)
+      find_library(FFMPEG_LIBSWRESAMPLE
+      NAMES swresample
+      PATHS 
+        /usr/local/opt/ffmpeg/lib
+        ${_FFMPEG_AVUTIL_LIBRARY_DIRS}
+        /usr/lib
+        /usr/local/lib
+        /opt/local/lib
+        /sw/lib)
+
+  if(FFMPEG_LIBAVCODEC AND FFMPEG_LIBAVFORMAT AND FFMPEG_LIBAVUTIL AND FFMPEG_LIBSWRESAMPLE)
     set(FFMPEG_FOUND TRUE)
   endif()
 
@@ -93,7 +105,8 @@ else()
     set(FFMPEG_LIBRARIES
       ${FFMPEG_LIBAVCODEC}
       ${FFMPEG_LIBAVFORMAT}
-      ${FFMPEG_LIBAVUTIL})
+      ${FFMPEG_LIBAVUTIL}
+      ${FFMPEG_LIBSWRESAMPLE})
   endif()
 
   if(FFMPEG_FOUND)

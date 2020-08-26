@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
-project(Rtpsendreceive)
+
+project(rtpsendreceive
+        LANGUAGES CXX)
 
 string(REGEX REPLACE "(.*)/" "" THIS_PACKAGE_NAME "${CMAKE_CURRENT_SOURCE_DIR}")
 
@@ -42,7 +44,7 @@ endif ()
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 find_package(FFmpeg 
-COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE 
+COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE SWRESAMPLE
 REQUIRED
 ) #add here the list of ffmpeg components required
 # memo: building barematal ffmpeg for macos
@@ -55,6 +57,15 @@ if(FFMPEG_FOUND)
     message("FFMPEG_LIBRARIES = ${FFMPEG_LIBRARIES} ")
     message("FFMPEG_DEFINITIONS = ${FFMPEG_DEFINITIONS} ")
 endif()
+find_library(OPUS_LIB
+    NAMES libopus.a opus
+	PATHS "/usr/local/opt/opus/lib"
+    NO_DEFAULT_PATH
+    REQUIRED
+    )
+message("OPUS_LIB =${OPUS_LIB}")
+
+set(DEPENDENT_LIBS ${FFMPEG_LIBRARIES} ${OPUS_LIB})
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/source/rtpsendreceive_lib)
 

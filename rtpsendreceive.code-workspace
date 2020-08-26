@@ -15,8 +15,9 @@
 			"-clang-tidy",
 			"-background-index",
 			"-compile-commands-dir=build",
-			"-header-insertion=never"
- 		],
+			"-header-insertion=never",
+			"--query-driver=\"/usr/local/opt/llvm/bin/clang++\""
+		],
 		"cmake.debugConfig": {
 			"stopAtEntry": false,
 			"MIMode": "lldb",
@@ -26,7 +27,8 @@
 				// "engineLogging": true,
 				// "traceResponse": true
 			}
-		}
+		},
+		"clangd.checkUpdates": true
 	},
 	"launch":{
 		"version": "0.2.0",
