@@ -17,7 +17,7 @@ class RtpReceiver : public RtpSRBase {
  public:
   explicit RtpReceiver(int framesize = 128, int samplerate = 48000,
                        int channels = 1, std::string address = "127.0.0.1",
-                       int port = 30000,
+                       int port = 30000,rtpsr::Codec codec=rtpsr::Codec::PCM_s16BE,
                        rtpsr::readfn_type callback_write = writePacketSelf,
                        rtpsr::seekfn_type callback_seek = nullptr,
                        void* userdata = nullptr);

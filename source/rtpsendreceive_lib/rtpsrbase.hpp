@@ -4,7 +4,7 @@
 class RtpSRBase {
  public:
   explicit RtpSRBase(int framesize = 128, int samplerate = 48000,
-            int channels = 1);
+            int channels = 1,rtpsr::Codec codec=rtpsr::Codec::PCM_s16BE);
   ~RtpSRBase();
   virtual void init();
   virtual void initFormatCtx() = 0;
@@ -21,6 +21,8 @@ class RtpSRBase {
   rtpsr::buffertype buffer;
   const size_t bufsize; // buffer size in byte
   int framesize;//buffer size for each channels
+  rtpsr::Codec codec;
+
   AVFormatContext* input_format_ctx;
   AVFormatContext* output_format_ctx;
 

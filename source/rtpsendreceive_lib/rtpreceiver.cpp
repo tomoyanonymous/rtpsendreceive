@@ -1,7 +1,7 @@
 #include "rtpreceiver.hpp"
 
 RtpReceiver::RtpReceiver(int framesize, int samplerate, int channels,
-                         std::string address, int port,
+                         std::string address, int port,rtpsr::Codec codec,
                          rtpsr::readfn_type callback_write,
                          rtpsr::seekfn_type callback_seek, void* userdata)
     : sdp_ioctx(nullptr),
@@ -9,7 +9,7 @@ RtpReceiver::RtpReceiver(int framesize, int samplerate, int channels,
       port(port),
       callback_write(callback_write),
       callback_seek(callback_seek),
-      RtpSRBase(framesize, samplerate, channels),
+      RtpSRBase(framesize, samplerate, channels,codec),
       avio_buffer(nullptr) {
   if (userdata == nullptr) {
     userdata_address = reinterpret_cast<void*>(this);
@@ -147,7 +147,7 @@ int RtpReceiver::writePacketSelf(void* userdata, uint8_t* avio_buf,
 int RtpReceiver::readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size) {
   auto octx = static_cast<SdpOpaque*>(userdata);
   if (octx->pos == octx->data.end()) {
-    return 0;
+    return AVERROR_EOF;
   }
   auto dist = static_cast<int>(std::distance(octx->pos, octx->data.end()));
   auto count = std::min(buf_size, dist);

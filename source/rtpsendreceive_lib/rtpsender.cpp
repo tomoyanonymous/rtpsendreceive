@@ -1,7 +1,7 @@
 #include "rtpsender.hpp"
 
 RtpSender::RtpSender(int framesize, int samplerate, int channels,
-                     std::string address, int port,
+                     std::string address, int port,rtpsr::Codec codec,
                      rtpsr::readfn_type callback_read,
                      rtpsr::seekfn_type callback_seek, void* userdata)
     : rtp_ioctx(nullptr),
@@ -9,7 +9,7 @@ RtpSender::RtpSender(int framesize, int samplerate, int channels,
       port(port),
       callback_read(callback_read),
       callback_seek(callback_seek),
-      RtpSRBase(framesize, samplerate, channels),
+      RtpSRBase(framesize, samplerate, channels,codec),
       avio_buffer(nullptr),
       timecount(0),
       iformat(std::make_unique<AVInputFormat>(ff_pcm_s16_custom_demuxer)) {

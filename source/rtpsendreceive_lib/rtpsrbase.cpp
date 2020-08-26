@@ -1,10 +1,11 @@
 #include "rtpsrbase.hpp"
 
-RtpSRBase::RtpSRBase(int framesize, int samplerate, int channels)
+RtpSRBase::RtpSRBase(int framesize, int samplerate, int channels,rtpsr::Codec codec)
     : framesize(framesize),
       bufsize(sizeof(typeof(int16_t)) * framesize * channels),
       samplerate(samplerate),
       channels(channels),
+      codec(codec),
       input_format_ctx(nullptr),
       output_format_ctx(nullptr),
       fmt_output(nullptr),
@@ -87,12 +88,13 @@ void RtpSRBase::init() {
   // std::cout << "----sdp-----\nSDP:\n" << teststr << "---------\n" << std::endl;
 }
 void RtpSRBase::initDecoder() {
-  codec_dec = avcodec_find_decoder(AV_CODEC_ID_PCM_S16BE);
+  codec_dec =   avcodec_find_decoder_by_name(rtpsr::getCodecName(codec).c_str());
+
   codecctx_dec = avcodec_alloc_context3(codec_dec);
   initCodecCtx(codecctx_dec, codec_dec, nullptr);
 }
 void RtpSRBase::initEncoder() {
-  codec_enc = avcodec_find_encoder(AV_CODEC_ID_PCM_S16BE);
+  codec_enc = avcodec_find_encoder_by_name(rtpsr::getCodecName(codec).c_str());
   codecctx_enc = avcodec_alloc_context3(codec_enc);
   initCodecCtx(codecctx_enc, codec_enc, nullptr);
 }
