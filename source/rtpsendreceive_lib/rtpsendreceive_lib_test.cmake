@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-set(TEST_NAME rtpsendreceive_lib_test)
+set(TEST_NAME rtpsr_classes_test)
 # project(${PROJECT_NAME})
 set(C74_MIN_API_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../min-api)
 
@@ -19,7 +19,7 @@ set_property(TARGET ${TEST_NAME} PROPERTY CXX_STANDARD 17)
 set_property(TARGET ${TEST_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
 
 
-target_link_libraries(${TEST_NAME} PUBLIC "mock_kernel" rtpsendreceive)
+target_link_libraries(${TEST_NAME} PUBLIC "mock_kernel" rtpsr_new)
 
 add_test(NAME ${TEST_NAME}
         COMMAND ${TEST_NAME})

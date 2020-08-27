@@ -16,11 +16,16 @@ include_directories(
 	"${FFMPEG_INCLUDE_DIR}" 
 )
 
-add_library( 
-	rtpsendreceive
-	STATIC
-	rtpsrbase.cpp rtpsender.cpp rtpreceiver.cpp
+# add_library( 
+# 	rtpsendreceive
+# 	STATIC
+# 	rtpsrbase.cpp rtpsender.cpp rtpreceiver.cpp
+# )
+add_library(rtpsr_new
+	STATIC rtpsr_classes.cpp
 )
-target_link_libraries(rtpsendreceive 
-						PUBLIC ${DEPENDENT_LIBS})
+# target_link_libraries(rtpsendreceive 
+# 						PUBLIC ${DEPENDENT_LIBS})
+target_link_libraries(rtpsr_new PUBLIC  ${DEPENDENT_LIBS})
+
 include(rtpsendreceive_lib_test.cmake)

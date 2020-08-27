@@ -15,41 +15,7 @@ void CustomCbInFormat::setBuffer(rtpsr::sample_t sample, int pos, int channel) {
   buffer.at(pos * setting.channels + channel) = sample;
 }
 
-// std::string& RtpInFormat::makeDummySdp() {
-//   std::string sdpcontent = R"(SDP:
-// v=0
-// o=- 0 0 IN IP4 $address$
-// s=DUMMY SDP
-// c=IN IP4 $address$
-// t=0 0
-// a=tool:libavformat 58.29.100
-// m=audio $port$ RTP/AVP 97
-// b=AS:$bitrate$
-// a=rtpmap:97 L16/$samplerate$/$channels$)";
-//   std::vector<std::pair<std::string, std::string>> replace_pairs = {
-//       {"\\$port\\$", std::to_string(port)},
-//       {"\\$address\\$", "127.0.0.1"},
-//       {"\\$channels\\$", std::to_string(setting.channels)},
-//       {"\\$bitrate\\$",
-//        std::to_string((setting.samplerate / 1000) * 16 * setting.channels)},
-//       {"\\$samplerate\\$", std::to_string(setting.samplerate)}};
-//   std::for_each(replace_pairs.begin(), replace_pairs.end(), [&](auto pair) {
-//     dummysdp_content =
-//         std::regex_replace(sdpcontent, std::regex(pair.first), pair.second);
-//   });
-//   return dummysdp_content;
-// }
-// int RtpInFormat::readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size) {
-//   auto octx = static_cast<SdpOpaque*>(userdata);
-//   if (octx->pos == octx->data.end()) {
-//     return AVERROR_EOF;
-//   }
-//   auto dist = static_cast<int>(std::distance(octx->pos, octx->data.end()));
-//   auto count = std::min(buf_size, dist);
-//   std::copy(octx->pos, octx->pos + count, avio_buf);
-//   octx->pos += count;
-//   return count;
-// }
+
 
 int CustomCbOutFormat::writePacket(void* userdata, uint8_t* avio_buf,
                                    int buf_size) {
@@ -59,10 +25,21 @@ int CustomCbOutFormat::writePacket(void* userdata, uint8_t* avio_buf,
   return buf_size;
 }
 rtpsr::sample_t CustomCbOutFormat::getBuffer(int pos, int channel) {
-    return buffer.at(pos*setting.channels+channel);
+  return buffer.at(pos * setting.channels + channel);
 }
 
-bool checkIsErrAgain(int error_code) {
+void RtpSender::setCtxParams(AVDictionary** dict) {
+  checkAvError(
+      av_dict_set(dict, "protocol_whitelist", "file,udp,rtp,tcp,rtsp", 0));
+  checkAvError(av_dict_set(dict, "rtsp_transport", "udp", 0));
+  checkAvError(av_dict_set(dict, "enable-protocol", "rtp", 0));
+  checkAvError(av_dict_set(dict, "enable-protocol", "udp", 0));
+  checkAvError(av_dict_set(dict, "enable-muxer", "rtsp", 0));
+  checkAvError(av_dict_set(dict, "enable-demuxer", "rtsp", 0));
+  checkAvError(av_dict_set(dict, "timeout", "10", 0));
+}
+
+bool CodecBase::checkIsErrAgain(int error_code) {
   if (error_code == AVERROR(EAGAIN)) {
     return true;  // return isempty
   }
@@ -111,7 +88,21 @@ void RtpSender::sendData() {
   }
 }
 
-void RtpReciever::receiveData() {
+void RtpReceiver::setCtxParams(AVDictionary** dict) {
+  checkAvError(
+      av_dict_set(dict, "protocol_whitelist", "file,udp,rtp,tcp,rtsp", 0));
+  checkAvError(av_dict_set(dict, "rtsp_transport", "udp", 0));
+  checkAvError(av_dict_set(dict, "enable-protocol", "rtp", 0));
+  checkAvError(av_dict_set(dict, "enable-protocol", "udp", 0));
+  checkAvError(av_dict_set(dict, "enable-muxer", "rtsp", 0));
+  checkAvError(av_dict_set(dict, "enable-demuxer", "rtsp", 0));
+  checkAvError(
+      av_dict_set_int(dict, "reorder_queue_size", 50000, 0));  // 0.05sec
+  checkAvError(av_dict_set(dict, "rtsp_flags", "listen", 0));
+  checkAvError(av_dict_set(dict, "allowed_media_types", "audio", 0));
+}
+
+void RtpReceiver::receiveData() {
   int read_count = 0;
   bool finish_read = false;
   while (finish_read) {
