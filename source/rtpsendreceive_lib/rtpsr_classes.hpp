@@ -44,6 +44,7 @@ struct InFormat : public IOFormat {
 
 struct CustomCbInFormat : public InFormat, public CustomCbFormat {
   explicit CustomCbInFormat(RtpSRSetting& s) : InFormat(s) {
+    buffer.resize(setting.framesize);
     auto bufsize = getBufSize(s);
     auto* aviobuf = static_cast<uint8_t*>(av_malloc(bufsize));
     auto avioctx = avio_alloc_context(aviobuf, bufsize, 0, this, readPacket,
@@ -54,7 +55,11 @@ struct CustomCbInFormat : public InFormat, public CustomCbFormat {
   ~CustomCbInFormat() {}
 
   static int readPacket(void* userdata, uint8_t* avio_buf, int buf_size);
-  void setBuffer(rtpsr::sample_t sample, int pos, int channel);
+
+  void setBuffer(double sample, int pos, int channel) {
+    buffer.at(pos * setting.channels + channel) =
+        static_cast<rtpsr::sample_t>(sample * INT16_MAX);
+  }
 };
 
 struct SdpOpaque {
@@ -92,6 +97,8 @@ struct OutFormat : public IOFormat {
 
 struct CustomCbOutFormat : public OutFormat, public CustomCbFormat {
   explicit CustomCbOutFormat(RtpSRSetting& s) : OutFormat(s) {
+    buffer.resize(setting.framesize);
+
     auto bufsize = getBufSize(s);
     auto* aviobuf = static_cast<uint8_t*>(av_malloc(bufsize));
     auto* avioctx = avio_alloc_context(aviobuf, bufsize, 1, this, nullptr,
@@ -101,7 +108,18 @@ struct CustomCbOutFormat : public OutFormat, public CustomCbFormat {
   }
   ~CustomCbOutFormat() {}
   static int writePacket(void* userdata, uint8_t* avio_buf, int buf_size);
-  rtpsr::sample_t getBuffer(int pos, int channel);
+  template <typename T>
+  T readBuffer(int pos, int channel) {
+    return static_cast<T>(buffer.at(pos * setting.channels + channel));
+  };
+  template <>
+  rtpsr::sample_t readBuffer(int pos, int channel) {
+    return buffer.at(pos * setting.channels + channel);
+  };
+  template <>
+  double readBuffer(int pos, int channel) {
+      return static_cast<double>(buffer.at(pos * setting.channels + channel))/INT16_MAX;
+  }
 };
 struct RtpOutFormat : public OutFormat {
   RtpOutFormat(Url& url, RtpSRSetting& s) : url(url), OutFormat(s) {
@@ -128,6 +146,8 @@ struct Decoder : public CodecBase {
     ctx->sample_rate = s.samplerate;
     ctx->frame_size = s.framesize;
     ctx->channels = s.channels;
+    ctx->sample_fmt = AV_SAMPLE_FMT_S16;
+    avcodec_open2(ctx, avcodec, nullptr);
   }
   ~Decoder() { avcodec_free_context(&ctx); }
   bool sendPacket(AVPacket* packet);
@@ -141,6 +161,8 @@ struct Encoder : public CodecBase {
     ctx->sample_rate = s.samplerate;
     ctx->frame_size = s.framesize;
     ctx->channels = s.channels;
+    ctx->sample_fmt = AV_SAMPLE_FMT_S16;
+    avcodec_open2(ctx, avcodec, nullptr);
   }
   ~Encoder() { avcodec_free_context(&ctx); }
   bool sendFrame(AVFrame* frame);
@@ -169,7 +191,6 @@ struct RtpSender : public RtpSRBase {
         std::make_shared<CustomCbInFormat>(setting));
     output = std::static_pointer_cast<OutFormat>(
         std::make_shared<RtpOutFormat>(url, setting));
-
     auto* instream = avformat_new_stream(input->ctx, encoder.ctx->codec);
     auto* outstream = avformat_new_stream(output->ctx, encoder.ctx->codec);
     checkAvError(
@@ -180,23 +201,24 @@ struct RtpSender : public RtpSRBase {
     outstream->start_time = 0;
     setCtxParams(&params);
     url_tmp = getSdpUrl(url);
+    char* urlctx = (char*)av_malloc(url_tmp.size() + sizeof(char));
+    av_strlcpy(urlctx, url_tmp.c_str(), url_tmp.size() + sizeof(char));
+    output->ctx->url = urlctx;
     checkAvError(avformat_init_output(output->ctx, &params));
     checkAvError(avio_open(&output->ctx->pb, url_tmp.c_str(), AVIO_FLAG_WRITE));
-    // std::char_traits<char>::copy(ctx->url, dest.c_str(), dest.size() + 1);
-    auto urlc = url_tmp.c_str();
-    std::copy(urlc, urlc + strlen(urlc), output->ctx->url);
     checkAvError(avformat_write_header(output->ctx, nullptr));
   }
   Encoder encoder;
   AVDictionary* params = nullptr;
-  int64_t timecount;
+  int64_t timecount = 0;
   std::string url_tmp;
+
   void sendData();
   static void setCtxParams(AVDictionary** dict);
-
-  auto& getBuffer() {
-    return std::dynamic_pointer_cast<CustomCbInFormat>(input)->buffer;
+  auto& getInput() {
+    return *std::dynamic_pointer_cast<CustomCbInFormat>(input);
   }
+  auto& getBuffer() { return getInput().buffer; }
   auto* getBufPointer() {
     return reinterpret_cast<uint8_t*>(getBuffer().data());
   }
@@ -210,13 +232,13 @@ struct RtpReceiver : public RtpSRBase {
     output = std::static_pointer_cast<OutFormat>(
         std::make_shared<CustomCbOutFormat>(setting));
 
-    auto* infmt = av_find_input_format("rtsp");
+    ifmt = av_find_input_format("rtsp");
     url_tmp = getSdpUrl(url);
 
     setCtxParams(&params);
     input->ctx->max_delay = 1000;
     wait_connection = std::async(std::launch::async, [&]() -> int {
-      int res = avformat_open_input(&input->ctx, url_tmp.c_str(), infmt,
+      int res = avformat_open_input(&input->ctx, url_tmp.c_str(), ifmt,
                                     &params);  // this start blocking...
       auto* instream = avformat_new_stream(input->ctx, decoder.ctx->codec);
       auto* outstream = avformat_new_stream(output->ctx, decoder.ctx->codec);
@@ -225,20 +247,24 @@ struct RtpReceiver : public RtpSRBase {
       checkAvError(
           avcodec_parameters_from_context(outstream->codecpar, decoder.ctx));
       instream->start_time = 0;
-      outstream->start_time = 0; 
+      outstream->start_time = 0;
       return res;
     });
   }
-  ~RtpReceiver() { av_dict_free(&params); }
+  ~RtpReceiver() {
+    //   av_dict_free(&params);
+  }
   Decoder decoder;
   AVDictionary* params = nullptr;
+  AVInputFormat* ifmt;
   std::future<int> wait_connection;
   std::string url_tmp;
   void receiveData();
   void setCtxParams(AVDictionary** dict);
-  auto& getBuffer() {
-    return std::dynamic_pointer_cast<CustomCbOutFormat>(output)->buffer;
+  auto& getOutput() {
+    return *std::dynamic_pointer_cast<CustomCbOutFormat>(output);
   }
+  auto& getBuffer() { return getOutput().buffer; }
   auto* getBufPointer() {
     return reinterpret_cast<uint8_t*>(getBuffer().data());
   }

@@ -11,21 +11,12 @@ int CustomCbInFormat::readPacket(void* userdata, uint8_t* avio_buf,
   return buf_size;
 }
 
-void CustomCbInFormat::setBuffer(rtpsr::sample_t sample, int pos, int channel) {
-  buffer.at(pos * setting.channels + channel) = sample;
-}
-
-
-
 int CustomCbOutFormat::writePacket(void* userdata, uint8_t* avio_buf,
                                    int buf_size) {
   auto* receiver = reinterpret_cast<CustomCbOutFormat*>(userdata);
   auto* address = receiver->buffer.data();
   memcpy(address, avio_buf, buf_size);
   return buf_size;
-}
-rtpsr::sample_t CustomCbOutFormat::getBuffer(int pos, int channel) {
-  return buffer.at(pos * setting.channels + channel);
 }
 
 void RtpSender::setCtxParams(AVDictionary** dict) {
@@ -62,9 +53,10 @@ bool Encoder::receivePacket(AVPacket* packet) {
 }
 
 void RtpSender::sendData() {
-  checkAvError(avcodec_fill_audio_frame(frame, setting.channels,
-                                        AV_SAMPLE_FMT_S16, getBufPointer(),
-                                        getBufSize(setting), 0));
+  //   av_read_frame(input->ctx, packet);
+  checkAvError(avcodec_fill_audio_frame(
+      frame, setting.channels, AV_SAMPLE_FMT_S16, (uint8_t*)getBuffer().data(),
+      getBufSize(setting), 0));
   frame->pts = timecount;
   frame->format = AV_SAMPLE_FMT_S16;
   frame->channels = setting.channels;
@@ -78,10 +70,12 @@ void RtpSender::sendData() {
     if (isempty) {
       read_flag = false;  // frame is fully flushed, finish sending
     } else {
+      packet->pos = -1;
+      packet->stream_index = 0;
+      packet->duration = setting.framesize;
       auto itb = input->ctx->streams[0]->time_base;
       auto otb = output->ctx->streams[0]->time_base;
-      av_packet_rescale_ts(packet, itb, otb);
-      packet->pos = -1;
+      av_packet_rescale_ts(packet, otb, otb);  // maybe unnecessary
       av_interleaved_write_frame(output->ctx, packet);
     }
     av_packet_unref(packet);
@@ -105,7 +99,7 @@ void RtpReceiver::setCtxParams(AVDictionary** dict) {
 void RtpReceiver::receiveData() {
   int read_count = 0;
   bool finish_read = false;
-  while (finish_read) {
+  while (!finish_read) {
     av_init_packet(packet);
     checkAvError(av_read_frame(input->ctx, packet));
     bool readflag = true;
@@ -115,7 +109,8 @@ void RtpReceiver::receiveData() {
     auto frameref = av_frame_get_plane_buffer(frame, 0);
     size_t offset = read_count * setting.channels * sizeof(int16_t);
     for (int i = read_count; i < read_count + samples; i++) {
-      getBuffer().at(i) = reinterpret_cast<int16_t*>(frameref->data)[i];
+      int16_t s = reinterpret_cast<int16_t*>(frameref->data)[i];
+      getBuffer().at(i)=s;
     }
     read_count += samples;
     finish_read = (read_count >= setting.framesize);
