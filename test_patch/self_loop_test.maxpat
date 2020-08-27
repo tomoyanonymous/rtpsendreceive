@@ -3,7 +3,7 @@
 		"fileversion" : 1,
 		"appversion" : 		{
 			"major" : 8,
-			"minor" : 0,
+			"minor" : 1,
 			"revision" : 5,
 			"architecture" : "x64",
 			"modernui" : 1
@@ -37,14 +37,66 @@
 		"tags" : "",
 		"style" : "",
 		"subpatcher_template" : "",
+		"assistshowspatchername" : 0,
 		"boxes" : [ 			{
 				"box" : 				{
+					"id" : "obj-31",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 399.5, 61.0, 57.0, 22.0 ],
+					"text" : "tosymbol"
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-28",
+					"items" : [ "pcm_s16be", ",", "opus" ],
+					"maxclass" : "umenu",
+					"numinlets" : 1,
+					"numoutlets" : 3,
+					"outlettype" : [ "int", "", "" ],
+					"parameter_enable" : 0,
+					"patching_rect" : [ 345.0, 24.0, 128.0, 22.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"attr" : "codec",
+					"id" : "obj-26",
+					"maxclass" : "attrui",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 97.0, 432.0, 150.0, 22.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"attr" : "codec",
+					"id" : "obj-23",
+					"maxclass" : "attrui",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 430.0, 161.0, 150.0, 22.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"basictuning" : 440,
 					"clipheight" : 29.0,
 					"data" : 					{
 						"clips" : [ 							{
 								"absolutepath" : "cello-f2.aif",
 								"filename" : "cello-f2.aif",
 								"filekind" : "audiofile",
+								"id" : "u581000496",
 								"loop" : 1,
 								"content_state" : 								{
 									"play" : [ 0 ],
@@ -61,30 +113,42 @@
 									"formant" : [ 1.0 ],
 									"originaltempo" : [ 120.0 ],
 									"slurtime" : [ 0.0 ],
-									"quality" : [ "basic" ]
+									"quality" : [ "basic" ],
+									"loop" : 1
 								}
 
 							}
  ]
 					}
 ,
+					"followglobaltempo" : 0,
+					"formantcorrection" : 0,
 					"id" : "obj-25",
 					"maxclass" : "playlist~",
+					"mode" : "basic",
 					"numinlets" : 1,
 					"numoutlets" : 5,
+					"originallength" : [ 0.0, "ticks" ],
+					"originaltempo" : 120.0,
 					"outlettype" : [ "signal", "signal", "signal", "", "dictionary" ],
-					"patching_rect" : [ 255.0, 208.0, 63.0, 30.0 ]
+					"parameter_enable" : 0,
+					"patching_rect" : [ 255.0, 208.0, 63.0, 30.0 ],
+					"pitchcorrection" : 0,
+					"quality" : "basic",
+					"timestretch" : [ 0 ]
 				}
 
 			}
 , 			{
 				"box" : 				{
+					"basictuning" : 440,
 					"clipheight" : 29.0,
 					"data" : 					{
 						"clips" : [ 							{
 								"absolutepath" : "eroica.aiff",
 								"filename" : "eroica.aiff",
 								"filekind" : "audiofile",
+								"id" : "u981000501",
 								"loop" : 1,
 								"content_state" : 								{
 									"play" : [ 0 ],
@@ -101,19 +165,29 @@
 									"formant" : [ 1.0 ],
 									"originaltempo" : [ 120.0 ],
 									"slurtime" : [ 0.0 ],
-									"quality" : [ "basic" ]
+									"quality" : [ "basic" ],
+									"loop" : 1
 								}
 
 							}
  ]
 					}
 ,
+					"followglobaltempo" : 0,
+					"formantcorrection" : 0,
 					"id" : "obj-16",
 					"maxclass" : "playlist~",
+					"mode" : "basic",
 					"numinlets" : 1,
 					"numoutlets" : 5,
+					"originallength" : [ 0.0, "ticks" ],
+					"originaltempo" : 120.0,
 					"outlettype" : [ "signal", "signal", "signal", "", "dictionary" ],
-					"patching_rect" : [ 187.0, 208.0, 49.0, 30.0 ]
+					"parameter_enable" : 0,
+					"patching_rect" : [ 187.0, 208.0, 49.0, 30.0 ],
+					"pitchcorrection" : 0,
+					"quality" : "basic",
+					"timestretch" : [ 0 ]
 				}
 
 			}
@@ -188,9 +262,9 @@
 					"patching_rect" : [ 33.0, 318.0, 48.0, 136.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
-							"parameter_mmin" : -70.0,
 							"parameter_longname" : "mc.live.gain~[1]",
 							"parameter_mmax" : 6.0,
+							"parameter_mmin" : -70.0,
 							"parameter_shortname" : "mc.live.gain~",
 							"parameter_type" : 0,
 							"parameter_unitstyle" : 4
@@ -288,12 +362,14 @@
 			}
 , 			{
 				"box" : 				{
+					"basictuning" : 440,
 					"clipheight" : 29.0,
 					"data" : 					{
 						"clips" : [ 							{
 								"absolutepath" : "cherokee.aif",
 								"filename" : "cherokee.aif",
 								"filekind" : "audiofile",
+								"id" : "u208000513",
 								"loop" : 1,
 								"content_state" : 								{
 									"play" : [ 0 ],
@@ -310,29 +386,41 @@
 									"formant" : [ 1.0 ],
 									"originaltempo" : [ 120.0 ],
 									"slurtime" : [ 0.0 ],
-									"quality" : [ "basic" ]
+									"quality" : [ "basic" ],
+									"loop" : 1
 								}
 
 							}
  ]
 					}
 ,
+					"followglobaltempo" : 0,
+					"formantcorrection" : 0,
 					"id" : "obj-15",
 					"maxclass" : "playlist~",
+					"mode" : "basic",
 					"numinlets" : 1,
 					"numoutlets" : 5,
+					"originallength" : [ 0.0, "ticks" ],
+					"originaltempo" : 120.0,
 					"outlettype" : [ "signal", "signal", "signal", "", "dictionary" ],
-					"patching_rect" : [ 116.5, 208.0, 61.0, 30.0 ]
+					"parameter_enable" : 0,
+					"patching_rect" : [ 116.5, 208.0, 61.0, 30.0 ],
+					"pitchcorrection" : 0,
+					"quality" : "basic",
+					"timestretch" : [ 0 ]
 				}
 
 			}
 , 			{
 				"box" : 				{
+					"basictuning" : 440,
 					"data" : 					{
 						"clips" : [ 							{
 								"absolutepath" : "drumLoop.aif",
 								"filename" : "drumLoop.aif",
 								"filekind" : "audiofile",
+								"id" : "u300000518",
 								"loop" : 1,
 								"content_state" : 								{
 									"play" : [ 0 ],
@@ -349,19 +437,29 @@
 									"formant" : [ 1.0 ],
 									"originaltempo" : [ 120.0 ],
 									"slurtime" : [ 0.0 ],
-									"quality" : [ "basic" ]
+									"quality" : [ "basic" ],
+									"loop" : 1
 								}
 
 							}
  ]
 					}
 ,
+					"followglobaltempo" : 0,
+					"formantcorrection" : 0,
 					"id" : "obj-13",
 					"maxclass" : "playlist~",
+					"mode" : "basic",
 					"numinlets" : 1,
 					"numoutlets" : 5,
+					"originallength" : [ 0.0, "ticks" ],
+					"originaltempo" : 120.0,
 					"outlettype" : [ "signal", "signal", "signal", "", "dictionary" ],
-					"patching_rect" : [ 33.0, 208.0, 70.0, 30.0 ]
+					"parameter_enable" : 0,
+					"patching_rect" : [ 33.0, 208.0, 70.0, 30.0 ],
+					"pitchcorrection" : 0,
+					"quality" : "basic",
+					"timestretch" : [ 0 ]
 				}
 
 			}
@@ -400,9 +498,9 @@
 					"patching_rect" : [ 689.0, 275.0, 48.0, 136.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
-							"parameter_mmin" : -70.0,
 							"parameter_longname" : "mc.live.gain~",
 							"parameter_mmax" : 6.0,
+							"parameter_mmin" : -70.0,
 							"parameter_shortname" : "mc.live.gain~",
 							"parameter_type" : 0,
 							"parameter_unitstyle" : 4
@@ -603,6 +701,13 @@
 			}
 , 			{
 				"patchline" : 				{
+					"destination" : [ "obj-4", 0 ],
+					"source" : [ "obj-23", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-19", 0 ],
 					"source" : [ "obj-24", 0 ]
 				}
@@ -612,6 +717,37 @@
 				"patchline" : 				{
 					"destination" : [ "obj-19", 3 ],
 					"source" : [ "obj-25", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-3", 0 ],
+					"source" : [ "obj-26", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-31", 0 ],
+					"source" : [ "obj-28", 1 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-23", 0 ],
+					"order" : 0,
+					"source" : [ "obj-31", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-26", 0 ],
+					"midpoints" : [ 409.0, 417.0, 106.5, 417.0 ],
+					"order" : 1,
+					"source" : [ "obj-31", 0 ]
 				}
 
 			}
@@ -689,7 +825,8 @@
 			"parameterbanks" : 			{
 
 			}
-
+,
+			"inherited_shortname" : 1
 		}
 ,
 		"dependency_cache" : [ 			{

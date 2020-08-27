@@ -26,6 +26,16 @@ class rtpreceive_tilde : public object<rtpreceive_tilde>, public mc_operator<> {
   }
 
   attribute<symbol> address{this, "address", "127.0.0.1"};
+  attribute<symbol> codec{this, "codec", "pcm_s16be",setter{
+    MIN_FUNCTION{
+      auto c = rtpsr::getCodecByName(args[0]);
+      if(c==rtpsr::Codec::INVALID){
+        cerr << "Invalid Codec Name.  Using pcm_s16be" << endl;
+        c = rtpsr::Codec::PCM_s16BE;
+      }
+      return args;
+    }
+  }};
   attribute<int> port{this, "port", 30000};
   attribute<bool> play{this, "play", false};
   inlet<> input{this, "(int) toggle subscription"};
@@ -37,16 +47,7 @@ class rtpreceive_tilde : public object<rtpreceive_tilde>, public mc_operator<> {
         return args;
         }
   }};
-  attribute<symbol> codec{this, "(symbol)codec (\"pcm_s16be, opus\")", "pcm_s16be",setter{
-    MIN_FUNCTION{
-      auto c = rtpsr::getCodecByName(args[0]);
-      if(c==rtpsr::Codec::INVALID){
-        cerr << "Invalid Codec Name.  Using pcm_s16be" << endl;
-        c = rtpsr::Codec::PCM_s16BE;
-      }
-      return args;
-    }
-  }};
+
   // post to max window == but only when the class is loaded the first time
   message<> maxclass_setup{this, "maxclass_setup",MIN_FUNCTION{
     const auto ns = c74::max::gensym("box");
@@ -101,15 +102,17 @@ private:
 std::shared_ptr<RtpReceiver> rtpreceiver{nullptr};
 double frame_size = vector_size();
 void resetChannel(int channel) {
+  symbol c = codec;
   rtpreceiver = std::make_shared<RtpReceiver>(frame_size, samplerate(), channel,
-                                              address, port, codec);
+                                              address.get(), port, rtpsr::getCodecByName(c));
   rtpreceiver->init();
 }
 
 void resetReceiver(double newvecsize) {
   frame_size = newvecsize;
+  symbol c = codec;
   rtpreceiver = std::make_shared<RtpReceiver>(
-      newvecsize, samplerate(), channels, address, port, codec);
+      newvecsize, samplerate(), channels, (symbol&)address, port, rtpsr::getCodecByName(c));
   rtpreceiver->init();
 }
 static long setOutChans(void* obj, long outletindex) {
