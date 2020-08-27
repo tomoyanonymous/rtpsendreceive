@@ -171,11 +171,17 @@ inline std::string getCodecName(Codec c) {
       return "pcm_s16be";
       break;
     case Codec::OPUS:
-      return "opus";
+      return "libopus";
       break;
     default:
       return "";
   }
+}
+inline size_t getCodecDataSize(Codec c) {
+  if (c == Codec::PCM_s16BE) {
+    return sizeof(int16_t);
+  }
+  return sizeof(double);
 }
 
 inline Codec getCodecByName(const std::string &name) {

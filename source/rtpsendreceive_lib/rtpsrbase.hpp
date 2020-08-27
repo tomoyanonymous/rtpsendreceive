@@ -1,6 +1,7 @@
 #pragma once
 #include "rtpsendreceive_lib.hpp"
 
+
 class RtpSRBase {
  public:
   explicit RtpSRBase(int framesize = 128, int samplerate = 48000,
@@ -16,6 +17,9 @@ class RtpSRBase {
  static int getBytesFromSamples(int samples,int chs);
  int decode();
   int encode();
+  auto getCodecSampleFormat(){
+    return (this->codec==rtpsr::Codec::PCM_s16BE)?AV_SAMPLE_FMT_S16:AV_SAMPLE_FMT_DBL;
+  }
   const int samplerate;
   const int channels;
   rtpsr::buffertype buffer;

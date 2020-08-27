@@ -8,10 +8,10 @@
 #include "rtpreceiver.hpp"
 #include "rtpsender.hpp"
 
-bool loopback_test(int channels) {
+bool loopback_test(int channels,rtpsr::Codec codec=rtpsr::Codec::PCM_s16BE) {
   bool result = false;
-  RtpSender sender(128, 48000, channels, "127.0.0.1", 30000);
-  RtpReceiver receiver(128, 48000, channels, "127.0.0.1", 30000);
+  RtpSender sender(128, 48000, channels, "127.0.0.1", 30000,codec);
+  RtpReceiver receiver(128, 48000, channels, "127.0.0.1", 30000,codec);
 
   sender.init();
   receiver.init();
@@ -62,3 +62,5 @@ TEST_CASE("Multi-packet per frame test") {
   REQUIRE(loopback_test(8) == true);
   REQUIRE(loopback_test(16) == true);
 }
+
+TEST_CASE("Opus test") { REQUIRE(loopback_test(1,rtpsr::Codec::OPUS) == true); }

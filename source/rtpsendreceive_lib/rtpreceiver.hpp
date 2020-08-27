@@ -54,4 +54,11 @@ class RtpReceiver : public RtpSRBase {
   static int writePacketSelf(void* userdata, uint8_t* avio_buf, int buf_size);
   static int readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size);
   static int checkTimeout(void* opaque);
+  template <typename T>
+  void copyBufferFromframe(AVBufferRef* frameref, int offset,int size){
+    auto dataptr = reinterpret_cast<T*>(frameref->data);
+    for(int i=offset;i<size;i++){
+    buffer.at(i) = (double)dataptr[i];
+    }
+  }
 };

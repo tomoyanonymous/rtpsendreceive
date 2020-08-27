@@ -91,13 +91,11 @@ void RtpSRBase::initDecoder() {
 
   codecctx_dec = avcodec_alloc_context3(codec_dec);
   initCodecCtx(codecctx_dec, codec_dec, nullptr);
-  codecctx_enc->bit_rate = bitrate;
 }
 void RtpSRBase::initEncoder() {
   codec_enc = avcodec_find_encoder_by_name(rtpsr::getCodecName(codec).c_str());
   codecctx_enc = avcodec_alloc_context3(codec_enc);
   initCodecCtx(codecctx_enc, codec_enc, nullptr);
-  codecctx_enc->bit_rate = bitrate;
 }
 void RtpSRBase::initCodecCtx(AVCodecContext* ctx, AVCodec* codec,
                              AVDictionary* codecoptions) {
@@ -109,6 +107,7 @@ void RtpSRBase::initCodecCtx(AVCodecContext* ctx, AVCodec* codec,
   ctx->channels = channels;
   ctx->frame_size = framesize;
   ctx->sample_fmt = codec->sample_fmts[0];
+  ctx->bit_rate = bitrate;
   ctx->codec_type = AVMEDIA_TYPE_AUDIO;
   ctx->audio_service_type = AV_AUDIO_SERVICE_TYPE_MAIN;
   auto layout = av_get_default_channel_layout(channels);
