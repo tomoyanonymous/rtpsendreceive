@@ -39,3 +39,33 @@ TEST_CASE("RTSP loopback") {
     std::exit(EXIT_FAILURE);
   }
 }
+// TEST_CASE("RTSP Opus loopback") {
+//   try {
+//     //   av_log_set_level(AV_LOG_TRACE);
+//     rtpsr::RtpSRSetting setting = {48000, 1, 256};
+//     rtpsr::Url url = {"127.0.0.1", 30000};
+
+//     rtpsr::RtpReceiver receiver(setting, url, rtpsr::Codec::OPUS);
+//     rtpsr::RtpSender sender(setting, url, rtpsr::Codec::OPUS);
+//     std::vector<double> ref;
+//     for (int i = 0; i < 128; i++) {
+//       auto r = ((double)std::rand() / RAND_MAX) * 2 - 1.0;
+//       ref.emplace_back(r);
+//       sender.getInput().setBuffer(r, i, 0);
+//     }
+//     sender.sendData();
+//     receiver.receiveData();
+//     std::vector<double> answer;
+
+//     for (int i = 0; i < 128; i++) {
+//       answer.emplace_back(receiver.getOutput().readBuffer<double>(i, 0));
+//     }
+
+//     REQUIRE(REQUIRE_VECTOR_APPROX(answer, ref) == true);
+
+//     // std::exit(EXIT_SUCCESS);
+//   } catch (std::exception &err) {
+//     std::cerr << err.what() << "\n";
+//     std::exit(EXIT_FAILURE);
+//   }
+// }

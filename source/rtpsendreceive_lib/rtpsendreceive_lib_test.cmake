@@ -19,7 +19,7 @@ set_property(TARGET ${TEST_NAME} PROPERTY CXX_STANDARD 17)
 set_property(TARGET ${TEST_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
 
 
-target_link_libraries(${TEST_NAME} PUBLIC "mock_kernel" rtpsr_new)
+target_link_libraries(${TEST_NAME} PUBLIC "mock_kernel" rtpsendreceive)
 
 add_test(NAME ${TEST_NAME}
         COMMAND ${TEST_NAME})
