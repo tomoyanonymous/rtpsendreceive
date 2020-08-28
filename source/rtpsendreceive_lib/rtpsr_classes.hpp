@@ -118,7 +118,8 @@ struct CustomCbOutFormat : public OutFormat, public CustomCbFormat {
   };
   template <>
   double readBuffer(int pos, int channel) {
-      return static_cast<double>(buffer.at(pos * setting.channels + channel))/INT16_MAX;
+    return static_cast<double>(buffer.at(pos * setting.channels + channel)) /
+           INT16_MAX;
   }
 };
 struct RtpOutFormat : public OutFormat {
@@ -146,6 +147,7 @@ struct Decoder : public CodecBase {
     ctx->sample_rate = s.samplerate;
     ctx->frame_size = s.framesize;
     ctx->channels = s.channels;
+    ctx->channel_layout = av_get_default_channel_layout(s.channels);
     ctx->sample_fmt = AV_SAMPLE_FMT_S16;
     avcodec_open2(ctx, avcodec, nullptr);
   }
@@ -161,6 +163,7 @@ struct Encoder : public CodecBase {
     ctx->sample_rate = s.samplerate;
     ctx->frame_size = s.framesize;
     ctx->channels = s.channels;
+    ctx->channel_layout = av_get_default_channel_layout(s.channels);
     ctx->sample_fmt = AV_SAMPLE_FMT_S16;
     avcodec_open2(ctx, avcodec, nullptr);
   }
@@ -184,9 +187,13 @@ struct RtpSRBase {
   AVFrame* frame;
 };
 
+struct ConnectionCb{
+    void* opaque=nullptr;
+    std::function<void(void*)> cb=[](void* v){};
+};
 struct RtpSender : public RtpSRBase {
-  explicit RtpSender(RtpSRSetting& s, Url& url, Codec codec)
-      : RtpSRBase(s), encoder(s, codec) {
+  explicit RtpSender(RtpSRSetting& s, Url& url, Codec codec,ConnectionCb cb=ConnectionCb())
+      : RtpSRBase(s), encoder(s, codec),connectioncb(std::move(cb)) {
     input = std::static_pointer_cast<InFormat>(
         std::make_shared<CustomCbInFormat>(setting));
     output = std::static_pointer_cast<OutFormat>(
@@ -205,14 +212,36 @@ struct RtpSender : public RtpSRBase {
     av_strlcpy(urlctx, url_tmp.c_str(), url_tmp.size() + sizeof(char));
     output->ctx->url = urlctx;
     checkAvError(avformat_init_output(output->ctx, &params));
-    checkAvError(avio_open(&output->ctx->pb, url_tmp.c_str(), AVIO_FLAG_WRITE));
-    checkAvError(avformat_write_header(output->ctx, nullptr));
+    checkAvError(avio_open(&output->ctx->pb, urlctx, AVIO_FLAG_WRITE));
+    waitvar = std::async(std::launch::async,[&](){
+    while (true) {
+      int res = avformat_write_header(output->ctx, nullptr);
+      if (res >= 0) {
+        break;
+      }
+      if(res==-61 || res==-22){
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+      }else{
+          checkAvError(res);
+          break;
+      }
+    }
+    connectioncb.cb(connectioncb.opaque);
+    return 1;
+    });
   }
+  ~RtpSender() {
+    if (output->ctx->pb != nullptr) {
+      avio_close(output->ctx->pb);
+    }
+  }
+
   Encoder encoder;
   AVDictionary* params = nullptr;
   int64_t timecount = 0;
   std::string url_tmp;
-
+  ConnectionCb connectioncb;
+  std::future<int> waitvar;
   void sendData();
   static void setCtxParams(AVDictionary** dict);
   auto& getInput() {
@@ -225,8 +254,8 @@ struct RtpSender : public RtpSRBase {
 };
 
 struct RtpReceiver : public RtpSRBase {
-  RtpReceiver(RtpSRSetting& s, Url& url, Codec codec)
-      : RtpSRBase(s), decoder(s, codec) {
+  RtpReceiver(RtpSRSetting& s, Url& url, Codec codec,ConnectionCb cb=ConnectionCb())
+      : RtpSRBase(s), decoder(s, codec),connectioncb(std::move(cb)) {
     input = std::static_pointer_cast<InFormat>(
         std::make_shared<RtpInFormat>(url, setting));
     output = std::static_pointer_cast<OutFormat>(
@@ -248,6 +277,7 @@ struct RtpReceiver : public RtpSRBase {
           avcodec_parameters_from_context(outstream->codecpar, decoder.ctx));
       instream->start_time = 0;
       outstream->start_time = 0;
+    connectioncb.cb(connectioncb.opaque);
       return res;
     });
   }
@@ -257,6 +287,8 @@ struct RtpReceiver : public RtpSRBase {
   Decoder decoder;
   AVDictionary* params = nullptr;
   AVInputFormat* ifmt;
+  ConnectionCb connectioncb;
+
   std::future<int> wait_connection;
   std::string url_tmp;
   void receiveData();

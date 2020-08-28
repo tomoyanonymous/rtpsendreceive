@@ -27,7 +27,7 @@ void RtpSender::setCtxParams(AVDictionary** dict) {
   checkAvError(av_dict_set(dict, "enable-protocol", "udp", 0));
   checkAvError(av_dict_set(dict, "enable-muxer", "rtsp", 0));
   checkAvError(av_dict_set(dict, "enable-demuxer", "rtsp", 0));
-  checkAvError(av_dict_set(dict, "timeout", "10", 0));
+  checkAvError(av_dict_set(dict, "stimeout", "1000000", 0));//wait up to 10 seconds until connect
 }
 
 bool CodecBase::checkIsErrAgain(int error_code) {
@@ -72,7 +72,7 @@ void RtpSender::sendData() {
     } else {
       packet->pos = -1;
       packet->stream_index = 0;
-      packet->duration = setting.framesize;
+    //   packet->duration = setting.framesize;
       auto itb = input->ctx->streams[0]->time_base;
       auto otb = output->ctx->streams[0]->time_base;
       av_packet_rescale_ts(packet, otb, otb);  // maybe unnecessary
