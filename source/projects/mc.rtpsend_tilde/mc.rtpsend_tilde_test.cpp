@@ -2,6 +2,7 @@
 ///	@ingroup 	rtpsendreceive
 ///	@copyright	Copyright 2020 Tomoya Matsuura. All rights reserved.
 ///	@license	Use of this source code is governed by the LGPL License found in the License.md file.
+#define CATCH_CONFIG_NO_CPP17_UNCAUGHT_EXCEPTIONS
 
 #include "c74_min_unittest.h"     // required unit test header
 

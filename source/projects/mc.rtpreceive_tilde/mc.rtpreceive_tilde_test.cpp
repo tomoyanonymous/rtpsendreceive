@@ -4,6 +4,7 @@
 /// reserved.
 ///	@license	Use of this source code is governed by the MIT License
 /// found in the License.md file.
+#define CATCH_CONFIG_NO_CPP17_UNCAUGHT_EXCEPTIONS
 #include "c74_min_unittest.h"  // required unit test header
 
 #include "mc.rtpreceive_tilde.cpp"  // need the source of our object so that we can access it

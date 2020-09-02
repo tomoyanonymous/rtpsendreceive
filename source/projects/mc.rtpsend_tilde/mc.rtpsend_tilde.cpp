@@ -4,7 +4,7 @@
 ///	@license	Use of this source code is governed by the LGPL License
 /// found in the License.md file.
 
-#include <rtpsr_classes.hpp>
+#include <rtpsender.hpp>
 
 #include "c74_max.h"
 #include "c74_min.h"
@@ -56,7 +56,6 @@ message<> maxclass_setup{this, "maxclass_setup",
 }
 ;
 message<> setup{this, "setup", MIN_FUNCTION{double newvecsize = args[1];
-resetSender(newvecsize);
 return {};
 }
 }
@@ -69,13 +68,17 @@ return {};
 ;
 
 void operator()(audio_bundle input, audio_bundle output) {
+  rtpsender->wait_connection.wait_for(std::chrono::seconds(3));
   if (rtpsender != nullptr) {
     int chs = std::min<int>(input.channel_count(), channels.get());
-    for (auto i = 0; i < input.frame_count(); ++i) {
-      for (auto channel = 0; channel < chs; ++channel) {
+    for (auto i = 0; i < input.frame_count(); i++) {
+      for (auto channel = 0; channel < chs; channel++) {
         auto in{input.samples(channel)[i]};
         rtpsender->getInput().setBuffer(in, i, channel);
       }
+    if(i==1023){
+      std::cerr <<"test"<<std::endl;
+    }
     }
     rtpsender->sendData();
   }
@@ -88,16 +91,10 @@ void resetSender(double newvecsize) {
   symbol c = codec;
   rtpsr::RtpSRSetting setting{(int)samplerate(), channels, (int)newvecsize};
   rtpsr::Url url{address.get(), port};
-  rtpsr::ConnectionCb cb{this,[](void* opaque){
-     auto* obj = (rtpsend_tilde*)(opaque);
-                           obj->cout << "RtpSender Connection to "
-                                     << obj->address.get() << ":"
-                                     << std::to_string(obj->port.get())
-                                     << "finished" << c74::min::endl;
-  } };
+
   try {
     rtpsender = std::make_unique<rtpsr::RtpSender>(setting, url,
-                                                   rtpsr::getCodecByName(c),cb);
+                                                   rtpsr::getCodecByName(c),cout);
   } catch (std::exception& e) {
     std::cerr << e.what() << std::endl;
   }

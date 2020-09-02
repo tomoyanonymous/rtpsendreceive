@@ -1,6 +1,37 @@
 #include "rtpreceiver.hpp"
 
 namespace rtpsr{
+  RtpReceiver::RtpReceiver(RtpSRSetting& s, Url& url, Codec codec,std::ostream& logger)
+      : RtpSRBase(s,logger), decoder(s, codec){
+    input = std::static_pointer_cast<InFormat>(
+        std::make_shared<RtpInFormat>(url, setting));
+    output = std::static_pointer_cast<OutFormat>(
+        std::make_shared<CustomCbOutFormat>(setting));
+
+    ifmt = av_find_input_format("rtsp");
+    url_tmp = getSdpUrl(url);
+
+    setCtxParams(&params);
+    input->ctx->max_delay = 1000;
+    wait_connection = std::async(std::launch::async, [&]() -> int {
+      logger << "rtpreceiver started connecting..." << std::endl;
+      int res = avformat_open_input(&input->ctx, url_tmp.c_str(), ifmt,
+                                    &params);  // this start blocking...
+      auto* instream = avformat_new_stream(input->ctx, decoder.ctx->codec);
+      auto* outstream = avformat_new_stream(output->ctx, decoder.ctx->codec);
+      checkAvError(
+          avcodec_parameters_from_context(instream->codecpar, decoder.ctx));
+      checkAvError(
+          avcodec_parameters_from_context(outstream->codecpar, decoder.ctx));
+      instream->start_time = 0;
+      outstream->start_time = 0;
+      logger << "rtpreceiver connected" << std::endl;
+      return res;
+    });
+  }
+  RtpReceiver::~RtpReceiver(){ 
+          logger << "rtpreceiver destructor called" << std::endl;
+  }
   void RtpReceiver::setCtxParams(AVDictionary** dict) {
   checkAvError(
       av_dict_set(dict, "protocol_whitelist", "file,udp,rtp,tcp,rtsp", 0));

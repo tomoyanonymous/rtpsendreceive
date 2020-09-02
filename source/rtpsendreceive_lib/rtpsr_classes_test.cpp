@@ -2,10 +2,11 @@
 //  written in C++.
 // Copyright 2020 Tomoya Matsuura All rights Reserved.
 // This source code is released under LGPL lisence.
-#include "rtpsr_classes.hpp"
+#include "rtpsender.hpp"
+#include "rtpreceiver.hpp"
 
 #include <cmath>
-
+#define CATCH_CONFIG_NO_CPP17_UNCAUGHT_EXCEPTIONS
 #include "c74_min_unittest.h"  // required unit test header
 
 
@@ -17,6 +18,12 @@ TEST_CASE("RTSP loopback") {
 
     rtpsr::RtpReceiver receiver(setting, url, rtpsr::Codec::PCM_s16BE);
     rtpsr::RtpSender sender(setting, url, rtpsr::Codec::PCM_s16BE);
+
+    auto rres = receiver.wait_connection.wait_for(std::chrono::seconds(3));
+    auto sres = sender.wait_connection.wait_for(std::chrono::seconds(3));
+    if(rres ==std::future_status::timeout||sres==std::future_status::timeout){
+      throw std::runtime_error("timeout");
+    }
     std::vector<double> ref;
     for (int i = 0; i < 128; i++) {
       auto r = ((double)std::rand() / RAND_MAX) * 2 - 1.0;
