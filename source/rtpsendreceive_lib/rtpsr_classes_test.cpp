@@ -9,9 +9,8 @@
 #define CATCH_CONFIG_NO_CPP17_UNCAUGHT_EXCEPTIONS
 #include "c74_min_unittest.h"  // required unit test header
 
-
+#include "lockfree_ringbuffer_test.hpp"
 TEST_CASE("RTSP loopback") {
-  try {
     //   av_log_set_level(AV_LOG_TRACE);
     rtpsr::RtpSRSetting setting = {48000, 1, 128};
     rtpsr::Url url = {"127.0.0.1", 30000};
@@ -40,11 +39,6 @@ TEST_CASE("RTSP loopback") {
 
     REQUIRE(REQUIRE_VECTOR_APPROX(answer, ref) == true);
 
-    // std::exit(EXIT_SUCCESS);
-  } catch (std::exception &err) {
-    std::cerr << err.what() << "\n";
-    std::exit(EXIT_FAILURE);
-  }
 }
 // TEST_CASE("RTSP Opus loopback") {
 //   try {
@@ -76,3 +70,4 @@ TEST_CASE("RTSP loopback") {
 //     std::exit(EXIT_FAILURE);
 //   }
 // }
+

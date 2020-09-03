@@ -14,7 +14,7 @@ include_directories(
 add_definitions(
 	-DMIN_TEST
 )
-add_executable(${TEST_NAME} ${TEST_NAME}.cpp)
+add_executable(${TEST_NAME} ${TEST_NAME}.cpp )
 set_property(TARGET ${TEST_NAME} PROPERTY CXX_STANDARD 17)
 set_property(TARGET ${TEST_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
 
