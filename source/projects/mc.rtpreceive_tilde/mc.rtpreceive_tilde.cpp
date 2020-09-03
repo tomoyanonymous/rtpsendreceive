@@ -37,21 +37,30 @@ public:
 }
 }
 ;
-attribute<int>                               port {this, "port", 30000};
-attribute<bool>                              play {this, "play", true};
+attribute<int> port {this, "port", 30000};
+attribute<int> active {this, "active", 0, setter {MIN_FUNCTION {int res = args[0];
+if (m_initialized && rtpreceiver != nullptr) {
+	if (res <= 0) {
+		rtpreceiver->loopstate.active = false;
+	}
+	else {
+		rtpreceiver->loopstate.active = true;
+		rtpreceiver->launchloop();
+	}
+}
+return {};
+}
+}
+}
+;
+
+// attribute<bool>                              play {this, "play", true};
 attribute<int, threadsafe::no, limit::clamp> channels {this, "channels", 1, range {1, 16}};
 inlet<>                                      input {this, "(int) toggle subscription"};
 outlet<>                                     m_output {this, "(multichannelsignal) received output", "multichannelsignal"};
 
 // post to max window == but only when the class is loaded the first time
-message<> maxclass_setup {this, "maxclass_setup", MIN_FUNCTION {const auto ns = c74::max::gensym("box");
-// auto c = c74::max::class_findbyname(ns, c74::max::gensym("mc.rtpreceive~"));
-// c74::max::class_addmethod(c, (c74::max::method)setOutChans,
-//                           "multichanneloutputs", c74::max::A_CANT, 0);
-return {};
-}
-}
-;
+// message<> maxclass_setup {this, "maxclass_setup"};
 message<> toggle {this, "int", "toggle play and pause", MIN_FUNCTION {int num = args[0];
 // bool state = num > 0;
 // bool changed = state != play;
@@ -66,8 +75,9 @@ return {};
 }
 }
 ;
-message<> setup {this, "setup", MIN_FUNCTION {double newvecsize = args[1];
-// resetReceiver(newvecsize);
+message<> setup {this, "maxclass_setup", MIN_FUNCTION {auto thisclass = args[0];
+c74::max::class_addmethod(thisclass, (c74::max::method)setOutChans, "multichanneloutputs", c74::max::A_CANT, 0);
+c74::max::class_addmethod(thisclass, (c74::max::method)setDspState, "dspstate", c74::max::A_CANT, 0);
 return {};
 }
 }
@@ -78,25 +88,30 @@ return {};
 }
 }
 ;
-
+static long setDspState(void* obj, long state) {
+	c74::max::object_attr_setlong(obj, c74::max::gensym("active"), state);
+	return state;
+}
 void operator()(audio_bundle input, audio_bundle output) {
-	rtpreceiver->wait_connection.wait_for(std::chrono::seconds(3));
-	int chs = std::min<int>(output.channel_count(), channels.get());
-	if (play && rtpreceiver != nullptr) {
-		rtpreceiver->receiveData();
-		for (auto i = 0; i < output.frame_count(); ++i) {
-			for (auto channel = 0; channel < chs; ++channel) {
-				output.samples(channel)[i] = rtpreceiver->getOutput().readBuffer<double>(i, channel);
-			}
-		}
-	}
-	else {
+	int  chs     = std::min<int>(output.channel_count(), channels.get());
+	bool readres = rtpreceiver->output_buf.readRange(iarray, iarray.size());
+	if (!readres) {
+		// cerr << "stream underflow detected!" << std::endl;
 		output.clear();
+		return;
+	}
+	for (auto i = 0; i < output.frame_count(); i++) {
+		for (auto channel = 0; channel < chs; channel++) {
+			rtpsr::sample_t s          = iarray[i * chs + channel];
+			double          d          = rtpsr::convertSampleToDouble(s);
+			output.samples(channel)[i] = d;
+		}
 	}
 }
 
 private:
 std::shared_ptr<rtpsr::RtpReceiver> rtpreceiver {nullptr};
+std::vector<rtpsr::sample_t>        iarray;
 double                              frame_size = vector_size();
 void                                resetChannel(int channel) {
     symbol              c = codec;
@@ -106,6 +121,7 @@ void                                resetChannel(int channel) {
 }
 
 void resetReceiver(double newvecsize) {
+	iarray.resize(newvecsize * channels);
 	frame_size            = newvecsize;
 	symbol              c = codec;
 	rtpsr::RtpSRSetting setting {(int)samplerate(), channels, (int)newvecsize};

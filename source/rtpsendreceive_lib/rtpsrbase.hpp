@@ -6,6 +6,11 @@
 
 namespace rtpsr {
 
+struct AsyncLoopState{
+  std::atomic<bool> active = false;
+  std::future<bool> future;
+};
+
 inline void checkAvError(int error_code) {
   if (error_code < 0) {
     char str[4096];
@@ -128,6 +133,7 @@ struct Encoder : public CodecBase {
 
 struct RtpSRBase {
   explicit RtpSRBase(RtpSRSetting& s,std::ostream& logger=std::cerr);
+  ~RtpSRBase();
   RtpSRSetting setting;
   std::shared_ptr<InFormat> input;
   std::shared_ptr<OutFormat> output;

@@ -84,4 +84,8 @@ RtpSRBase::RtpSRBase(RtpSRSetting& s,std::ostream& logger): setting(s),logger(lo
     packet = av_packet_alloc();
     av_new_packet(packet, getBufSize(setting));
   }
+RtpSRBase::~RtpSRBase(){
+  av_frame_free(&frame);
+  av_packet_free(&packet);
+}
 }  // namespace rtpsr

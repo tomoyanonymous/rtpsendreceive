@@ -152,8 +152,20 @@ static AVInputFormat ff_pcm_s16_custom_demuxer = {
 #include <future>
 #include <chrono>
 
+
+#ifndef THREAD_SLEEP
+#define THREAD_SLEEP(s) std::this_thread::sleep_for(std::chrono::seconds(s));
+#endif
+
 namespace rtpsr {
 using sample_t = int16_t;
+
+inline double convertSampleToDouble(sample_t s){
+  return  ((double)s)/INT16_MAX;
+}
+inline sample_t convertDoubleToSample(double d){
+  return (int16_t)(d*INT16_MAX);
+}
 
 struct buffer_data {
   sample_t *ptr;
