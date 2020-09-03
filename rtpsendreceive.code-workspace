@@ -16,7 +16,7 @@
 			"-background-index",
 			"-compile-commands-dir=build",
 			"-header-insertion=never",
-			"--query-driver=\"/usr/local/opt/llvm/bin/clang++\""
+			"--query-driver=\"/usr/bin/clang++\""
 		],
 		"cmake.debugConfig": {
 			"stopAtEntry": false,
