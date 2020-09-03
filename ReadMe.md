@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/tomoyanonymous/rtpsendreceive.svg?branch=master)](https://travis-ci.org/tomoyanonymous/rtpsendreceive)
 
-External objects for Cycling'74 Max to send MSP signal over network using rtp protocol. An modern alternative to netsend~ & netreceive~ objects.
+External objects for Cycling'74 Max to send MSP signal over network using rtp protocol. An modern alternative to legacy `netsend~` & `netreceive~` objects.
 
 
 ![](./screenshot.jpg)
@@ -10,8 +10,7 @@ External objects for Cycling'74 Max to send MSP signal over network using rtp pr
 ## notes & todos
 
 - Currently number of channels are fixed by an attribute "channels", an auto-adaptation depending on input channels is not available due to a limitation of min-api.
-- A codec is fixed to Linear PCM 16bit(Big Endian). For future, FLAC and Opus will be implemented.
-- mc.rtpreceiver~ will cause freeze Max when DSP is started before sender starts streaming (polling packets is blocking function)
+- A codec is fixed to Linear PCM 16bit(Big Endian). For future, Opus will be added.
 
 ## Download
 
@@ -21,13 +20,13 @@ Get latest version from [release](https://github.com/tomoyanonymous/rtpsendrecei
 
 ### ffmpeg
 
-The objects use ffmpeg(libav) as its backend. To link it statically, you need to prepare static-library version of ffmpeg. Most of 3rd-party libraries are disabled in configuration.
+The objects use ffmpeg(libav) as its backend. To link it statically, you need to prepare static-library version of ffmpeg. Most of 3rd-party libraries are disabled in configuration except for Opus.
 
 ```bash
-
+# brew install opus //if you do not have opus
 git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg && cd ffmpeg
 
-./configure --prefix={enter installation path}  --disable-avfoundation --disable-iconv --disable-filters --disable-devices --disable-shared --enable-static  --disable-optimizations --disable-mmx --disable-audiotoolbox --disable-videotoolbox --disable-stripping --disable-appkit --disable-zlib --disable-coreimage  --disable-bzlib --disable-securetransport --disable-sdl2 --disable-encoder=opus --disable-decoder=opus --disable-lzma --pkg-config-flags=--static 
+./configure --prefix={enter installation path}  --disable-avfoundation --disable-iconv --disable-filters --disable-devices --disable-shared --enable-static  --disable-optimizations --disable-mmx --disable-audiotoolbox --disable-videotoolbox --disable-stripping --disable-appkit --disable-zlib --disable-coreimage  --disable-bzlib --disable-securetransport --disable-sdl2  --disable-lzma --enable-libopus --pkg-config-flags=--static --cc=/usr/bin/clang --cxx=/usr/bin/clang++
 
 make -j
 
