@@ -15,8 +15,9 @@ namespace rtpsr {
 		AsyncLoopState   loopstate;
 
 		LockFreeRingbuf<sample_t> output_buf;
-
+    std::vector<int16_t> tmpbuf;
 		std::string url_tmp;
+    std::chrono::duration<double> polling_rate_cache;
 		bool        receiveData();
 		void        receiveLoop();
     AsyncLoopState& launchloop();

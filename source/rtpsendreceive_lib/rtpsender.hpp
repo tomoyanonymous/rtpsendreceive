@@ -7,7 +7,7 @@ namespace rtpsr {
 		explicit RtpSender(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger = std::cerr);
 		~RtpSender() {
 			loopstate.active = false;
-			loopstate.future.wait();
+			// loopstate.future.wait();
 			av_write_trailer(output->ctx);
 			if (output->ctx->pb != nullptr) {
 				avio_close(output->ctx->pb);
@@ -24,10 +24,11 @@ namespace rtpsr {
 		AsyncLoopState   loopstate;
 		// communication entrypoint between max
 		LockFreeRingbuf<sample_t> input_buf;
+		std::vector<sample_t>     framebuf;
 		void                      sendData();
 		void                      sendDataLoop();
 		AsyncLoopState&           launchLoop();
-
+		std::chrono::duration<double> pollingrate  =std::chrono::seconds(setting.framesize / setting.samplerate);
 		static void setCtxParams(AVDictionary** dict);
 		auto&       getInput() {
             return *std::dynamic_pointer_cast<CustomCbInFormat>(input);

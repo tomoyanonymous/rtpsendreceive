@@ -15,6 +15,7 @@ namespace rtpsr {
 		outstream->start_time = 0;
 		setCtxParams(&params);
 		input_buf.resize(frame->nb_samples * s.channels * 2);
+    framebuf.resize(frame->nb_samples * s.channels * 2);
 		url_tmp      = getSdpUrl(url);
 		char* urlctx = (char*)av_malloc(url_tmp.size() + sizeof(char));
 		av_strlcpy(urlctx, url_tmp.c_str(), url_tmp.size() + sizeof(char));
@@ -53,10 +54,10 @@ namespace rtpsr {
 	}
 	bool RtpSender::fillFrame() {
 		size_t   packet_framesize = frame->nb_samples * setting.channels;
-		std::vector<sample_t> framebuf(packet_framesize,0);
 		if (input_buf.getReadMargin() < packet_framesize) {
 			return false;
 		}
+    framebuf.resize(packet_framesize);
 		input_buf.readRange(framebuf, packet_framesize);
 		checkAvError(avcodec_fill_audio_frame(
 			frame, setting.channels, AV_SAMPLE_FMT_S16, (uint8_t*)framebuf.data(), sizeof(sample_t) * packet_framesize, 0));
@@ -64,6 +65,7 @@ namespace rtpsr {
 	}
 	void RtpSender::sendData() {
 		//   av_read_frame(input->ctx, packet);
+    if(wait_connection.valid()){
 		frame->pts            = timecount;
 		frame->format         = AV_SAMPLE_FMT_S16;
 		frame->channels       = setting.channels;
@@ -91,12 +93,13 @@ namespace rtpsr {
 
 			av_packet_unref(packet);
 		}
+    }
 	}
 	void RtpSender::sendDataLoop() {
 		try {
 			while (loopstate.active) {
 				sendData();
-				std::this_thread::sleep_for(0.8 * std::chrono::seconds(setting.framesize / setting.samplerate));
+				std::this_thread::sleep_for(pollingrate);
 			}
 		}
 		catch (std::exception& e) {

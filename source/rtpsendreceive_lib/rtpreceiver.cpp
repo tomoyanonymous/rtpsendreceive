@@ -12,7 +12,9 @@ namespace rtpsr {
 		url_tmp = getSdpUrl(url);
 
 		setCtxParams(&params);
+    tmpbuf.resize(frame->nb_samples * setting.channels * 2);
 		output_buf.resize(frame->nb_samples * setting.channels * 2);
+    polling_rate_cache = std::chrono::seconds(0);
 		input->ctx->max_delay = 1000000;
 		wait_connection       = std::async(std::launch::async, [&]() -> int {
             logger << "rtpreceiver started connecting..." << std::endl;
@@ -63,10 +65,8 @@ namespace rtpsr {
 	bool RtpReceiver::pushToOutput() {
 		auto* frameref = av_frame_get_plane_buffer(frame, 0);
     auto size = frame->nb_samples * setting.channels;
-    std::vector<int16_t> tmpbuf(size,0);
-    for(int i=0;i<size;i++){   
-      tmpbuf.at(i) = reinterpret_cast<int16_t*>(frameref->data)[i];
-    }
+    tmpbuf.resize(size);
+    std::memcpy(tmpbuf.data(),frameref->data, size*sizeof(int16_t));
 		 bool  res  = output_buf.writeRange(tmpbuf, frame->nb_samples * setting.channels);
 		av_packet_unref(packet);
 		return res;
@@ -91,7 +91,10 @@ namespace rtpsr {
 				}
 				writeres = pushToOutput();
         wait:
-				std::this_thread::sleep_for(std::chrono::seconds(frame->nb_samples/setting.samplerate));
+        if(polling_rate_cache.count()<=0.0){
+          polling_rate_cache = std::chrono::seconds(frame->nb_samples/setting.samplerate);
+        }
+				std::this_thread::sleep_for(polling_rate_cache);
 			}
 		}
 		catch (std::exception& e) {

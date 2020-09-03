@@ -489,7 +489,7 @@
 , 			{
 				"box" : 				{
 					"id" : "obj-7",
-					"lastchannelcount" : 4,
+					"lastchannelcount" : 2,
 					"maxclass" : "mc.live.gain~",
 					"numinlets" : 1,
 					"numoutlets" : 4,
@@ -551,7 +551,7 @@
 		"lines" : [ 			{
 				"patchline" : 				{
 					"destination" : [ "obj-1", 1 ],
-					"source" : [ "obj-11", 3 ]
+					"source" : [ "obj-11", 0 ]
 				}
 
 			}

@@ -34,14 +34,15 @@ public:
 		if (getReadMargin() < size) {
 			return false;
 		}
-		size_t target_index        = read_index + size;
+		size_t localread           = read_index;
+		size_t target_index        = localread + size;
 		size_t target_index_ringed = (target_index % buffer.size());
 		if (target_index > buffer.size()) {
-            auto&& iter = std::copy(buffer.begin()+read_index,buffer.end(),res_array.begin());
-            std::copy(buffer.begin(),buffer.begin()+target_index_ringed,iter);
+			auto&& iter = std::copy(buffer.begin() + localread, buffer.end(), res_array.begin());
+			std::copy(buffer.begin(), buffer.begin() + target_index_ringed, iter);
 		}
 		else {
-            std::copy_n(buffer.begin()+read_index,size,res_array.begin());
+			std::copy_n(buffer.begin() + localread, size, res_array.begin());
 		}
 		read_index = target_index_ringed;
 		return true;
@@ -50,30 +51,33 @@ public:
 		if (getWriteMargin() < size) {
 			return false;
 		}
-		size_t target_index        = write_index + size;
+		size_t localwrite          = write_index;
+		size_t target_index        = localwrite + size;
 		size_t target_index_ringed = (target_index % buffer.size());
 		if (target_index > buffer.size()) {
-			size_t writetoend = (buffer.size() - write_index);
-            auto&& iter = std::copy_n(src_array.begin(),buffer.size() - write_index,buffer.begin()+write_index);
-            std::copy_n(src_array.begin()+writetoend,target_index_ringed,buffer.begin());
+			size_t writetoend = (buffer.size() - localwrite);
+			auto&& iter       = std::copy_n(src_array.begin(), buffer.size() - localwrite, buffer.begin() + localwrite);
+			std::copy_n(src_array.begin() + writetoend, target_index_ringed, buffer.begin());
 		}
 		else {
-            std::copy_n(src_array.begin(),size,buffer.begin()+write_index);
+			std::copy_n(src_array.begin(), size, buffer.begin() + localwrite);
 		}
 		write_index = target_index_ringed;
 		return true;
 	}
 	int getReadMargin() {
-        
-        int margin = write_index - read_index;
-        if(margin<0){
-            margin = buffer.size()-(read_index-write_index);
-        }
+		size_t localread = read_index;
+		size_t localwrite = write_index;
+
+		auto margin = localread - localwrite;
+		if (margin < 0) {
+			margin = buffer.size() - (localwrite - localread);
+		}
 		return margin;
 	}
 	int getWriteMargin() {
 
-		return buffer.size()-getReadMargin();
+		return buffer.size() - getReadMargin();
 	}
 
 private:
