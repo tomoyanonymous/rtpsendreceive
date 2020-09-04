@@ -42,6 +42,7 @@ attribute<int> active {this, "active", 0, setter {MIN_FUNCTION {int res = args[0
 if (m_initialized && rtpreceiver != nullptr) {
 	if (res <= 0) {
 		rtpreceiver->loopstate.active = false;
+    rtpreceiver->initloop=false;
 	}
 	else {
 		rtpreceiver->loopstate.active = true;

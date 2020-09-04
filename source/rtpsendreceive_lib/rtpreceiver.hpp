@@ -13,7 +13,7 @@ namespace rtpsr {
 		AVInputFormat*   ifmt;
 		std::future<int> wait_connection;
 		AsyncLoopState   loopstate;
-
+    std::atomic<bool> initloop=true;
 		LockFreeRingbuf<sample_t> output_buf;
     std::vector<int16_t> tmpbuf;
 		std::string url_tmp;
