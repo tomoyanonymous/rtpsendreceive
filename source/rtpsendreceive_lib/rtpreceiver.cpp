@@ -12,21 +12,24 @@ namespace rtpsr {
 		url_tmp = getSdpUrl(url);
 
 		setCtxParams(&params);
-    tmpbuf.resize(frame->nb_samples * setting.channels * 2);
+		tmpbuf.resize(frame->nb_samples * setting.channels * 2);
 		output_buf.resize(frame->nb_samples * setting.channels * 2);
-    polling_rate_cache = std::chrono::seconds(0);
+		polling_rate_cache    = std::chrono::seconds(0);
 		input->ctx->max_delay = 1000000;
+		wait_connection       = std::future<int>();
 		wait_connection       = std::async(std::launch::async, [&]() -> int {
-            logger << "rtpreceiver started connecting..." << std::endl;
             int   res       = avformat_open_input(&input->ctx, url_tmp.c_str(), ifmt,
                 &params);    // this start blocking...
+            if (res >= 0) {
+            logger << "rtpreceiver waiting incoming connection..." << std::endl;
             auto* instream  = avformat_new_stream(input->ctx, decoder.ctx->codec);
             auto* outstream = avformat_new_stream(output->ctx, decoder.ctx->codec);
             checkAvError(avcodec_parameters_from_context(instream->codecpar, decoder.ctx));
             checkAvError(avcodec_parameters_from_context(outstream->codecpar, decoder.ctx));
             instream->start_time  = 0;
             outstream->start_time = 0;
-            logger << "rtpreceiver connected" << std::endl;
+                logger << "rtpreceiver connected" << std::endl;
+            }
             return res;
         });
 	}
@@ -44,7 +47,7 @@ namespace rtpsr {
 		checkAvError(av_dict_set(dict, "enable-protocol", "udp", 0));
 		checkAvError(av_dict_set(dict, "enable-muxer", "rtsp", 0));
 		checkAvError(av_dict_set(dict, "enable-demuxer", "rtsp", 0));
-		checkAvError(av_dict_set_int(dict, "reorder_queue_size", 100000, 0));                              // 0.05sec
+		checkAvError(av_dict_set_int(dict, "reorder_queue_size", 100000, 0));                               // 0.05sec
 		checkAvError(av_dict_set_int(dict, "buffer_size", setting.framesize * setting.channels * 4, 0));    // 0.05sec
 
 		checkAvError(av_dict_set(dict, "rtsp_flags", "listen", 0));
@@ -55,7 +58,7 @@ namespace rtpsr {
 	bool RtpReceiver::receiveData() {
 		av_init_packet(packet);
 		int res = av_read_frame(input->ctx, packet);
-		if (res == -60 || res==AVERROR_EOF) {
+		if (res == -60 || res == AVERROR_EOF) {
 			return false;    // timeout or eof(ignore)
 		}
 		checkAvError(res);
@@ -64,10 +67,10 @@ namespace rtpsr {
 	// return value:stopped_index;
 	bool RtpReceiver::pushToOutput() {
 		auto* frameref = av_frame_get_plane_buffer(frame, 0);
-    auto size = frame->nb_samples * setting.channels;
-    tmpbuf.resize(size);
-    std::memcpy(tmpbuf.data(),frameref->data, size*sizeof(int16_t));
-		 bool  res  = output_buf.writeRange(tmpbuf, frame->nb_samples * setting.channels);
+		auto  size     = frame->nb_samples * setting.channels;
+		tmpbuf.resize(size);
+		std::memcpy(tmpbuf.data(), frameref->data, size * sizeof(int16_t));
+		bool res = output_buf.writeRange(tmpbuf, frame->nb_samples * setting.channels);
 		av_packet_unref(packet);
 		return res;
 	}
@@ -77,26 +80,23 @@ namespace rtpsr {
 		bool res            = true;
 		bool writeres       = true;
 		try {
+		int status = wait_connection.get();
+    if(status<0){
+      checkAvError(status);
+    }
 			while (loopstate.active) {
-				// block until data comes;
-			retry:
+			// block until data comes;
 				res = receiveData();
 				if (!res) {
-					goto wait;
 				}
 				isdecoderfull  = decoder.sendPacket(packet);
 				isdecoderempty = decoder.receiveFrame(frame);
 				if (isdecoderempty) {
-					goto wait;
 				}
 				writeres = pushToOutput();
-        wait:
-        if(polling_rate_cache.count()<=0.0){
-          polling_rate_cache = std::chrono::seconds(frame->nb_samples/setting.samplerate);
-        }
-				std::this_thread::sleep_for(polling_rate_cache);
 			}
 		}
+
 		catch (std::exception& e) {
 			std::cerr << "Error happend in receive polling loop:" << e.what() << std::endl;
 		}

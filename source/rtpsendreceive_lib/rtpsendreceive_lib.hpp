@@ -177,6 +177,8 @@ using buffertype = std::vector<sample_t>;
 using readfn_type = int (*)(void *, uint8_t *, int);
 using seekfn_type = int64_t (*)(void *, int64_t, int);
 
+using duration_type = std::chrono::duration<double, std::ratio<1, 48000>>;
+
 enum class Codec { PCM_s16BE, OPUS, INVALID = -1 };
 
 inline std::string getCodecName(Codec c) {

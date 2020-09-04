@@ -28,7 +28,7 @@ namespace rtpsr {
 		void                      sendData();
 		void                      sendDataLoop();
 		AsyncLoopState&           launchLoop();
-		std::chrono::duration<double> pollingrate  =std::chrono::seconds(setting.framesize / setting.samplerate);
+		duration_type pollingrate  =duration_type(static_cast<double>(setting.framesize)*0.5*48000/ setting.samplerate);
 		static void setCtxParams(AVDictionary** dict);
 		auto&       getInput() {
             return *std::dynamic_pointer_cast<CustomCbInFormat>(input);

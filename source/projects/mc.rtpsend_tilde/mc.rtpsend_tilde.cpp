@@ -43,8 +43,7 @@ if (m_initialized && rtpsender != nullptr) {
 	}
 	else {
 		rtpsender->loopstate.active = true;
-    rtpsender->wait_connection.wait();
-		// rtpsender->launchLoop();
+		rtpsender->launchLoop();
 	}
 }
 return {};
@@ -96,7 +95,6 @@ void operator()(audio_bundle input, audio_bundle output) {
 	if (!write_success) {
 		// cerr << "ring buffer is full!" <<std::endl;
 	}
-  rtpsender->sendData();
 }
 static long setDspState(void* obj, long state) {
 	c74::max::object_attr_setlong(obj, c74::max::gensym("active"), state);

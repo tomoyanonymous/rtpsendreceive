@@ -15,30 +15,33 @@ namespace rtpsr {
 		outstream->start_time = 0;
 		setCtxParams(&params);
 		input_buf.resize(frame->nb_samples * s.channels * 2);
-    framebuf.resize(frame->nb_samples * s.channels * 2);
+		framebuf.resize(frame->nb_samples * s.channels * 2);
 		url_tmp      = getSdpUrl(url);
 		char* urlctx = (char*)av_malloc(url_tmp.size() + sizeof(char));
 		av_strlcpy(urlctx, url_tmp.c_str(), url_tmp.size() + sizeof(char));
 		output->ctx->url = urlctx;
 		checkAvError(avformat_init_output(output->ctx, &params));
-		checkAvError(avio_open(&output->ctx->pb, urlctx, AVIO_FLAG_WRITE));
+		wait_connection = std::future<int>();
+    loopstate.active=true;
 		wait_connection = std::async(std::launch::async, [&]() {
-			while (true) {
+			int result = 0;
+			checkAvError(avio_open(&output->ctx->pb, urlctx, AVIO_FLAG_WRITE));
+			while (loopstate.active) {
 				int res = avformat_write_header(output->ctx, nullptr);
 				if (res >= 0) {
+					result = 1;
+					logger << "rtpsender: connected" << std::endl;
 					break;
 				}
-				if (res == -61 || res == -22) {
+				if (res == -60 || res == -61 || res == -22) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(300));
-					logger << "rtpsender: connection refused,retry in 300ms" << std::endl;
-				}
-				else {
-					checkAvError(res);
-					break;
-				}
+					logger << "rtpsender: connection to " << url_tmp << " refused,retry in 300ms" << std::endl;
+				}else{
+				checkAvError(res);
+				break;
+        }
 			}
-			logger << "rtpsender: connected" << std::endl;
-			return 1;
+			return result;
 		});
 	}
 
@@ -53,11 +56,11 @@ namespace rtpsr {
 			0));    // wait up to 10 seconds until connect
 	}
 	bool RtpSender::fillFrame() {
-		size_t   packet_framesize = frame->nb_samples * setting.channels;
+		size_t packet_framesize = frame->nb_samples * setting.channels;
 		if (input_buf.getReadMargin() < packet_framesize) {
 			return false;
 		}
-    framebuf.resize(packet_framesize);
+		framebuf.resize(packet_framesize);
 		input_buf.readRange(framebuf, packet_framesize);
 		checkAvError(avcodec_fill_audio_frame(
 			frame, setting.channels, AV_SAMPLE_FMT_S16, (uint8_t*)framebuf.data(), sizeof(sample_t) * packet_framesize, 0));
@@ -65,7 +68,6 @@ namespace rtpsr {
 	}
 	void RtpSender::sendData() {
 		//   av_read_frame(input->ctx, packet);
-    if(wait_connection.valid()){
 		frame->pts            = timecount;
 		frame->format         = AV_SAMPLE_FMT_S16;
 		frame->channels       = setting.channels;
@@ -93,10 +95,11 @@ namespace rtpsr {
 
 			av_packet_unref(packet);
 		}
-    }
 	}
+
 	void RtpSender::sendDataLoop() {
 		try {
+			wait_connection.wait();
 			while (loopstate.active) {
 				sendData();
 				std::this_thread::sleep_for(pollingrate);
@@ -107,8 +110,6 @@ namespace rtpsr {
 		}
 	}
 	AsyncLoopState& RtpSender::launchLoop() {
-		wait_connection.wait();
-		loopstate.active = true;
 		loopstate.future = std::async(std::launch::async, [&]() {
 			sendDataLoop();
 			return true;
