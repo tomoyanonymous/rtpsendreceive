@@ -53,15 +53,15 @@ cmake --build . --target all
 
 ```
 
+## Copyrights
+
+Tomoya Matsuura　松浦知也 
+
+https://matsuuratomoya.com/en 
+
 ## License
 
 [LGPL v3.0](./License.md)
-
-## Author
-
-Tomoya Matsuura
-
-https://matsuuratomoya.com/en 
 
 ## Acknowledgements
 

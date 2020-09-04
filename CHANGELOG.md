@@ -1,5 +1,12 @@
 # CHANGELOG 
 
+## 2020-09-03 v0.2.1
+
+### Fixed Bugs
+
+Fixed hanging when sender/receiver could not connect to server.
+Now sender also transmits packets asynchronously from audio/main thread.
+
 ## 2020-09-03 v0.2.0
 
 This release contains many many refactorings.
