@@ -1,0 +1,82 @@
+name: release
+on:
+  push:
+      tags: 
+        - 'v*'
+
+jobs:
+  create_release:
+    name: "Create Release"
+    runs-on : ubuntu-20.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Create Source Release
+        id: create_release
+        uses: actions/create-release@v1.0.0
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false 
+  build_and_upload:
+    name: "Build and Release"
+    needs: create_release
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+        config:
+          - Release
+        include:
+            # - os: ubuntu-20.04
+            #   zip_postfix: Linux
+            - os: macos-latest
+              zip_postfix: macOS
+    steps:
+      - uses: actions/checkout@v2
+      - if: contains(matrix.os, 'macos')
+        name: deps-macos
+        run: |
+          brew update
+          brew install opus
+      - name: install-ffmpeg
+        run: |
+          git clone https://git.ffmpeg.org/ffmpeg.git /tmp/ffmpeg
+          pushd /tmp/ffmpeg
+          ./configure --prefix=/usr/local/Cellar/ffmpeg/HEAD_Debug  --disable-avfoundation --disable-iconv --disable-filters --disable-devices --disable-shared --enable-static  --disable-optimizations  --disable-mmx --disable-audiotoolbox --disable-videotoolbox --disable-stripping   --disable-appkit --disable-zlib --disable-coreimage  --disable-bzlib --disable-securetransport --disable-sdl2 --disable-lzma --enable-libopus --pkg-config-flags=--static --cc=/usr/bin/clang --cxx=/usr/bin/clang++
+          make -j
+          make install
+          popd
+      - name: configure
+        run:
+          mkdir build && cd build && cmake ${{ matrix.cmake-generator }} -DCMAKE_BUILD_CONFIG=${{ matrix.config }} ..
+
+      - name: build
+        run: cmake --build build --config ${{ matrix.config }}
+
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+      - name: pack
+        run: cd ../ && zip -r rtpsendreceive-${{ steps.get_version.outputs.VERSION }}-${{ matrix.zip_postfix }}.zip  rtpsendreceive/
+
+      - name: Upload Compiled Binary
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ./rtpsendreceive-${{ steps.get_version.outputs.VERSION }}-${{ matrix.zip_postfix }}.zip
+          asset_name: rtpsendreceive-${{ steps.get_version.outputs.VERSION }}-${{ matrix.zip_postfix }}.zip
+          asset_content_type: application/zip
+
+  

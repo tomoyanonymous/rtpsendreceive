@@ -1,0 +1,47 @@
+name: build & test
+on:
+  push:
+      branches:
+      - master
+      - dev
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - macos-10.14
+        config:
+          - Debug
+          - Release
+
+    steps:
+      - uses: actions/checkout@v2
+      
+      - if: contains(matrix.os, 'macos')
+        name: deps-macos
+        run: |
+          brew update
+          brew install opus
+      - name: install-ffmpeg
+        run: |
+          git clone https://git.ffmpeg.org/ffmpeg.git /tmp/ffmpeg
+          pushd /tmp/ffmpeg
+          ./configure --prefix=/usr/local/Cellar/ffmpeg/HEAD_Debug  --disable-avfoundation --disable-iconv --disable-filters --disable-devices --disable-shared --enable-static  --disable-optimizations  --disable-mmx --disable-audiotoolbox --disable-videotoolbox --disable-stripping   --disable-appkit --disable-zlib --disable-coreimage  --disable-bzlib --disable-securetransport --disable-sdl2 --disable-lzma --enable-libopus --pkg-config-flags=--static --cc=/usr/bin/clang --cxx=/usr/bin/clang++
+          make -j
+          make install
+          popd
+      - name: configure
+        run:
+          mkdir build && cd build && cmake ${{ matrix.cmake-generator }} -DCMAKE_BUILD_CONFIG=${{ matrix.config }} ..
+
+      - name: build
+        run: cmake --build build --config ${{ matrix.config }}
+
+      # - name: test
+      #   run: cd build && ctest --build-config ${{ matrix.config }}
