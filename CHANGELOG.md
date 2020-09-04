@@ -1,5 +1,13 @@
 # CHANGELOG 
 
+## 2020-09-03 v0.2.2
+
+Added GitHub workflow and funding pages.
+
+### Fixed Bugs
+Fixed hangs when receiver is reinstanciated before finishes connection.
+
+
 ## 2020-09-03 v0.2.1
 
 ### Fixed Bugs
