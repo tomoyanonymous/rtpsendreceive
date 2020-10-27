@@ -1,6 +1,20 @@
 #include "rtpsrbase.hpp"
 
 namespace rtpsr {
+
+	bool RtpInFormat::tryConnectInput() {
+		auto* ifmt = av_find_input_format("rtsp");
+		auto res = avformat_open_input(&ctx, getSdpUrl(url).c_str(), ifmt, &avoptions);
+		if (res == -60 || res == -61 || res == -22) {
+			return false;
+		}
+		if (res < 0) {
+			checkAvError(res);
+		}
+		return true;
+	}
+
+
 	CustomCbInFormat::CustomCbInFormat(RtpSRSetting& s)
 	: InFormat(s) {
 		buffer.resize(setting.framesize * setting.channels);
@@ -96,6 +110,7 @@ namespace rtpsr {
 	bool Encoder::receivePacket(AVPacket* packet) {
 		return checkIsErrAgain(avcodec_receive_packet(ctx, packet));
 	}
+
 
 	RtpSRBase::RtpSRBase(RtpSRSetting& s, std::ostream& logger)
 	: setting(s)

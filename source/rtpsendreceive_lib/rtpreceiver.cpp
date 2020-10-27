@@ -4,11 +4,9 @@ namespace rtpsr {
 	RtpReceiver::RtpReceiver(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger)
 	: RtpSRBase(s, logger)
 	, output_buf(s.framesize) {
-		input            = std::make_unique<RtpInFormat>(url, setting);
-		output           = std::make_unique<CustomCbOutFormat>(setting);
-		this->codec      = std::make_unique<Decoder>(s, codec);
-		auto* ifmt       = av_find_input_format("rtsp");
-		url_tmp          = getSdpUrl(url);
+		input       = std::make_unique<RtpInFormat>(url, setting);
+		output      = std::make_unique<CustomCbOutFormat>(setting);
+		this->codec = std::make_unique<Decoder>(s, codec);
 		setCtxParams(&params);
 		tmpbuf.resize(frame->nb_samples * setting.channels * 2);
 		output_buf.resize(frame->nb_samples * setting.channels * 2);
@@ -19,8 +17,8 @@ namespace rtpsr {
             while (loopstate) {
                 logger << "rtpreceiver waiting incoming connection..." << std::endl;
                 // this start blocking...
-                res = avformat_open_input(&input->ctx, url_tmp.c_str(), ifmt, &params);
-                if (res >= 0) {
+                bool connection_res = dynamic_cast<RtpInFormat*>(input.get())->tryConnectInput();
+                if (connection_res) {
                     initStream();
                     logger << "rtpreceiver connected" << std::endl;
                     break;

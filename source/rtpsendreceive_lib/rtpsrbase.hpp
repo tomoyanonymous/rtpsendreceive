@@ -36,6 +36,8 @@ namespace rtpsr {
 		}
 		AVFormatContext* ctx;
 		RtpSRSetting&    setting;
+    protected:
+		AVDictionary*    avoptions = nullptr;
 	};
 
 	struct CustomCbFormat {
@@ -55,7 +57,7 @@ namespace rtpsr {
 	struct InFormat : public IOFormat {
 		explicit InFormat(RtpSRSetting& s)
 		: IOFormat(s) {};
-		virtual void startInput() {};
+		virtual void connectInput() {};
 	};
 
 	struct CustomCbInFormat : public InFormat, public CustomCbFormat {
@@ -121,7 +123,8 @@ namespace rtpsr {
 			avformat_network_init();
 		}
 		~RtpInFormat();
-		Url url;
+		bool tryConnectInput();
+		Url  url;
 	};
 
 	struct OutFormat : public IOFormat {
