@@ -6,10 +6,6 @@
 
 namespace rtpsr {
 
-	struct AsyncLoopState {
-		std::atomic<bool> active = false;
-		std::future<bool> future;
-	};
 
 	inline void checkAvError(int error_code) {
 		if (error_code < 0) {
@@ -124,7 +120,7 @@ namespace rtpsr {
 		, InFormat(s) {
 			avformat_network_init();
 		}
-		~RtpInFormat() { }
+		~RtpInFormat();
 		Url url;
 	};
 
@@ -180,29 +176,44 @@ namespace rtpsr {
 		bool sendFrame(AVFrame* frame);
 		bool receivePacket(AVPacket* packet);
 	};
-
+	struct AsyncLoopState {
+		std::atomic<bool> active = false;
+		std::future<bool> future;
+	};
 
 	class AsyncLooper {
 	public:
 		AsyncLooper()      = default;
-		using callbacktype = void (*)(AsyncLoopState const&, std::future<int>&);
-		AsyncLoopState& launch(callbacktype fn) {
-			loopstate.active = true;
-			loopstate.future = std::async(std::launch::async, [&]() {
-				fn(loopstate, wait_connection);
-				return true;
-			});
-			return loopstate;
+		using callbacktype = void (*)(AsyncLooper const&);
+
+		template<class F>
+		std::future<bool>& launch(F&& fn) {
+			active = true;
+			return std::async(std::launch::async, fn, active);
+		}
+		bool halt() {
+			if (future.valid()) {
+				active = false;
+				wait();
+			}
+			return true;
+		}
+		void wait() {
+			future.wait();
+		}
+		bool isActive() const {
+			return active;
 		}
 
 	private:
-		std::future<int> wait_connection;
-		AsyncLoopState   loopstate;
+		std::atomic<bool> active = false;
+		std::future<bool> future;
 	};
 
 	struct RtpSRBase {
 		explicit RtpSRBase(RtpSRSetting& s, std::ostream& logger = std::cerr);
 		~RtpSRBase();
+		virtual std::future<bool>& launchLoop() = 0;
 
 	protected:
 		void                       initStream() const;
@@ -211,6 +222,7 @@ namespace rtpsr {
 		std::unique_ptr<OutFormat> output;
 		std::unique_ptr<CodecBase> codec;
 		AsyncLooper                asynclooper;
+		AsyncLooper                init_asyncloop;
 		AVPacket*                  packet;
 		AVFrame*                   frame;
 		std::ostream&              logger;

@@ -16,29 +16,25 @@ namespace rtpsr {
 		av_strlcpy(urlctx, url_tmp.c_str(), url_tmp.size() + sizeof(char));
 		output->ctx->url = urlctx;
 		checkAvError(avformat_init_output(output->ctx, &params));
-		wait_connection  = std::future<int>();
-		loopstate.active = true;
-		wait_connection  = std::async(std::launch::async, [&]() {
-            int result = 0;
-            checkAvError(avio_open(&output->ctx->pb, urlctx, AVIO_FLAG_WRITE));
-            while (loopstate.active) {
-                int res = avformat_write_header(output->ctx, nullptr);
-                if (res >= 0) {
-                    result = 1;
-                    logger << "rtpsender: connected" << std::endl;
-                    break;
-                }
-                if (res == -60 || res == -61 || res == -22) {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-                    logger << "rtpsender: connection to " << url_tmp << " refused,retry in 2000ms" << std::endl;
-                }
-                else {
-                    checkAvError(res);
-                    break;
-                }
-            }
-            return result;
-        });
+		auto& future = init_asyncloop.launch([&](std::atomic<bool> const& isactive) {
+			checkAvError(avio_open(&output->ctx->pb, urlctx, AVIO_FLAG_WRITE));
+			while (isactive) {
+				int res = avformat_write_header(output->ctx, nullptr);
+				if (res >= 0) {
+					logger << "rtpsender: connected" << std::endl;
+					break;
+				}
+				if (res == -60 || res == -61 || res == -22) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+					logger << "rtpsender: connection to " << url_tmp << " refused,retry in 2000ms" << std::endl;
+				}
+				else {
+					checkAvError(res);
+					break;
+				}
+			}
+			// return result;
+		});
 	}
 
 	void RtpSender::setCtxParams(AVDictionary** dict) {
@@ -93,24 +89,18 @@ namespace rtpsr {
 			av_packet_unref(packet);
 		}
 	}
-
-	void RtpSender::sendDataLoop() {
-		try {
-			wait_connection.wait();
-			while (loopstate.active) {
-				sendData();
-				std::this_thread::sleep_for(pollingrate);
+	std::future<bool>& RtpSender::launchLoop() {
+		return asynclooper.launch([&](std::atomic<bool> const& isactive) {
+			try {
+				init_asyncloop.wait();
+				while (isactive) {
+					sendData();
+					std::this_thread::sleep_for(pollingrate);
+				}
 			}
-		}
-		catch (std::exception& e) {
-			std::cerr << "Error happend in polling loop:" << e.what() << std::endl;
-		}
-	}
-	AsyncLoopState& RtpSender::launchLoop() {
-		loopstate.future = std::async(std::launch::async, [&]() {
-			sendDataLoop();
-			return true;
+			catch (std::exception& e) {
+				std::cerr << "Error happend in polling loop:" << e.what() << std::endl;
+			}
 		});
-		return loopstate;
 	}
 }    // namespace rtpsr

@@ -4,24 +4,22 @@ namespace rtpsr {
 	RtpReceiver::RtpReceiver(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger)
 	: RtpSRBase(s, logger)
 	, output_buf(s.framesize) {
-		input  = std::make_unique<RtpInFormat>(url, setting);
-		output = std::make_unique<CustomCbOutFormat>(setting);
-		this->codec = std::make_unique<Decoder>(s,codec);		
-		auto* ifmt             = av_find_input_format("rtsp");
+		input            = std::make_unique<RtpInFormat>(url, setting);
+		output           = std::make_unique<CustomCbOutFormat>(setting);
+		this->codec      = std::make_unique<Decoder>(s, codec);
+		auto* ifmt       = av_find_input_format("rtsp");
 		url_tmp          = getSdpUrl(url);
-		loopstate.active = true;
 		setCtxParams(&params);
 		tmpbuf.resize(frame->nb_samples * setting.channels * 2);
 		output_buf.resize(frame->nb_samples * setting.channels * 2);
 		polling_rate_cache    = std::chrono::seconds(0);
 		input->ctx->max_delay = 1000000;
-		wait_connection       = std::future<int>();
-		wait_connection       = std::async(std::launch::async, [&]() -> int {
+		auto& future          = init_asyncloop.launch([&](std::atomic<bool> const& loopstate) {
             int res = 1;
-            while (initloop) {
+            while (loopstate) {
                 logger << "rtpreceiver waiting incoming connection..." << std::endl;
-                res = avformat_open_input(&input->ctx, url_tmp.c_str(), ifmt,
-                    &params);    // this start blocking...
+                // this start blocking...
+                res = avformat_open_input(&input->ctx, url_tmp.c_str(), ifmt, &params);
                 if (res >= 0) {
                     initStream();
                     logger << "rtpreceiver connected" << std::endl;
@@ -33,13 +31,10 @@ namespace rtpsr {
 	}
 	RtpReceiver::~RtpReceiver() {
 		std::cerr << "rtpreceiver destructor called" << std::endl;
-		loopstate.active = false;
-		initloop         = false;
-		if (wait_connection.valid()) {
-			auto state = wait_connection.get();
-			if (state >= 0) {
-				avformat_close_input(&input->ctx);
-			}
+		bool res1 = init_asyncloop.halt();
+		bool res2 = asynclooper.halt();
+		if (res1 && res2) {
+			avformat_close_input(&input->ctx);
 		}
 		av_dict_free(&params);
 	}
@@ -79,39 +74,31 @@ namespace rtpsr {
 		av_packet_unref(packet);
 		return res;
 	}
-	void RtpReceiver::receiveLoop() {
-		auto* decoder = dynamic_cast<Decoder*>(codec.get());
-		bool isdecoderempty = false;
-		bool isdecoderfull  = false;
-		bool res            = true;
-		bool writeres       = true;
-		try {
-			int status = wait_connection.get();
-			if (status < 0) {
-				checkAvError(status);
+	std::future<bool>& RtpReceiver::launchloop() {
+		return asynclooper.launch([&](std::atomic<bool> const& loopstate) {
+			auto* decoder        = dynamic_cast<Decoder*>(codec.get());
+			bool  isdecoderempty = false;
+			bool  isdecoderfull  = false;
+			bool  res            = true;
+			bool  writeres       = true;
+			try {
+				init_asyncloop.wait();
+				while (loopstate) {
+					// block until data comes;
+					res = receiveData();
+					if (!res) { }
+					isdecoderfull  = decoder->sendPacket(packet);
+					isdecoderempty = decoder->receiveFrame(frame);
+					if (isdecoderempty) { }
+					writeres = pushToOutput();
+				}
 			}
-			while (loopstate.active) {
-				// block until data comes;
-				res = receiveData();
-				if (!res) { }
-				isdecoderfull  = decoder->sendPacket(packet);
-				isdecoderempty = decoder->receiveFrame(frame);
-				if (isdecoderempty) { }
-				writeres = pushToOutput();
+			catch (std::exception& e) {
+				std::cerr << "Error happend in receive polling loop:" << e.what() << std::endl;
 			}
 		}
 
-		catch (std::exception& e) {
-			std::cerr << "Error happend in receive polling loop:" << e.what() << std::endl;
-		}
-	}    // namespace rtpsr
-	AsyncLoopState& RtpReceiver::launchloop() {
-		loopstate.active = true;
-		loopstate.future = std::async(std::launch::async, [&]() {
-			receiveLoop();
-			return true;
-		});
-		return loopstate;
+		);
 	}
 
 }    // namespace rtpsr

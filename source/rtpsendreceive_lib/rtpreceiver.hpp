@@ -8,17 +8,14 @@ namespace rtpsr {
 	struct RtpReceiver : public RtpSRBase {
 		explicit RtpReceiver(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger = std::cerr);
 		~RtpReceiver();
-		AVDictionary*             params = nullptr;
-		std::future<int>          wait_connection;
-		AsyncLoopState            loopstate;
+		AVDictionary*             params   = nullptr;
 		std::atomic<bool>         initloop = true;
 		LockFreeRingbuf<sample_t> output_buf;
 		std::vector<int16_t>      tmpbuf;
 		std::string               url_tmp;
 		duration_type             polling_rate_cache;
 		bool                      receiveData();
-		void                      receiveLoop();
-		AsyncLoopState&           launchloop();
+		std::future<bool>&        launchloop();
 		bool                      pushToOutput();
 		void                      setCtxParams(AVDictionary** dict);
 		CustomCbOutFormat&        getOutput() {
