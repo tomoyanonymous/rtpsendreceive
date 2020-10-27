@@ -181,6 +181,25 @@ namespace rtpsr {
 		bool receivePacket(AVPacket* packet);
 	};
 
+
+	class AsyncLooper {
+	public:
+		AsyncLooper()      = default;
+		using callbacktype = void (*)(AsyncLoopState const&, std::future<int>&);
+		AsyncLoopState& launch(callbacktype fn) {
+			loopstate.active = true;
+			loopstate.future = std::async(std::launch::async, [&]() {
+				fn(loopstate, wait_connection);
+				return true;
+			});
+			return loopstate;
+		}
+
+	private:
+		std::future<int> wait_connection;
+		AsyncLoopState   loopstate;
+	};
+
 	struct RtpSRBase {
 		explicit RtpSRBase(RtpSRSetting& s, std::ostream& logger = std::cerr);
 		~RtpSRBase();
@@ -191,6 +210,7 @@ namespace rtpsr {
 		std::unique_ptr<InFormat>  input;
 		std::unique_ptr<OutFormat> output;
 		std::unique_ptr<CodecBase> codec;
+		AsyncLooper                asynclooper;
 		AVPacket*                  packet;
 		AVFrame*                   frame;
 		std::ostream&              logger;
