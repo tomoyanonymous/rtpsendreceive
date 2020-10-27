@@ -13,8 +13,8 @@ TEST_CASE("Lockfree Ringbuffer") {
 
 	const int try_size = 2000;
 
-	constexpr int        chunk_write = 20;
-	constexpr int        chunk_read  = 8;
+	constexpr int        chunk_write = 30;
+	constexpr int        chunk_read  = 30;
 	std::vector<int16_t> reference;
 	std::vector<int16_t> answer;
 	std::thread th1{ [&]() {
