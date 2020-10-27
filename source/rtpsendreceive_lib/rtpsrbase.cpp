@@ -10,6 +10,21 @@ CustomCbInFormat::CustomCbInFormat(RtpSRSetting& s) : InFormat(s) {
   ctx->flags |= AVFMT_FLAG_CUSTOM_IO;
   ctx->pb = avioctx;
 }
+
+
+void CustomCbAsyncFormat::pushRingBuffer(std::vector<sample_t> const& input){
+  buffer.writeRange(input, input.size());
+}
+
+void CustomCbAsyncFormat::popRingBuffer(std::vector<sample_t>& dest){
+  buffer.readRange(dest, dest.size());
+}
+
+
+CustomCbAsyncInFormat::CustomCbAsyncInFormat(size_t buffer_size):CustomCbAsyncFormat(buffer_size){}
+CustomCbAsyncOutFormat::CustomCbAsyncOutFormat(size_t buffer_size):CustomCbAsyncFormat(buffer_size){}
+
+
 int CustomCbInFormat::readPacket(void* userdata, uint8_t* avio_buf,
                                  int buf_size) {
   auto* sender = reinterpret_cast<CustomCbInFormat*>(userdata);
