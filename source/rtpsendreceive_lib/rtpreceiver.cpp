@@ -20,16 +20,11 @@ namespace rtpsr {
 		wait_connection       = std::async(std::launch::async, [&]() -> int {
             int res = 1;
             while (initloop) {
+                logger << "rtpreceiver waiting incoming connection..." << std::endl;
                 res = avformat_open_input(&input->ctx, url_tmp.c_str(), ifmt,
                     &params);    // this start blocking...
                 if (res >= 0) {
-                    logger << "rtpreceiver waiting incoming connection..." << std::endl;
-                    auto* instream  = avformat_new_stream(input->ctx, decoder.ctx->codec);
-                    auto* outstream = avformat_new_stream(output->ctx, decoder.ctx->codec);
-                    checkAvError(avcodec_parameters_from_context(instream->codecpar, decoder.ctx));
-                    checkAvError(avcodec_parameters_from_context(outstream->codecpar, decoder.ctx));
-                    instream->start_time  = 0;
-                    outstream->start_time = 0;
+                    initStream();
                     logger << "rtpreceiver connected" << std::endl;
                     break;
                 }
@@ -40,13 +35,13 @@ namespace rtpsr {
 	RtpReceiver::~RtpReceiver() {
 		std::cerr << "rtpreceiver destructor called" << std::endl;
 		loopstate.active = false;
-    initloop = false;
-    if(wait_connection.valid()){
-		auto state       = wait_connection.get();
-		if (state >= 0) {
-			avformat_close_input(&input->ctx);
+		initloop         = false;
+		if (wait_connection.valid()) {
+			auto state = wait_connection.get();
+			if (state >= 0) {
+				avformat_close_input(&input->ctx);
+			}
 		}
-    }
 		av_dict_free(&params);
 	}
 	void RtpReceiver::setCtxParams(AVDictionary** dict) {
@@ -57,7 +52,7 @@ namespace rtpsr {
 		checkAvError(av_dict_set(dict, "enable-muxer", "rtsp", 0));
 		checkAvError(av_dict_set(dict, "enable-demuxer", "rtsp", 0));
 		checkAvError(av_dict_set_int(dict, "timeout", 20000, 0));
-		checkAvError(av_dict_set(dict, "stimeout", "1000000",0));  //tcp connection
+		checkAvError(av_dict_set(dict, "stimeout", "1000000", 0));                                          // tcp connection
 		checkAvError(av_dict_set_int(dict, "reorder_queue_size", 100000, 0));                               // 0.05sec
 		checkAvError(av_dict_set_int(dict, "buffer_size", setting.framesize * setting.channels * 4, 0));    // 0.05sec
 

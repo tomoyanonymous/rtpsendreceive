@@ -183,6 +183,9 @@ namespace rtpsr {
 	struct RtpSRBase {
 		explicit RtpSRBase(RtpSRSetting& s, std::ostream& logger = std::cerr);
 		~RtpSRBase();
+
+	protected:
+		void                       initStream() const;
 		RtpSRSetting               setting;
 		std::unique_ptr<InFormat>  input;
 		std::unique_ptr<OutFormat> output;

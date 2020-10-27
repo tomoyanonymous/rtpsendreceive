@@ -7,12 +7,7 @@ namespace rtpsr {
 	, input_buf(s.framesize) {
 		input           = std::make_unique<CustomCbInFormat>(setting);
 		output          = std::make_unique<RtpOutFormat>(url, setting);
-		auto* instream  = avformat_new_stream(input->ctx, encoder.ctx->codec);
-		auto* outstream = avformat_new_stream(output->ctx, encoder.ctx->codec);
-		checkAvError(avcodec_parameters_from_context(instream->codecpar, encoder.ctx));
-		checkAvError(avcodec_parameters_from_context(outstream->codecpar, encoder.ctx));
-		instream->start_time  = 0;
-		outstream->start_time = 0;
+		initStream();
 		setCtxParams(&params);
 		input_buf.resize(frame->nb_samples * s.channels * 2);
 		framebuf.resize(frame->nb_samples * s.channels * 2);
