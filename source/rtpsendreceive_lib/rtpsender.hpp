@@ -15,8 +15,6 @@ namespace rtpsr {
 			av_dict_free(&params);
 			avformat_close_input(&input->ctx);
 		}
-
-		Encoder          encoder;
 		AVDictionary*    params    = nullptr;
 		int64_t          timecount = 0;
 		std::string      url_tmp;

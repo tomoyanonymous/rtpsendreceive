@@ -158,14 +158,15 @@ namespace rtpsr {
 
 	struct CodecBase {
 		explicit CodecBase(RtpSRSetting& s, Codec c = Codec::PCM_s16BE, bool isencoder = true);
-		AVCodecContext* ctx = nullptr;
+		virtual ~CodecBase() = default;
+		AVCodecContext* ctx  = nullptr;
 		rtpsr::Codec    codec;
 		int64_t         bitrate = 192000;    // bitrate for lossy compression
 		static bool     checkIsErrAgain(int error_code);
 	};
 	struct Decoder : public CodecBase {
 		explicit Decoder(RtpSRSetting& s, Codec c);
-		~Decoder() {
+		~Decoder() override {
 			avcodec_free_context(&ctx);
 		}
 		bool sendPacket(AVPacket* packet);
@@ -173,7 +174,7 @@ namespace rtpsr {
 	};
 	struct Encoder : public CodecBase {
 		explicit Encoder(RtpSRSetting& s, Codec c);
-		~Encoder() {
+		~Encoder() override {
 			avcodec_free_context(&ctx);
 		}
 		bool sendFrame(AVFrame* frame);

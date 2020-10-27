@@ -8,7 +8,6 @@ namespace rtpsr {
 	struct RtpReceiver : public RtpSRBase {
 		explicit RtpReceiver(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger = std::cerr);
 		~RtpReceiver();
-		Decoder                   decoder;
 		AVDictionary*             params = nullptr;
 		AVInputFormat*            ifmt;
 		std::future<int>          wait_connection;

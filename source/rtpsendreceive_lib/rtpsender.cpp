@@ -3,10 +3,10 @@
 namespace rtpsr {
 	RtpSender::RtpSender(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger)
 	: RtpSRBase(s, logger)
-	, encoder(s, codec)
 	, input_buf(s.framesize) {
-		input           = std::make_unique<CustomCbInFormat>(setting);
-		output          = std::make_unique<RtpOutFormat>(url, setting);
+		input       = std::make_unique<CustomCbInFormat>(setting);
+		output      = std::make_unique<RtpOutFormat>(url, setting);
+		this->codec = std::make_unique<Encoder>(s, codec);
 		initStream();
 		setCtxParams(&params);
 		input_buf.resize(frame->nb_samples * s.channels * 2);
@@ -16,28 +16,29 @@ namespace rtpsr {
 		av_strlcpy(urlctx, url_tmp.c_str(), url_tmp.size() + sizeof(char));
 		output->ctx->url = urlctx;
 		checkAvError(avformat_init_output(output->ctx, &params));
-		wait_connection = std::future<int>();
-    loopstate.active=true;
-		wait_connection = std::async(std::launch::async, [&]() {
-			int result = 0;
-			checkAvError(avio_open(&output->ctx->pb, urlctx, AVIO_FLAG_WRITE));
-			while (loopstate.active) {
-				int res = avformat_write_header(output->ctx, nullptr);
-				if (res >= 0) {
-					result = 1;
-					logger << "rtpsender: connected" << std::endl;
-					break;
-				}
-				if (res == -60 || res == -61 || res == -22) {
-					std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-					logger << "rtpsender: connection to " << url_tmp << " refused,retry in 2000ms" << std::endl;
-				}else{
-				checkAvError(res);
-				break;
-        }
-			}
-			return result;
-		});
+		wait_connection  = std::future<int>();
+		loopstate.active = true;
+		wait_connection  = std::async(std::launch::async, [&]() {
+            int result = 0;
+            checkAvError(avio_open(&output->ctx->pb, urlctx, AVIO_FLAG_WRITE));
+            while (loopstate.active) {
+                int res = avformat_write_header(output->ctx, nullptr);
+                if (res >= 0) {
+                    result = 1;
+                    logger << "rtpsender: connected" << std::endl;
+                    break;
+                }
+                if (res == -60 || res == -61 || res == -22) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+                    logger << "rtpsender: connection to " << url_tmp << " refused,retry in 2000ms" << std::endl;
+                }
+                else {
+                    checkAvError(res);
+                    break;
+                }
+            }
+            return result;
+        });
 	}
 
 	void RtpSender::setCtxParams(AVDictionary** dict) {
@@ -63,19 +64,20 @@ namespace rtpsr {
 	}
 	void RtpSender::sendData() {
 		//   av_read_frame(input->ctx, packet);
+		auto* encoder         = dynamic_cast<rtpsr::Encoder*>(codec.get());
 		frame->pts            = timecount;
 		frame->format         = AV_SAMPLE_FMT_S16;
 		frame->channels       = setting.channels;
-		frame->channel_layout = encoder.ctx->channel_layout;
+		frame->channel_layout = codec->ctx->channel_layout;
 		bool hasinputframe    = fillFrame();
 		if (!hasinputframe) {
 			return;
 		}
 		timecount += setting.framesize;
-		bool isfull = encoder.sendFrame(frame);
+		bool isfull = encoder->sendFrame(frame);
 		while (true) {
 			av_init_packet(packet);
-			bool isempty = encoder.receivePacket(packet);
+			bool isempty = encoder->receivePacket(packet);
 			if (isempty) {
 				av_packet_unref(packet);
 				break;    // frame is fully flushed, finish sending
@@ -83,7 +85,7 @@ namespace rtpsr {
 			packet->pos          = -1;
 			packet->stream_index = 0;
 			//   packet->duration = setting.framesize;
-			auto itb = encoder.ctx->time_base;
+			auto itb = codec->ctx->time_base;
 			auto otb = output->ctx->streams[0]->time_base;
 			av_packet_rescale_ts(packet, otb, otb);    // maybe unnecessary
 			checkAvError(av_write_frame(output->ctx, packet));

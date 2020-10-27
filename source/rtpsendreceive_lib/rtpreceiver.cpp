@@ -3,11 +3,10 @@
 namespace rtpsr {
 	RtpReceiver::RtpReceiver(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger)
 	: RtpSRBase(s, logger)
-	, decoder(s, codec)
 	, output_buf(s.framesize) {
 		input  = std::make_unique<RtpInFormat>(url, setting);
 		output = std::make_unique<CustomCbOutFormat>(setting);
-
+		this->codec = std::make_unique<Decoder>(s,codec);		
 		ifmt             = av_find_input_format("rtsp");
 		url_tmp          = getSdpUrl(url);
 		loopstate.active = true;
@@ -81,6 +80,7 @@ namespace rtpsr {
 		return res;
 	}
 	void RtpReceiver::receiveLoop() {
+		auto* decoder = dynamic_cast<Decoder*>(codec.get());
 		bool isdecoderempty = false;
 		bool isdecoderfull  = false;
 		bool res            = true;
@@ -94,8 +94,8 @@ namespace rtpsr {
 				// block until data comes;
 				res = receiveData();
 				if (!res) { }
-				isdecoderfull  = decoder.sendPacket(packet);
-				isdecoderempty = decoder.receiveFrame(frame);
+				isdecoderfull  = decoder->sendPacket(packet);
+				isdecoderempty = decoder->receiveFrame(frame);
 				if (isdecoderempty) { }
 				writeres = pushToOutput();
 			}

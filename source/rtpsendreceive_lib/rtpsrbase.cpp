@@ -110,7 +110,7 @@ namespace rtpsr {
 		av_frame_free(&frame);
 		av_packet_free(&packet);
 	}
-	void RtpSRBase::initStream() const{
+	void RtpSRBase::initStream() const {
 		auto* instream  = avformat_new_stream(input->ctx, codec->ctx->codec);
 		auto* outstream = avformat_new_stream(output->ctx, codec->ctx->codec);
 		checkAvError(avcodec_parameters_from_context(instream->codecpar, codec->ctx));
