@@ -9,7 +9,6 @@ namespace rtpsr {
 		explicit RtpReceiver(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger = std::cerr);
 		~RtpReceiver();
 		AVDictionary*             params = nullptr;
-		AVInputFormat*            ifmt;
 		std::future<int>          wait_connection;
 		AsyncLoopState            loopstate;
 		std::atomic<bool>         initloop = true;

@@ -7,7 +7,7 @@ namespace rtpsr {
 		input  = std::make_unique<RtpInFormat>(url, setting);
 		output = std::make_unique<CustomCbOutFormat>(setting);
 		this->codec = std::make_unique<Decoder>(s,codec);		
-		ifmt             = av_find_input_format("rtsp");
+		auto* ifmt             = av_find_input_format("rtsp");
 		url_tmp          = getSdpUrl(url);
 		loopstate.active = true;
 		setCtxParams(&params);
