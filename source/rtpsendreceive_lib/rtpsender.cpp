@@ -5,8 +5,8 @@ namespace rtpsr {
 	: RtpSRBase(s, logger)
 	, encoder(s, codec)
 	, input_buf(s.framesize) {
-		input           = std::static_pointer_cast<InFormat>(std::make_shared<CustomCbInFormat>(setting));
-		output          = std::static_pointer_cast<OutFormat>(std::make_shared<RtpOutFormat>(url, setting));
+		input           = std::make_unique<CustomCbInFormat>(setting);
+		output          = std::make_unique<RtpOutFormat>(url, setting);
 		auto* instream  = avformat_new_stream(input->ctx, encoder.ctx->codec);
 		auto* outstream = avformat_new_stream(output->ctx, encoder.ctx->codec);
 		checkAvError(avcodec_parameters_from_context(instream->codecpar, encoder.ctx));
@@ -34,8 +34,8 @@ namespace rtpsr {
 					break;
 				}
 				if (res == -60 || res == -61 || res == -22) {
-					std::this_thread::sleep_for(std::chrono::milliseconds(300));
-					logger << "rtpsender: connection to " << url_tmp << " refused,retry in 300ms" << std::endl;
+					std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+					logger << "rtpsender: connection to " << url_tmp << " refused,retry in 2000ms" << std::endl;
 				}else{
 				checkAvError(res);
 				break;

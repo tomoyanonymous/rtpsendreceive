@@ -31,7 +31,7 @@ namespace rtpsr {
 		duration_type pollingrate  =duration_type(static_cast<double>(setting.framesize)*0.5*48000/ setting.samplerate);
 		static void setCtxParams(AVDictionary** dict);
 		auto&       getInput() {
-            return *std::dynamic_pointer_cast<CustomCbInFormat>(input);
+            return *dynamic_cast<CustomCbInFormat*>(input.get());
 		}
 		auto& getBuffer() {
 			return getInput().buffer;

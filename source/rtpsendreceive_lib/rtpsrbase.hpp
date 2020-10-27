@@ -135,9 +135,9 @@ struct RtpSRBase {
   explicit RtpSRBase(RtpSRSetting& s,std::ostream& logger=std::cerr);
   ~RtpSRBase();
   RtpSRSetting setting;
-  std::shared_ptr<InFormat> input;
-  std::shared_ptr<OutFormat> output;
-  std::shared_ptr<CodecBase> codec;
+  std::unique_ptr<InFormat> input;
+  std::unique_ptr<OutFormat> output;
+  std::unique_ptr<CodecBase> codec;
   AVPacket* packet;
   AVFrame* frame;
   std::ostream& logger;

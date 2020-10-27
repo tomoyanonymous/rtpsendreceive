@@ -5,8 +5,8 @@ namespace rtpsr {
 	: RtpSRBase(s, logger)
 	, decoder(s, codec)
 	, output_buf(s.framesize) {
-		input  = std::static_pointer_cast<InFormat>(std::make_shared<RtpInFormat>(url, setting));
-		output = std::static_pointer_cast<OutFormat>(std::make_shared<CustomCbOutFormat>(setting));
+		input  = std::make_unique<RtpInFormat>(url, setting);
+		output = std::make_unique<CustomCbOutFormat>(setting);
 
 		ifmt             = av_find_input_format("rtsp");
 		url_tmp          = getSdpUrl(url);
@@ -56,7 +56,8 @@ namespace rtpsr {
 		checkAvError(av_dict_set(dict, "enable-protocol", "udp", 0));
 		checkAvError(av_dict_set(dict, "enable-muxer", "rtsp", 0));
 		checkAvError(av_dict_set(dict, "enable-demuxer", "rtsp", 0));
-		checkAvError(av_dict_set_int(dict, "timeout", 1, 0));
+		checkAvError(av_dict_set_int(dict, "timeout", 20000, 0));
+		checkAvError(av_dict_set(dict, "stimeout", "1000000",0));  //tcp connection
 		checkAvError(av_dict_set_int(dict, "reorder_queue_size", 100000, 0));                               // 0.05sec
 		checkAvError(av_dict_set_int(dict, "buffer_size", setting.framesize * setting.channels * 4, 0));    // 0.05sec
 

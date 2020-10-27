@@ -151,6 +151,7 @@ static AVInputFormat ff_pcm_s16_custom_demuxer = {
 #include <vector>
 #include <future>
 #include <chrono>
+#include <memory>
 
 
 #ifndef THREAD_SLEEP
