@@ -3,37 +3,37 @@
 namespace rtpsr {
 	RtpSender::RtpSender(
 		std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec, std::chrono::milliseconds init_retry_rate, std::ostream& logger)
-	: RtpSRBase(std::move(s), logger)
-	, init_retry_rate(init_retry_rate) {
-		input = std::make_unique<CustomCbAsyncInFormat>(*setting, setting->framesize * 2);
-		// auto option = std::make_unique<AVOptionBase>(makeCtxParams());
-
-		auto option = std::make_unique<RtspOutOption>(url, setting->samplerate, setting->channels, setting->framesize);
+	: RtpSRBase(*s, logger)
+	, init_retry_rate(init_retry_rate)
+	, pollingrate(duration_type(static_cast<double>(s->framesize) * 0.5 * 48000 / s->samplerate)) {
+		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * 2);
+		auto option = std::make_unique<RtspOutOption>(url, setting_ref.samplerate, setting_ref.channels, setting_ref.framesize);
 		output      = std::make_unique<RtspOutFormat>(std::move(option));
-		this->codec = std::make_unique<Encoder>(*setting, codec);
-		initStream();
-		dtosbuffer.resize(setting->framesize * 2 * setting->channels);
-		init_asyncloop.launch([&]() {
-			while (init_asyncloop.isActive()) {
-				auto* rtpout = dynamic_cast<RtspOutFormat*>(output.get());
-				try {
-					bool res = rtpout->tryConnect();
-					if (res) {
-						logger << "rtpsender: connected" << std::endl;
-						break;
-					}
-					logger << "rtpsender: connection to " << rtpout->option->url.address << ":" << std::to_string(rtpout->option->url.port)
-						   << " refused,retry in " << std::to_string(this->init_retry_rate.count()) << "ms." << std::endl;
-					std::this_thread::sleep_for(this->init_retry_rate);
-				}
-				catch (std::runtime_error& e) {
-					throw e;
-					break;
-				}
-			}
-			return true;    // return result;
-		});
+		this->codec = std::make_unique<Encoder>(*s, codec);
+		init();
 	}
+	RtpSender::RtpSender(std::unique_ptr<RtpOutOption> option, Codec codec, std::chrono::milliseconds init_retry_rate, std::ostream& logger)
+	: RtpSRBase(*static_cast<RtpSRSetting*>(option.get()), logger)
+	, init_retry_rate(init_retry_rate) {
+		pollingrate = duration_type(static_cast<double>(setting_ref.framesize) * 0.5 * 48000 / setting_ref.samplerate);
+		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * 2);
+		output      = std::make_unique<RtpOutFormat>(std::move(option));
+		this->codec = std::make_unique<Encoder>(setting_ref, codec);
+		init();
+	}
+
+	RtpSender::RtpSender(
+		std::unique_ptr<RtspOutOption> option, Codec codec, std::chrono::milliseconds init_retry_rate, std::ostream& logger)
+	: RtpSRBase(*static_cast<RtpSRSetting*>(option.get()), logger)
+	, init_retry_rate(init_retry_rate) {
+		pollingrate = duration_type(static_cast<double>(setting_ref.framesize) * 0.5 * 48000 / setting_ref.samplerate);
+		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * 2);
+		output      = std::make_unique<RtspOutFormat>(std::move(option));
+		this->codec = std::make_unique<Encoder>(setting_ref, codec);
+		init();
+	}
+
+
 	RtpSender::~RtpSender() {
 		bool res1 = init_asyncloop.halt();
 		bool res2 = asynclooper.halt();
@@ -45,14 +45,29 @@ namespace rtpsr {
 			avformat_close_input(&input->ctx);
 		}
 	}
-	AVOptionBase::container_t RtpSender::makeCtxParams() {
-		return {
-			{"protocol_whitelist", "file,udp,rtp,tcp,rtsp"},
-			{"rtsp_transport", "udp"},
-			{"enable-protocol", "rtp"},
-			{"enable-protocol", "udp"},
-			{"stimeout", "1000000"},
-		};
+	void RtpSender::init() {
+		initStream();
+		dtosbuffer.resize(setting_ref.framesize * 2 * setting_ref.channels);
+		init_asyncloop.launch([&]() {
+			while (init_asyncloop.isActive()) {
+				auto* rtpout = dynamic_cast<RtpOutFormatBase*>(output.get());
+				try {
+					bool res = rtpout->tryConnect();
+					if (res) {
+						logger << "rtpsender: connected" << std::endl;
+						break;
+					}
+					logger << "rtpsender: connection to " << rtpout->option->url.address << ":" << std::to_string(rtpout->option->url.port)
+						   << " refused,retry in " << std::to_string(init_retry_rate.count()) << "ms." << std::endl;
+					std::this_thread::sleep_for(init_retry_rate);
+				}
+				catch (std::runtime_error& e) {
+					throw e;
+					break;
+				}
+			}
+			return true;    // return result;
+		});
 	}
 	bool RtpSender::writeToInput(std::vector<sample_t> const& input) {
 		auto* asyncinput = dynamic_cast<CustomCbAsyncInFormat*>(this->input.get());
@@ -66,13 +81,13 @@ namespace rtpsr {
 	}
 	bool RtpSender::fillFrame() {
 		auto*  asyncinput       = dynamic_cast<CustomCbAsyncInFormat*>(input.get());
-		size_t packet_framesize = frame->nb_samples * setting->channels;
+		size_t packet_framesize = frame->nb_samples * setting_ref.channels;
 
 		framebuf.resize(packet_framesize);
 		bool res = asyncinput->tryPopRingBuffer(framebuf);
 		if (res) {
 			checkAvError(avcodec_fill_audio_frame(frame,
-				setting->channels,
+				setting_ref.channels,
 				AV_SAMPLE_FMT_S16,
 				(uint8_t*)framebuf.data(),
 				sizeof(sample_t) * packet_framesize,
@@ -86,13 +101,13 @@ namespace rtpsr {
 		auto* encoder         = dynamic_cast<rtpsr::Encoder*>(codec.get());
 		frame->pts            = timecount;
 		frame->format         = AV_SAMPLE_FMT_S16;
-		frame->channels       = setting->channels;
+		frame->channels       = setting_ref.channels;
 		frame->channel_layout = codec->ctx->channel_layout;
 		bool hasinputframe    = fillFrame();
 		if (!hasinputframe) {
 			return;
 		}
-		timecount += setting->framesize;
+		timecount += setting_ref.framesize;
 		bool isfull = encoder->sendFrame(frame);
 		while (true) {
 			av_init_packet(packet);
@@ -103,7 +118,7 @@ namespace rtpsr {
 			}
 			packet->pos          = -1;
 			packet->stream_index = 0;
-			//   packet->duration = setting->framesize;
+			//   packet->duration = setting_ref.framesize;
 			auto itb = codec->ctx->time_base;
 			auto otb = output->ctx->streams[0]->time_base;
 			av_packet_rescale_ts(packet, otb, otb);    // maybe unnecessary

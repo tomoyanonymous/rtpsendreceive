@@ -199,12 +199,12 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 
 
 	// Rtp Input
-	RtpFormatBase::RtpFormatBase() {
+	RtpFormatBase::RtpFormatBase(std::unique_ptr<RtpOptionsBase> opt)
+	: option(std::move(opt)) {
 		avformat_network_init();
 	}
 	RtspInFormat::RtspInFormat(std::unique_ptr<RtspInOption> rtpoptions)
-	: RtpInFormatBase()
-	, option(std::move(rtpoptions)) { }
+	: RtpInFormatBase(std::move(rtpoptions)) { }
 
 	bool RtspInFormat::tryConnectInput() {
 		option->generateOptions();
@@ -220,20 +220,20 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		return true;
 	}
 	RtpInFormat::RtpInFormat(std::unique_ptr<RtpInOption> rtpoptions)
-	: RtpInFormatBase()
-	, option(std::move(rtpoptions)) {
+	: RtpInFormatBase(std::move(rtpoptions)) {
 		sdp_avio = (unsigned char*)av_mallocz(aviobufsize);
 	}
 	RtpInFormat::~RtpInFormat() {
-		if (sdp_opaque != nullptr) {
-			av_freep(sdp_avio);
+		if (sdp_avio != nullptr) {
+			// av_free(sdp_avio);
 		}
 	}
 
 	bool RtpInFormat::tryConnectInput() {
-		option->generateOptions();
+		auto* opt = dynamic_cast<RtpInOption*>(option.get());
+		opt->generateOptions();
 		auto* ifmt       = av_find_input_format("sdp");
-		auto  sdp        = option->makeDummySdp();
+		auto  sdp        = opt->makeDummySdp();
 		sdp_opaque       = std::make_unique<SdpOpaque>();
 		sdp_opaque->data = SdpOpaque::Vector(sdp.c_str(), sdp.c_str() + strlen(sdp.c_str()));
 		sdp_opaque->pos  = sdp_opaque->data.begin();
@@ -249,11 +249,9 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 	}
 
 	RtspOutFormat::RtspOutFormat(std::unique_ptr<RtspOutOption> rtpoptions)
-	: RtpOutFormatBase()
-	, option(std::move(rtpoptions)) { }
+	: RtpOutFormatBase(std::move(rtpoptions)) { }
 	RtpOutFormat::RtpOutFormat(std::unique_ptr<RtpOutOption> rtpoptions)
-	: RtpOutFormatBase()
-	, option(std::move(rtpoptions)) { }
+	: RtpOutFormatBase(std::move(rtpoptions)) { }
 
 
 	bool RtspOutFormat::tryConnect() {
@@ -359,13 +357,13 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 
 	// RtpSRBase
 
-	RtpSRBase::RtpSRBase(std::unique_ptr<RtpSRSetting> s, std::ostream& logger)
-	: setting(std::move(s))
+	RtpSRBase::RtpSRBase(RtpSRSetting const& s, std::ostream& logger)
+	: setting_ref(s)
 	, logger(logger) {
 		frame             = av_frame_alloc();
-		frame->nb_samples = setting->framesize;
+		frame->nb_samples = s.framesize;
 		packet            = av_packet_alloc();
-		av_new_packet(packet, getBufSize(*setting));
+		av_new_packet(packet, getBufSize(s));
 	}
 
 	RtpSRBase::~RtpSRBase() {

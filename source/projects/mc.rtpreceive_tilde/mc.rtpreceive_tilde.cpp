@@ -45,6 +45,11 @@ return {};
 }
 }
 ;
+attribute<double> reorder_queue_size {this, "reorder_queue_size", 500.0, description {"number of packets for reorder queue"}};
+attribute<bool>   use_rtsp {this,
+    "use_rtsp",
+    true,
+    description {"if set to false, use raw rtp protocol instead of using rtsp mux/demuxer(Some options are ignored)."}};
 
 // attribute<bool>                              play {this, "play", true};
 attribute<int, threadsafe::no, limit::clamp> channels {this, "channels", 1, range {1, 16}};
@@ -75,7 +80,7 @@ return {};
 }
 ;
 message<> dspsetup {this, "dspsetup", MIN_FUNCTION {double newvecsize = args[1];
-resetReceiver(newvecsize);
+resetReceiver(newvecsize, channels);
 return {};
 }
 }
@@ -106,31 +111,49 @@ std::shared_ptr<rtpsr::RtpReceiver> rtpreceiver {nullptr};
 std::vector<rtpsr::sample_t>        iarray;
 double                              frame_size = vector_size();
 void                                resetChannel(int channel) {
-    symbol     c = codec;
-    auto       setting = std::make_unique<rtpsr::RtpSRSetting>(rtpsr::RtpSRSetting {samplerate(), channel, (int)frame_size});
-    rtpsr::Url url {address.get(), port};
-    resetReceiver(std::move(setting), url, rtpsr::getCodecByName(c));
+    resetReceiver(vector_size(), channels);
 }
 
-void resetReceiver(double newvecsize) {
-	iarray.resize(newvecsize * channels);
-	frame_size         = newvecsize;
-	symbol     c       = codec;
-	auto       setting = std::make_unique<rtpsr::RtpSRSetting>(rtpsr::RtpSRSetting {samplerate(), channels, (int)newvecsize});
+void resetReceiver(double newvecsize, int channel) {
+	iarray.resize(newvecsize * channel);
+	frame_size = newvecsize;
 	rtpsr::Url url {address.get(), port};
-	resetReceiver(std::move(setting), url, rtpsr::getCodecByName(c));
+	if (use_rtsp) {
+		auto option = std::make_unique<rtpsr::RtspInOption>(url, samplerate(), channel, (int)newvecsize);
+		setOptions(*static_cast<rtpsr::RtpOptionsBase*>(option.get()));
+		resetReceiver(std::move(option));
+	}
+	else {
+		auto option = std::make_unique<rtpsr::RtpInOption>(url, samplerate(), channel, (int)newvecsize);
+		setOptions(*static_cast<rtpsr::RtpOptionsBase*>(option.get()));
+		resetReceiver(std::move(option));
+	}
 }
-void resetReceiver(std::unique_ptr<rtpsr::RtpSRSetting> s, rtpsr::Url& url, rtpsr::Codec c) {
+void resetReceiver(std::unique_ptr<rtpsr::RtspInOption> s) {
 	rtpreceiver.reset();
-
 	try {
-		rtpreceiver = std::make_unique<rtpsr::RtpReceiver>(std::move(s), url, c, cout);
+		rtpreceiver = std::make_unique<rtpsr::RtpReceiver>(std::move(s), rtpsr::getCodecByName(codec.get()), cout);
 		rtpreceiver->launchLoop();
 	}
 	catch (std::exception& e) {
 		std::cerr << e.what() << std::endl;
 	}
 }
+void resetReceiver(std::unique_ptr<rtpsr::RtpInOption> s) {
+	rtpreceiver.reset();
+	try {
+		rtpreceiver = std::make_unique<rtpsr::RtpReceiver>(std::move(s), rtpsr::getCodecByName(codec.get()), cout);
+		rtpreceiver->launchLoop();
+	}
+	catch (std::exception& e) {
+		std::cerr << e.what() << std::endl;
+	}
+}
+
+void setOptions(rtpsr::RtpOptionsBase& opt) {
+	opt.reorder_queue_size = reorder_queue_size;
+}
+
 static long setOutChans(void* obj, long outletindex) {
 	auto chs = c74::max::object_attr_getlong(obj, c74::max::gensym("channels"));
 	return chs;

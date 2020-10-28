@@ -5,6 +5,12 @@ namespace rtpsr {
 	struct RtpSender : public RtpSRBase {
 		explicit RtpSender(std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec,
 			std::chrono::milliseconds init_retry_rate = std::chrono::milliseconds(500), std::ostream& logger = std::cerr);
+		// launch with raw rtp version;
+		explicit RtpSender(std::unique_ptr<RtpOutOption> option, Codec codec,
+			std::chrono::milliseconds init_retry_rate = std::chrono::milliseconds(500), std::ostream& logger = std::cerr);
+		// launch with rtsp version
+		explicit RtpSender(std::unique_ptr<RtspOutOption> option, Codec codec,
+			std::chrono::milliseconds init_retry_rate = std::chrono::milliseconds(500), std::ostream& logger = std::cerr);
 		~RtpSender();
 
 		void launchLoop() override;
@@ -13,13 +19,14 @@ namespace rtpsr {
 		bool writeToInput(std::vector<double> const& input);
 
 	private:
-		int64_t                   timecount = 0;
-		std::vector<sample_t>     framebuf;
-		AVOptionBase::container_t makeCtxParams();
-		bool                      fillFrame();
-		void                      sendData();
-		std::vector<sample_t>     dtosbuffer;
-		duration_type             pollingrate = duration_type(static_cast<double>(setting->framesize) * 0.5 * 48000 / setting->samplerate);
+		int64_t               timecount = 0;
+		std::vector<sample_t> framebuf;
+		// constructor must call init()
+		void                            init();
+		bool                            fillFrame();
+		void                            sendData();
+		std::vector<sample_t>           dtosbuffer;
+		duration_type                   pollingrate;
 		const std::chrono::milliseconds init_retry_rate;
 	};
 
