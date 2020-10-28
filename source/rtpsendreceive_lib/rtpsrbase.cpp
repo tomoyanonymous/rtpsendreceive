@@ -224,8 +224,8 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		sdp_avio = (unsigned char*)av_mallocz(aviobufsize);
 	}
 	RtpInFormat::~RtpInFormat() {
-		if (sdp_opaque != nullptr) {
-			av_freep(sdp_avio);
+		if (sdp_avio != nullptr) {
+			// av_free(sdp_avio);
 		}
 	}
 

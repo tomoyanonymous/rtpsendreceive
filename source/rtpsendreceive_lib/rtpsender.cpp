@@ -50,7 +50,7 @@ namespace rtpsr {
 		dtosbuffer.resize(setting_ref.framesize * 2 * setting_ref.channels);
 		init_asyncloop.launch([&]() {
 			while (init_asyncloop.isActive()) {
-				auto* rtpout = dynamic_cast<RtspOutFormat*>(output.get());
+				auto* rtpout = dynamic_cast<RtpOutFormatBase*>(output.get());
 				try {
 					bool res = rtpout->tryConnect();
 					if (res) {

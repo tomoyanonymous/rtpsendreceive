@@ -41,6 +41,11 @@
 			<description></description>
 		</attribute>
 
+		<attribute name='use_rtsp' get='1' set='1' type='long' size='1' >
+			<digest>if set to false, use raw rtp protocol instead of using rtsp mux/demuxer(Some options are ignored)</digest>
+			<description>if set to false, use raw rtp protocol instead of using rtsp mux/demuxer(Some options are ignored). </description>
+		</attribute>
+
 		<attribute name='retry_rate' get='1' set='1' type='float64' size='1' >
 			<digest>Retry intervals in milliseconds at connection </digest>
 			<description>Retry intervals in milliseconds at connection </description>

@@ -46,7 +46,10 @@ return {};
 }
 ;
 attribute<double> reorder_queue_size {this, "reorder_queue_size", 500.0, description {"number of packets for reorder queue"}};
-
+attribute<bool>   use_rtsp {this,
+    "use_rtsp",
+    true,
+    description {"if set to false, use raw rtp protocol instead of using rtsp mux/demuxer(Some options are ignored)."}};
 
 // attribute<bool>                              play {this, "play", true};
 attribute<int, threadsafe::no, limit::clamp> channels {this, "channels", 1, range {1, 16}};
@@ -115,9 +118,16 @@ void resetReceiver(double newvecsize, int channel) {
 	iarray.resize(newvecsize * channel);
 	frame_size = newvecsize;
 	rtpsr::Url url {address.get(), port};
-	auto       option          = std::make_unique<rtpsr::RtspInOption>(url, samplerate(), channel, (int)newvecsize);
-	option->reorder_queue_size = reorder_queue_size;
-	resetReceiver(std::move(option));
+	if (use_rtsp) {
+		auto option = std::make_unique<rtpsr::RtspInOption>(url, samplerate(), channel, (int)newvecsize);
+		setOptions(*static_cast<rtpsr::RtpOptionsBase*>(option.get()));
+		resetReceiver(std::move(option));
+	}
+	else {
+		auto option = std::make_unique<rtpsr::RtpInOption>(url, samplerate(), channel, (int)newvecsize);
+		setOptions(*static_cast<rtpsr::RtpOptionsBase*>(option.get()));
+		resetReceiver(std::move(option));
+	}
 }
 void resetReceiver(std::unique_ptr<rtpsr::RtspInOption> s) {
 	rtpreceiver.reset();
@@ -129,6 +139,21 @@ void resetReceiver(std::unique_ptr<rtpsr::RtspInOption> s) {
 		std::cerr << e.what() << std::endl;
 	}
 }
+void resetReceiver(std::unique_ptr<rtpsr::RtpInOption> s) {
+	rtpreceiver.reset();
+	try {
+		rtpreceiver = std::make_unique<rtpsr::RtpReceiver>(std::move(s), rtpsr::getCodecByName(codec.get()), cout);
+		rtpreceiver->launchLoop();
+	}
+	catch (std::exception& e) {
+		std::cerr << e.what() << std::endl;
+	}
+}
+
+void setOptions(rtpsr::RtpOptionsBase& opt) {
+	opt.reorder_queue_size = reorder_queue_size;
+}
+
 static long setOutChans(void* obj, long outletindex) {
 	auto chs = c74::max::object_attr_getlong(obj, c74::max::gensym("channels"));
 	return chs;

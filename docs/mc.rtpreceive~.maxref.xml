@@ -51,6 +51,11 @@
 			<description>number of packets for reorder queue </description>
 		</attribute>
 
+		<attribute name='use_rtsp' get='1' set='1' type='long' size='1' >
+			<digest>if set to false, use raw rtp protocol instead of using rtsp mux/demuxer(Some options are ignored)</digest>
+			<description>if set to false, use raw rtp protocol instead of using rtsp mux/demuxer(Some options are ignored). </description>
+		</attribute>
+
 		<attribute name='active' get='1' set='1' type='long' size='1' >
 			<digest></digest>
 			<description></description>
