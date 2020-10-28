@@ -30,10 +30,10 @@ namespace rtpsr {
 	std::string getSdpUrl(std::string const& address, int port) {
 		return "udp://" + address + ":" + std::to_string(port) + "/live.sdp";
 	}
-	std::string getSdpUrl(Url& url) {
+	std::string getSdpUrl(Url const& url) {
 		return getSdpUrl(url.address, url.port);
 	}
-	RtpOptionsBase::RtpOptionsBase(Url&& url)
+	RtpOptionsBase::RtpOptionsBase(Url const&& url)
 	: url(url) {
 		dict.emplace("protocol_whitelist", "file,udp,rtp,tcp,rtsp");
 	}
@@ -43,7 +43,7 @@ namespace rtpsr {
 		dict.emplace("packet_size", packet_size);
 		dict.emplace("buffer_size", buffer_size);
 	}
-	RtpOption::RtpOption(Url&& url, double samplerate, int channels, int buffersize)
+	RtpOption::RtpOption(Url const&& url, double samplerate, int channels, int buffersize)
 	: RtpOptionsBase(std::move(url))
 	, RtpSRSetting({samplerate, channels, buffersize}) { }
 	void RtpOption::generateOptions() {
@@ -51,7 +51,7 @@ namespace rtpsr {
 		// todo::filter_source;
 	}
 
-	RtspOption::RtspOption(Url&& url, double samplerate, int channels, int buffersize)
+	RtspOption::RtspOption(Url const&& url, double samplerate, int channels, int buffersize)
 	: RtpOptionsBase(std::move(url))
 	, RtpSRSetting({samplerate, channels, buffersize}) {
 		// dict.emplace("allowed_media_types",nullptr);
@@ -191,7 +191,7 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 	: options(std::move(options)) { }
 
 	// Rtp Input
-	RtpInFormat::RtpInFormat(Url& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
+	RtpInFormat::RtpInFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
 	: url(url)
 	, RtpFormatBase(std::move(options))
 	, InFormat(s) {
@@ -208,7 +208,7 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		}
 		return true;
 	}
-	RtpOutFormat::RtpOutFormat(Url& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
+	RtpOutFormat::RtpOutFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
 	: url(url)
 	, RtpFormatBase(std::move(options))
 	, OutFormat(s) {

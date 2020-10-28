@@ -2,7 +2,7 @@
 
 namespace rtpsr {
 	RtpSender::RtpSender(
-		std::unique_ptr<RtpSRSetting> s, Url& url, Codec codec, std::chrono::milliseconds init_retry_rate, std::ostream& logger)
+		std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec, std::chrono::milliseconds init_retry_rate, std::ostream& logger)
 	: RtpSRBase(std::move(s), logger)
 	, init_retry_rate(init_retry_rate) {
 		input       = std::make_unique<CustomCbAsyncInFormat>(*setting, setting->framesize * 2);

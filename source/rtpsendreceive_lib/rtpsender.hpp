@@ -3,7 +3,7 @@
 
 namespace rtpsr {
 	struct RtpSender : public RtpSRBase {
-		explicit RtpSender(std::unique_ptr<RtpSRSetting> s, Url& url, Codec codec,
+		explicit RtpSender(std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec,
 			std::chrono::milliseconds init_retry_rate = std::chrono::milliseconds(500), std::ostream& logger = std::cerr);
 		~RtpSender();
 

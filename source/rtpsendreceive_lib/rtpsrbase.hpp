@@ -52,7 +52,7 @@ namespace rtpsr {
 		int         port    = 30000;
 	};
 	std::string getSdpUrl(std::string const& address, int port);
-	std::string getSdpUrl(Url& url);
+	std::string getSdpUrl(Url const& url);
 
 	enum class RtpFormatKind { RTP = 0, RTSP = 1 };
 
@@ -69,7 +69,7 @@ namespace rtpsr {
 	}
 
 	struct RtpOptionsBase {
-		explicit RtpOptionsBase(Url&& url);
+		explicit RtpOptionsBase(Url const&& url);
 		Url url;
 		// maximum reorder delay to be set to audioformatcontext
 		int max_delay;
@@ -88,7 +88,7 @@ namespace rtpsr {
 	};
 	class RtpOption : public RtpSRSetting, public RtpOptionsBase {
 	public:
-		explicit RtpOption(Url&& url, double samplerate, int channels, int buffersize);
+		explicit RtpOption(Url const&& url, double samplerate, int channels, int buffersize);
 		RtpFormatKind getKind() override {
 			return RtpFormatKind::RTP;
 		};
@@ -97,7 +97,7 @@ namespace rtpsr {
 	};
 	class RtspOption : public RtpSRSetting, public RtpOptionsBase {
 	public:
-		explicit RtspOption(Url&& url, double samplerate, int channels, int buffersize);
+		explicit RtspOption(Url const&& url, double samplerate, int channels, int buffersize);
 
 		RtpFormatKind getKind() override {
 			return RtpFormatKind::RTSP;
@@ -210,13 +210,13 @@ namespace rtpsr {
 	};
 	struct RtpInFormat final : public InFormat, public RtpFormatBase {
 		RtpInFormat() = delete;
-		explicit RtpInFormat(Url& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
+		explicit RtpInFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
 		~RtpInFormat() final = default;
 		bool tryConnectInput();
 		Url  url;
 	};
 	struct RtpOutFormat final : public OutFormat, public RtpFormatBase {
-		explicit RtpOutFormat(Url& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
+		explicit RtpOutFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
 		~RtpOutFormat() final = default;
 		bool tryConnect();
 		Url  url;
