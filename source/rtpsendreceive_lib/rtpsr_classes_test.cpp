@@ -1,7 +1,7 @@
 //  A simple ffmpeg wrapper to send/receive audio stream with rtp protocol
 //  written in C++.
 // Copyright 2020 Tomoya Matsuura All rights Reserved.
-// This source code is released under LGPL lisence.
+// This source code is released under LGPL 3.0 lisence.
 #include "rtpsender.hpp"
 #include "rtpreceiver.hpp"
 
@@ -9,20 +9,14 @@
 #define CATCH_CONFIG_NO_CPP17_UNCAUGHT_EXCEPTIONS
 #include "c74_min_unittest.h"    // required unit test header
 
-#include "lockfree_ringbuffer_test.hpp"
 TEST_CASE("RTSP loopback") {
 	//   av_log_set_level(AV_LOG_TRACE);
 	rtpsr::RtpSRSetting setting = {48000, 1, 128};
 	rtpsr::Url          url     = {"127.0.0.1", 30000};
 
-	rtpsr::RtpReceiver receiver(setting, url, rtpsr::Codec::PCM_s16BE);
-	rtpsr::RtpSender   sender(setting, url, rtpsr::Codec::PCM_s16BE);
+	auto receiver = std::make_unique<rtpsr::RtpReceiver>(setting, url, rtpsr::Codec::PCM_s16BE);
+	auto sender   = std::make_unique<rtpsr::RtpSender>(setting, url, rtpsr::Codec::PCM_s16BE);
 
-	auto rres = receiver.wait_connection.wait_for(std::chrono::seconds(3));
-	auto sres = sender.wait_connection.wait_for(std::chrono::seconds(3));
-	if (rres == std::future_status::timeout || sres == std::future_status::timeout) {
-		throw std::runtime_error("timeout");
-	}
 	std::vector<double> ref;
 	std::vector<short>  input;
 	for (int i = 0; i < 128; i++) {
@@ -31,12 +25,19 @@ TEST_CASE("RTSP loopback") {
 		ref.emplace_back(ds);
 		input.emplace_back(s);
 	}
-	sender.input_buf.writeRange(input, input.size());
-	sender.sendData();
-	receiver.receiveData();
+	sender->writeToInput(input);
+	sender->launchLoop();
+	receiver->launchLoop();
 	std::vector<int16_t> answer_s(input.size(), 0);
 	std::vector<double>  answer;
-	receiver.output_buf.readRange(answer_s, input.size());
+	while (true) {
+		auto res = receiver->readFromOutput(answer_s);
+		if (res)
+			break;
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+	}
+	sender.reset();
+	receiver.reset();
 	for (int i = 0; i < input.size(); i++) {
 		answer.emplace_back(rtpsr::convertSampleToDouble(answer_s[i]));
 	}
