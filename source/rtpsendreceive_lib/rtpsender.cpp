@@ -5,24 +5,26 @@ namespace rtpsr {
 		std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec, std::chrono::milliseconds init_retry_rate, std::ostream& logger)
 	: RtpSRBase(std::move(s), logger)
 	, init_retry_rate(init_retry_rate) {
-		input       = std::make_unique<CustomCbAsyncInFormat>(*setting, setting->framesize * 2);
-		auto option = std::make_unique<AVOptionBase>(makeCtxParams());
-		output      = std::make_unique<RtpOutFormat>(url, *setting, std::move(option));
+		input = std::make_unique<CustomCbAsyncInFormat>(*setting, setting->framesize * 2);
+		// auto option = std::make_unique<AVOptionBase>(makeCtxParams());
+
+		auto option = std::make_unique<RtspOutOption>(url, setting->samplerate, setting->channels, setting->framesize);
+		output      = std::make_unique<RtspOutFormat>(std::move(option));
 		this->codec = std::make_unique<Encoder>(*setting, codec);
 		initStream();
 		dtosbuffer.resize(setting->framesize * 2 * setting->channels);
 		init_asyncloop.launch([&]() {
 			while (init_asyncloop.isActive()) {
-				auto* rtpout = dynamic_cast<RtpOutFormat*>(output.get());
+				auto* rtpout = dynamic_cast<RtspOutFormat*>(output.get());
 				try {
 					bool res = rtpout->tryConnect();
 					if (res) {
 						logger << "rtpsender: connected" << std::endl;
 						break;
 					}
-					std::this_thread::sleep_for(init_retry_rate);
-					logger << "rtpsender: connection to " << rtpout->url.address << ":" << std::to_string(rtpout->url.port)
-						   << " refused,retry in " << std::to_string(init_retry_rate.count()) << "ms." << std::endl;
+					logger << "rtpsender: connection to " << rtpout->option->url.address << ":" << std::to_string(rtpout->option->url.port)
+						   << " refused,retry in " << std::to_string(this->init_retry_rate.count()) << "ms." << std::endl;
+					std::this_thread::sleep_for(this->init_retry_rate);
 				}
 				catch (std::runtime_error& e) {
 					throw e;

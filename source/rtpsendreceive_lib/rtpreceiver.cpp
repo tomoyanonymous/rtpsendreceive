@@ -1,10 +1,11 @@
 #include "rtpreceiver.hpp"
 
 namespace rtpsr {
-	RtpReceiver::RtpReceiver(std::unique_ptr<RtpSRSetting> s, Url& url, Codec codec, std::ostream& logger)
+	RtpReceiver::RtpReceiver(std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec, std::ostream& logger)
 	: RtpSRBase(std::move(s), logger) {
-		auto option = std::make_unique<AVOptionBase>(makeCtxParams());
-		input       = std::make_unique<RtpInFormat>(url, *setting, std::move(option));
+		// auto option = std::make_unique<AVOptionBase>(makeCtxParams());
+		auto option = std::make_unique<RtspInOption>(url, setting->samplerate, setting->channels, setting->framesize);
+		input       = std::make_unique<RtspInFormat>(std::move(option));
 		output      = std::make_unique<CustomCbAsyncOutFormat>(*setting, frame->nb_samples * 2);
 		this->codec = std::make_unique<Decoder>(*setting, codec);
 		tmpbuf.resize(frame->nb_samples * setting->channels * 2);
@@ -14,7 +15,7 @@ namespace rtpsr {
 			logger << "rtpreceiver waiting incoming connection..." << std::endl;
 			while (init_asyncloop.isActive()) {
 				// this start blocking...
-				bool connection_res = dynamic_cast<RtpInFormat*>(input.get())->tryConnectInput();
+				bool connection_res = dynamic_cast<RtpInFormatBase*>(input.get())->tryConnectInput();
 				if (connection_res) {
 					initStream();
 					logger << "rtpreceiver connected" << std::endl;
@@ -38,10 +39,10 @@ namespace rtpsr {
 			{"enable-protocol", "rtp"},
 			{"enable-protocol", "udp"},
 			{"timeout", 20000},
-			{"stimeout", "1000000"},        
-			{"min_port",5000},
-			{"max_port",65000},                              // tcp connection
-			{"reorder_queue_size", 100000},                               // 0.05sec
+			{"stimeout", "1000000"},
+			{"min_port", 5000},
+			{"max_port", 65000},                                            // tcp connection
+			{"reorder_queue_size", 100000},                                 // 0.05sec
 			{"buffer_size", setting->framesize * setting->channels * 4},    // 0.05sec
 			{"rtsp_flags", "listen"},
 			{"allowed_media_types", "audio"}};

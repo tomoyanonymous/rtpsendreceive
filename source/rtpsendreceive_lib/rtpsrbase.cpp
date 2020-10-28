@@ -33,25 +33,26 @@ namespace rtpsr {
 	std::string getSdpUrl(Url const& url) {
 		return getSdpUrl(url.address, url.port);
 	}
-	RtpOptionsBase::RtpOptionsBase(Url const&& url)
-	: url(url) {
+	RtpOptionsBase::RtpOptionsBase(Url const& url)
+	: url(std::move(url)) {
 		dict.emplace("protocol_whitelist", "file,udp,rtp,tcp,rtsp");
 	}
 	void RtpOptionsBase::generateOptions() {
 		dict.clear();
 		dict.emplace("reorder_queue_size", reorder_queue_size);
 		dict.emplace("packet_size", packet_size);
-		dict.emplace("buffer_size", buffer_size);
 	}
-	RtpOption::RtpOption(Url const&& url, double samplerate, int channels, int buffersize)
+	RtpOption::RtpOption(Url const& url, double samplerate, int channels, int buffersize)
 	: RtpOptionsBase(std::move(url))
-	, RtpSRSetting({samplerate, channels, buffersize}) { }
+	, RtpSRSetting({samplerate, channels, buffersize})
+	, buffer_size(buffersize * channels * 4) { }
 	void RtpOption::generateOptions() {
 		RtpOptionsBase::generateOptions();
+		dict.emplace("buffer_size", buffer_size);
 		// todo::filter_source;
 	}
 
-	RtspOption::RtspOption(Url const&& url, double samplerate, int channels, int buffersize)
+	RtspOption::RtspOption(Url const& url, double samplerate, int channels, int buffersize)
 	: RtpOptionsBase(std::move(url))
 	, RtpSRSetting({samplerate, channels, buffersize}) {
 		// dict.emplace("allowed_media_types",nullptr);
@@ -123,23 +124,20 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 
 	// IO Format
 
-	IOFormat::IOFormat(RtpSRSetting& setting)
-	: setting(setting) {
+	IOFormat::IOFormat() {
 		ctx = avformat_alloc_context();
 	}
 	IOFormat::~IOFormat() {
 		avformat_free_context(ctx);
 	}
 	// InFormat
-	InFormat::InFormat(RtpSRSetting& s)
-	: IOFormat(s) { }
+	InFormat::InFormat() = default;
 	// OutFormat
-	OutFormat::OutFormat(RtpSRSetting& s)
-	: IOFormat(s) { }
+	OutFormat::OutFormat() = default;
 
 	// old cutomcallback format
-	CustomCbInFormat::CustomCbInFormat(RtpSRSetting& s)
-	: InFormat(s) {
+	CustomCbInFormat::CustomCbInFormat(RtpSRSetting const& s)
+	: InFormat() {
 		buffer.resize(setting.framesize * setting.channels);
 		auto  bufsize = getBufSize(s);
 		auto* aviobuf = static_cast<uint8_t*>(av_malloc(bufsize));
@@ -156,8 +154,8 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		memcpy(avio_buf, address, buf_size);
 		return buf_size;
 	}
-	CustomCbOutFormat::CustomCbOutFormat(RtpSRSetting& s)
-	: OutFormat(s) {
+	CustomCbOutFormat::CustomCbOutFormat(RtpSRSetting const& s)
+	: OutFormat() {
 		buffer.resize(setting.framesize);
 
 		auto  bufsize = getBufSize(s);
@@ -190,30 +188,29 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		buffer.readRange(dest, dest.size());
 		return true;
 	}
-	CustomCbAsyncInFormat::CustomCbAsyncInFormat(RtpSRSetting& s, size_t buffer_size)
-	: InFormat(s)
+	CustomCbAsyncInFormat::CustomCbAsyncInFormat(RtpSRSetting const& s, size_t buffer_size)
+	: InFormat()
 	, CustomCbAsyncFormat(std::max((int)buffer_size, s.framesize) * s.channels) { }
-	CustomCbAsyncOutFormat::CustomCbAsyncOutFormat(RtpSRSetting& s, size_t buffer_size)
-	: OutFormat(s)
+	CustomCbAsyncOutFormat::CustomCbAsyncOutFormat(RtpSRSetting const& s, size_t buffer_size)
+	: OutFormat()
 	, CustomCbAsyncFormat(std::max((int)buffer_size, s.framesize) * s.channels) { }
 
-	// Rtp Format base
-	RtpFormatBase::RtpFormatBase(std::unique_ptr<AVOptionBase> options)
-	: options(std::move(options)) { }
+	// Rtp Format base(for now, nothing)
+
 
 	// Rtp Input
-	RtpInFormatBase::RtpInFormatBase(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
-	: url(url)
-	, RtpFormatBase(std::move(options))
-	, InFormat(s) {
+	RtpFormatBase::RtpFormatBase() {
 		avformat_network_init();
 	}
-	RtspInFormat::RtspInFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
-	: RtpInFormatBase(url, s, std::move(options)) { }
+	RtspInFormat::RtspInFormat(std::unique_ptr<RtspInOption> rtpoptions)
+	: RtpInFormatBase()
+	, option(std::move(rtpoptions)) { }
 
 	bool RtspInFormat::tryConnectInput() {
+		option->generateOptions();
+
 		auto* ifmt = av_find_input_format("rtsp");
-		auto  res  = avformat_open_input(&ctx, getSdpUrl(url).c_str(), ifmt, options->get());
+		auto  res  = avformat_open_input(&ctx, getSdpUrl(option->url).c_str(), ifmt, option->getParam());
 		if (res == -60 || res == -61 || res == -22) {
 			return false;
 		}
@@ -222,41 +219,51 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		}
 		return true;
 	}
-	RtpInFormat::RtpInFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
-	: RtpInFormatBase(url, s, std::move(options)) { }
+	RtpInFormat::RtpInFormat(std::unique_ptr<RtpInOption> rtpoptions)
+	: RtpInFormatBase()
+	, option(std::move(rtpoptions)) {
+		sdp_avio = (unsigned char*)av_mallocz(aviobufsize);
+	}
+	RtpInFormat::~RtpInFormat() {
+		if (sdp_opaque != nullptr) {
+			av_freep(sdp_avio);
+		}
+	}
 
 	bool RtpInFormat::tryConnectInput() {
-		auto* ifmt = av_find_input_format("sdp");
-		// todo
-		// auto  res  = avformat_open_input(&ctx, getSdpUrl(url).c_str(), ifmt, options->get());
-		// if (res == -60 || res == -61 || res == -22) {
-		// 	return false;
-		// }
-		// if (res < 0) {
-		// 	checkAvError(res);
-		// }
+		option->generateOptions();
+		auto* ifmt       = av_find_input_format("sdp");
+		auto  sdp        = option->makeDummySdp();
+		sdp_opaque       = std::make_unique<SdpOpaque>();
+		sdp_opaque->data = SdpOpaque::Vector(sdp.c_str(), sdp.c_str() + strlen(sdp.c_str()));
+		sdp_opaque->pos  = sdp_opaque->data.begin();
+		ctx->pb          = avio_alloc_context(sdp_avio, aviobufsize, 0, sdp_opaque.get(), RtpInOption::readDummySdp, nullptr, nullptr);
+		auto res         = avformat_open_input(&ctx, "internal.sdp", ifmt, option->getParam());
+		if (res == -60 || res == -61 || res == -22) {
+			return false;
+		}
+		if (res < 0) {
+			checkAvError(res);
+		}
 		return true;
 	}
-	RtpOutFormatBase::RtpOutFormatBase(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
-	: url(url)
-	, RtpFormatBase(std::move(options))
-	, OutFormat(s) {
-		avformat_network_init();
-	}
 
-	RtspOutFormat::RtspOutFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
-	: RtpOutFormatBase(url, s, std::move(options)) { }
-	RtpOutFormat::RtpOutFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
-	: RtpOutFormatBase(url, s, std::move(options)) { }
+	RtspOutFormat::RtspOutFormat(std::unique_ptr<RtspOutOption> rtpoptions)
+	: RtpOutFormatBase()
+	, option(std::move(rtpoptions)) { }
+	RtpOutFormat::RtpOutFormat(std::unique_ptr<RtpOutOption> rtpoptions)
+	: RtpOutFormatBase()
+	, option(std::move(rtpoptions)) { }
 
 
 	bool RtspOutFormat::tryConnect() {
-		auto  url_tmp    = getSdpUrl(url);
+		option->generateOptions();
+		auto  url_tmp    = getSdpUrl(option->url);
 		auto* fmt_output = av_guess_format("rtsp", url_tmp.c_str(), nullptr);
 		ctx->oformat     = fmt_output;
 		ctx->url         = (char*)av_malloc(url_tmp.size() + sizeof(char));
 		av_strlcpy(ctx->url, url_tmp.c_str(), url_tmp.size() + sizeof(char));
-		checkAvError(avformat_init_output(ctx, this->options->get()));
+		checkAvError(avformat_init_output(ctx, option->getParam()));
 		checkAvError(avio_open(&ctx->pb, ctx->url, AVIO_FLAG_WRITE));
 		int rcode = avformat_write_header(ctx, nullptr);
 		if (rcode >= 0) {
@@ -270,7 +277,8 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 	}
 
 	bool RtpOutFormat::tryConnect() {
-		auto  url_tmp           = getSdpUrl(url);
+		option->generateOptions();
+		auto  url_tmp           = getSdpUrl(option->url);
 		auto* fmt_output        = av_guess_format("rtp", url_tmp.c_str(), nullptr);
 		fmt_output->mime_type   = "audio/L16";
 		fmt_output->audio_codec = AV_CODEC_ID_PCM_S16BE;
@@ -278,7 +286,7 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		ctx->oformat            = fmt_output;
 		ctx->url                = (char*)av_malloc(url_tmp.size() + sizeof(char));
 		av_strlcpy(ctx->url, url_tmp.c_str(), url_tmp.size() + sizeof(char));
-		checkAvError(avformat_init_output(ctx, this->options->get()));
+		checkAvError(avformat_init_output(ctx, option->getParam()));
 		checkAvError(avio_open(&ctx->pb, ctx->url, AVIO_FLAG_WRITE));
 		int rcode = avformat_write_header(ctx, nullptr);
 		if (rcode >= 0) {
@@ -291,7 +299,7 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		return false;
 	}
 
-	CodecBase::CodecBase(RtpSRSetting& s, Codec c, bool isencoder)
+	CodecBase::CodecBase(RtpSRSetting const& s, Codec c, bool isencoder)
 	: codec(c) {
 		auto* avcodec = (isencoder) ? avcodec_find_encoder_by_name(getCodecName(codec).c_str())
 									: avcodec_find_decoder_by_name(getCodecName(codec).c_str());
@@ -312,9 +320,9 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		return false;
 	}
 
-	Decoder::Decoder(RtpSRSetting& s, Codec c)
+	Decoder::Decoder(RtpSRSetting const& s, Codec c)
 	: CodecBase(s, c, false) { }
-	Encoder::Encoder(RtpSRSetting& s, Codec c)
+	Encoder::Encoder(RtpSRSetting const& s, Codec c)
 	: CodecBase(s, c, true) { }
 	bool Decoder::sendPacket(AVPacket* packet) {
 		return checkIsErrAgain(avcodec_send_packet(ctx, packet));
