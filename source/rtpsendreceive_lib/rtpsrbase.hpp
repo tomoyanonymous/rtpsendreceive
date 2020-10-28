@@ -114,7 +114,7 @@ namespace rtpsr {
 	class RtpInOption : public RtpOption {
 	public:
 		std::string makeDummySdp();
-		static int readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size);
+		static int  readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size);
 		bool        use_customio;
 		bool        rtcp_to_source;
 	};
@@ -209,16 +209,29 @@ namespace rtpsr {
 		explicit RtpFormatBase(std::unique_ptr<AVOptionBase> options);
 		std::unique_ptr<AVOptionBase> options;
 	};
-	struct RtpInFormat final : public InFormat, public RtpFormatBase {
-		RtpInFormat() = delete;
-		explicit RtpInFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
-		~RtpInFormat() final = default;
-		bool tryConnectInput();
+	struct RtpInFormatBase : public InFormat, public RtpFormatBase {
+		RtpInFormatBase() = delete;
+		explicit RtpInFormatBase(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
+		~RtpInFormatBase() = default;
+		virtual bool tryConnectInput()=0;
 		Url  url;
 	};
-	struct RtpOutFormat final : public OutFormat, public RtpFormatBase {
-		explicit RtpOutFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
-		~RtpOutFormat() final = default;
+
+	struct RtspInFormat : public RtpInFormatBase {
+		RtspInFormat() = delete;
+		explicit RtspInFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
+		bool tryConnectInput() override;
+	};
+
+	struct RtpInFormat : public RtpInFormatBase {
+		RtpInFormat() = delete;
+		explicit RtpInFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
+		bool tryConnectInput() override;
+	};
+
+	struct RtpOutFormatBase : public OutFormat, public RtpFormatBase {
+		explicit RtpOutFormatBase(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
+		~RtpOutFormatBase() = default;
 		bool tryConnect();
 		Url  url;
 	};

@@ -109,17 +109,17 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		});
 		return sdp_content;
 	}
-int RtpInOption::readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size) {
-  auto octx = static_cast<SdpOpaque*>(userdata);
-  if (octx->pos == octx->data.end()) {
-    return 0;
-  }
-  auto dist = static_cast<int>(std::distance(octx->pos, octx->data.end()));
-  auto count = std::min(buf_size, dist);
-  std::copy(octx->pos, octx->pos + count, avio_buf);
-  octx->pos += count;
-  return count;
-}
+	int RtpInOption::readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size) {
+		auto octx = static_cast<SdpOpaque*>(userdata);
+		if (octx->pos == octx->data.end()) {
+			return 0;
+		}
+		auto dist  = static_cast<int>(std::distance(octx->pos, octx->data.end()));
+		auto count = std::min(buf_size, dist);
+		std::copy(octx->pos, octx->pos + count, avio_buf);
+		octx->pos += count;
+		return count;
+	}
 
 	// IO Format
 
@@ -202,13 +202,16 @@ int RtpInOption::readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size) {
 	: options(std::move(options)) { }
 
 	// Rtp Input
-	RtpInFormat::RtpInFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
+	RtpInFormatBase::RtpInFormatBase(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
 	: url(url)
 	, RtpFormatBase(std::move(options))
 	, InFormat(s) {
 		avformat_network_init();
 	}
-	bool RtpInFormat::tryConnectInput() {
+	RtspInFormat::RtspInFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
+	: RtpInFormatBase(url, s, std::move(options)) { }
+
+	bool RtspInFormat::tryConnectInput() {
 		auto* ifmt = av_find_input_format("rtsp");
 		auto  res  = avformat_open_input(&ctx, getSdpUrl(url).c_str(), ifmt, options->get());
 		if (res == -60 || res == -61 || res == -22) {
@@ -219,7 +222,22 @@ int RtpInOption::readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size) {
 		}
 		return true;
 	}
-	RtpOutFormat::RtpOutFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
+		RtpInFormat::RtpInFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
+	: RtpInFormatBase(url, s, std::move(options)) { }
+	
+	bool RtpInFormat::tryConnectInput() {
+		auto* ifmt = av_find_input_format("sdp");
+		//todo
+		// auto  res  = avformat_open_input(&ctx, getSdpUrl(url).c_str(), ifmt, options->get());
+		// if (res == -60 || res == -61 || res == -22) {
+		// 	return false;
+		// }
+		// if (res < 0) {
+		// 	checkAvError(res);
+		// }
+		return true;
+	}
+	RtpOutFormatBase::RtpOutFormatBase(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
 	: url(url)
 	, RtpFormatBase(std::move(options))
 	, OutFormat(s) {
@@ -230,7 +248,7 @@ int RtpInOption::readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size) {
 		ctx->url         = (char*)av_malloc(url_tmp.size() + sizeof(char));
 		av_strlcpy(ctx->url, url_tmp.c_str(), url_tmp.size() + sizeof(char));
 	}
-	bool RtpOutFormat::tryConnect() {
+	bool RtpOutFormatBase::tryConnect() {
 		checkAvError(avformat_init_output(ctx, this->options->get()));
 		checkAvError(avio_open(&ctx->pb, ctx->url, AVIO_FLAG_WRITE));
 		int rcode = avformat_write_header(ctx, nullptr);
