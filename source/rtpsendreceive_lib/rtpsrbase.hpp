@@ -2,6 +2,8 @@
 
 #include <variant>
 #include <unordered_map>
+#include <regex>
+
 
 #include "rtpsendreceive_lib.hpp"
 #include "lockfree_ringbuffer.hpp"
@@ -36,12 +38,12 @@ namespace rtpsr {
 	};
 
 	struct RtpSRSetting {
-		int samplerate;
-		int channels;
-		int framesize;
+		double samplerate;
+		int    channels;
+		int    framesize;
 	};
 
-	inline size_t getBufSize(RtpSRSetting& s) {
+	inline size_t getBufSize(RtpSRSetting const& s) {
 		// how sample format?
 		return sizeof(double) * s.framesize * s.channels;
 	}
@@ -50,22 +52,104 @@ namespace rtpsr {
 		int         port    = 30000;
 	};
 	std::string getSdpUrl(std::string const& address, int port);
-	std::string getSdpUrl(Url& url);
+	std::string getSdpUrl(Url const& url);
+
+	enum class RtpFormatKind { RTP = 0, RTSP = 1 };
+
+	inline std::string toString(RtpFormatKind k) {
+		switch (k) {
+			case RtpFormatKind::RTP:
+				return "rtp";
+			case RtpFormatKind::RTSP:
+				return "rtsp";
+			default:
+				assert(false);
+				return "";
+		}
+	}
+
+	struct RtpOptionsBase {
+		explicit RtpOptionsBase(Url const& url);
+
+		const Url url;
+
+		// number of packet of reorder queue
+		size_t                reorder_queue_size = 1000;
+		size_t                packet_size        = 1000;
+		virtual RtpFormatKind getKind()          = 0;
+		virtual void          generateOptions();
+		AVDictionary**        getParam() {
+            avoptions = std::make_unique<AVOptionBase>(std::move(dict));
+            return avoptions->get();
+		}
+		AVOptionBase::container_t     dict;
+		std::unique_ptr<AVOptionBase> avoptions;
+	};
+	class RtpOption : public RtpSRSetting, public RtpOptionsBase {
+	public:
+		explicit RtpOption(Url const& url, double samplerate, int channels, int buffersize);
+		RtpFormatKind getKind() override {
+			return RtpFormatKind::RTP;
+		};
+		void generateOptions() override;
+		// maximum reorder delay(in microseconds) to be set to audioformatcontext
+		int    max_delay = 500000;
+		size_t buffer_size;
+		bool   filter_source = false;
+	};
+	class RtspOption : public RtpSRSetting, public RtpOptionsBase {
+	public:
+		explicit RtspOption(Url const& url, double samplerate, int channels, int buffersize);
+
+		RtpFormatKind getKind() override {
+			return RtpFormatKind::RTSP;
+		};
+		void generateOptions() override;
+		enum class TransPortProtocol { UDP = 0, TCP, UDP_MULTICAST, HTTP, HTTPS } rtsp_transport = TransPortProtocol::UDP;
+		int                 listen_timeout                                                       = 5000;       // unit:seconds
+		int                 socket_timeout                                                       = 1000000;    // unit:microseconds
+		std::pair<int, int> port_range                                                           = {5000, 65000};
+
+	private:
+		static std::string getProtocolString(TransPortProtocol p);
+	};
+	class RtpInOption : public RtpOption {
+	public:
+		std::string makeDummySdp();
+		static int  readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size);
+		bool        use_customio   = false;
+		bool        rtcp_to_source = false;
+	};
+	class RtpOutOption : public RtpOption {
+	public:
+	};
+
+	class RtspOutOption : public RtspOption {
+	public:
+		explicit RtspOutOption(Url const& url, double samplerate, int channels, int buffersize)
+		: RtspOption(url, samplerate, channels, buffersize) { }
+	};
+	class RtspInOption : public RtspOption {
+	public:
+		explicit RtspInOption(Url const& url, double samplerate, int channels, int buffersize)
+		: RtspOption(url, samplerate, channels, buffersize) { }
+		void generateOptions() override;
+	};
 
 	// IO Format
 	struct IOFormat {
-		explicit IOFormat(RtpSRSetting& setting);
+		IOFormat();
 		virtual ~IOFormat();
 		AVFormatContext* ctx;
-		RtpSRSetting&    setting;
+		RtpSRSetting     setting;
 	};
 	struct InFormat : public IOFormat {
-		explicit InFormat(RtpSRSetting& s);
+		InFormat();
 		~InFormat() override = default;
 		virtual void connectInput() {};
 	};
 	struct OutFormat : public IOFormat {
-		explicit OutFormat(RtpSRSetting& s);
+		OutFormat();
 		virtual ~OutFormat() = default;
 		virtual void startOutput() {};
 	};
@@ -85,12 +169,12 @@ namespace rtpsr {
 
 	class CustomCbAsyncInFormat final : public InFormat, public CustomCbAsyncFormat {
 	public:
-		explicit CustomCbAsyncInFormat(RtpSRSetting& s, size_t buffer_size);
+		explicit CustomCbAsyncInFormat(RtpSRSetting const& s, size_t buffer_size);
 		~CustomCbAsyncInFormat() final = default;
 	};
 	class CustomCbAsyncOutFormat final : public OutFormat, public CustomCbAsyncFormat {
 	public:
-		explicit CustomCbAsyncOutFormat(RtpSRSetting& s, size_t buffer_size);
+		explicit CustomCbAsyncOutFormat(RtpSRSetting const& s, size_t buffer_size);
 		~CustomCbAsyncOutFormat() final = default;
 	};
 
@@ -99,7 +183,7 @@ namespace rtpsr {
 		rtpsr::buffertype buffer;
 	};
 	struct CustomCbInFormat : public InFormat, public CustomCbFormat {
-		explicit CustomCbInFormat(RtpSRSetting& s);
+		explicit CustomCbInFormat(RtpSRSetting const& s);
 		~CustomCbInFormat() = default;
 		static int readPacket(void* userdata, uint8_t* avio_buf, int buf_size);
 
@@ -108,7 +192,7 @@ namespace rtpsr {
 		}
 	};
 	struct CustomCbOutFormat : public OutFormat, public CustomCbFormat {
-		explicit CustomCbOutFormat(RtpSRSetting& s);
+		explicit CustomCbOutFormat(RtpSRSetting const& s);
 		~CustomCbOutFormat() { }
 		static int writePacket(void* userdata, uint8_t* avio_buf, int buf_size);
 		template<typename T>
@@ -127,26 +211,51 @@ namespace rtpsr {
 
 	// rtp in out format.
 	struct RtpFormatBase {
-		RtpFormatBase() = delete;
-		explicit RtpFormatBase(std::unique_ptr<AVOptionBase> options);
-		std::unique_ptr<AVOptionBase> options;
+		RtpFormatBase();
 	};
-	struct RtpInFormat final : public InFormat, public RtpFormatBase {
+	struct RtpInFormatBase : public InFormat, public RtpFormatBase {
+		RtpInFormatBase()              = default;
+		virtual bool tryConnectInput() = 0;
+	};
+
+	struct RtspInFormat : public RtpInFormatBase {
+		RtspInFormat() = delete;
+		explicit RtspInFormat(std::unique_ptr<RtspInOption> rtpoptions);
+		bool                          tryConnectInput() override;
+		std::unique_ptr<RtspInOption> option;
+	};
+
+	struct RtpInFormat : public RtpInFormatBase {
 		RtpInFormat() = delete;
-		explicit RtpInFormat(Url& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
-		~RtpInFormat() final = default;
-		bool tryConnectInput();
-		Url  url;
+		explicit RtpInFormat(std::unique_ptr<RtpInOption> rtpoptions);
+		~RtpInFormat() override;
+		bool                           tryConnectInput() override;
+		std::unique_ptr<RtpInOption>   option;
+		std::unique_ptr<SdpOpaque>     sdp_opaque;
+		unsigned char*                 sdp_avio;
+		inline static constexpr size_t aviobufsize = 4096;
 	};
-	struct RtpOutFormat final : public OutFormat, public RtpFormatBase {
-		explicit RtpOutFormat(Url& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
-		~RtpOutFormat() final = default;
-		bool tryConnect();
-		Url  url;
+
+	struct RtpOutFormatBase : public OutFormat, public RtpFormatBase {
+		RtpOutFormatBase()        = default;
+		virtual bool tryConnect() = 0;
+	};
+	struct RtspOutFormat : public RtpOutFormatBase {
+		RtspOutFormat() = delete;
+		explicit RtspOutFormat(std::unique_ptr<RtspOutOption> rtpoptions);
+		bool                           tryConnect() override;
+		std::unique_ptr<RtspOutOption> option;
+	};
+
+	struct RtpOutFormat : public RtpOutFormatBase {
+		RtpOutFormat() = delete;
+		explicit RtpOutFormat(std::unique_ptr<RtpOutOption> rtpoptions);
+		bool                          tryConnect() override;
+		std::unique_ptr<RtpOutOption> option;
 	};
 
 	struct CodecBase {
-		explicit CodecBase(RtpSRSetting& s, Codec c = Codec::PCM_s16BE, bool isencoder = true);
+		explicit CodecBase(RtpSRSetting const& s, Codec c = Codec::PCM_s16BE, bool isencoder = true);
 		virtual ~CodecBase() = default;
 		AVCodecContext* ctx  = nullptr;
 		rtpsr::Codec    codec;
@@ -154,7 +263,7 @@ namespace rtpsr {
 		static bool     checkIsErrAgain(int error_code);
 	};
 	struct Decoder : public CodecBase {
-		explicit Decoder(RtpSRSetting& s, Codec c);
+		explicit Decoder(RtpSRSetting const& s, Codec c);
 		~Decoder() override {
 			avcodec_free_context(&ctx);
 		}
@@ -162,7 +271,7 @@ namespace rtpsr {
 		bool receiveFrame(AVFrame* frame);
 	};
 	struct Encoder : public CodecBase {
-		explicit Encoder(RtpSRSetting& s, Codec c);
+		explicit Encoder(RtpSRSetting const& s, Codec c);
 		~Encoder() override {
 			avcodec_free_context(&ctx);
 		}
@@ -188,27 +297,28 @@ namespace rtpsr {
 		void               wait();
 		std::future_status wait_for(int mills);
 		bool               isActive() const;
+
 	private:
 		std::atomic<bool>        active = false;
 		std::shared_future<bool> future;
 	};
 
 	struct RtpSRBase {
-		explicit RtpSRBase(RtpSRSetting& s, std::ostream& logger = std::cerr);
+		explicit RtpSRBase(std::unique_ptr<RtpSRSetting> s, std::ostream& logger = std::cerr);
 		~RtpSRBase();
 		virtual void launchLoop() = 0;
 		AsyncLooper  asynclooper;
 		AsyncLooper  init_asyncloop;
 
 	protected:
-		void                       initStream() const;
-		RtpSRSetting               setting;
-		std::unique_ptr<InFormat>  input;
-		std::unique_ptr<OutFormat> output;
-		std::unique_ptr<CodecBase> codec;
-		AVPacket*                  packet;
-		AVFrame*                   frame;
-		std::ostream&              logger;
+		void                          initStream() const;
+		std::unique_ptr<RtpSRSetting> setting;
+		std::unique_ptr<InFormat>     input;
+		std::unique_ptr<OutFormat>    output;
+		std::unique_ptr<CodecBase>    codec;
+		AVPacket*                     packet;
+		AVFrame*                      frame;
+		std::ostream&                 logger;
 	};
 
 }    // namespace rtpsr

@@ -11,11 +11,13 @@
 
 TEST_CASE("RTSP loopback") {
 	//   av_log_set_level(AV_LOG_TRACE);
-	rtpsr::RtpSRSetting setting = {48000, 1, 128};
+	auto setting_r = std::make_unique<rtpsr::RtpSRSetting>(rtpsr::RtpSRSetting{48000, 1, 128});
+	auto setting_s = std::make_unique<rtpsr::RtpSRSetting>(rtpsr::RtpSRSetting{48000, 1, 128});
+
 	rtpsr::Url          url     = {"127.0.0.1", 30000};
 
-	auto receiver = std::make_unique<rtpsr::RtpReceiver>(setting, url, rtpsr::Codec::PCM_s16BE);
-	auto sender   = std::make_unique<rtpsr::RtpSender>(setting, url, rtpsr::Codec::PCM_s16BE);
+	auto receiver = std::make_unique<rtpsr::RtpReceiver>(std::move(setting_r), url, rtpsr::Codec::PCM_s16BE);
+	auto sender   = std::make_unique<rtpsr::RtpSender>(std::move(setting_s), url, rtpsr::Codec::PCM_s16BE);
 
 	std::vector<double> ref;
 	std::vector<short>  input;
