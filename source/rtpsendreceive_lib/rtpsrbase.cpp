@@ -34,6 +34,29 @@ namespace rtpsr {
 		return getSdpUrl(url.address, url.port);
 	}
 
+	std::string RtpInOption::makeDummySdp() {
+		std::string sdp_content =
+			R"(SDP:
+v=0
+o=- 0 0 IN IP4 $address$
+s=DUMMY SDP
+c=IN IP4 $address$
+t=0 0
+a=tool:libavformat 58.29.100
+m=audio $port$ RTP/AVP 97
+b=AS:$bitrate$
+a=rtpmap:97 L16/$samplerate$/$channels$)";
+		std::vector<std::pair<std::string, std::string>> replace_pairs = {{"\\$port\\$", std::to_string(url.port)},
+			{"\\$address\\$", url.address},
+			{"\\$channels\\$", std::to_string(channels)},
+			{"\\$bitrate\\$", std::to_string((samplerate / 1000) * 16 * channels)},
+			{"\\$samplerate\\$", std::to_string(samplerate)}};
+		std::for_each(replace_pairs.begin(), replace_pairs.end(), [&](auto pair) {
+			sdp_content = std::regex_replace(sdp_content, std::regex(pair.first), pair.second);
+		});
+		return sdp_content;
+	}
+
 	// IO Format
 
 	IOFormat::IOFormat(RtpSRSetting& setting)
@@ -215,8 +238,8 @@ namespace rtpsr {
 	std::future_status AsyncLooper::wait_for(int mills) {
 		return future.wait_for(std::chrono::milliseconds(mills));
 	}
-	
-	//RtpSRBase
+
+	// RtpSRBase
 
 	RtpSRBase::RtpSRBase(RtpSRSetting& s, std::ostream& logger)
 	: setting(s)

@@ -2,6 +2,8 @@
 
 #include <variant>
 #include <unordered_map>
+#include <regex>
+
 
 #include "rtpsendreceive_lib.hpp"
 #include "lockfree_ringbuffer.hpp"
@@ -51,6 +53,41 @@ namespace rtpsr {
 	};
 	std::string getSdpUrl(std::string const& address, int port);
 	std::string getSdpUrl(Url& url);
+
+	enum class RtpFormatKind { RTP = 0, RTSP = 1 };
+
+	struct RtpOptionsBase {
+		Url                           url;
+		std::unique_ptr<AVOptionBase> avoptions;
+		int                           max_delay;
+		virtual RtpFormatKind         getKind() = 0;
+	};
+	class RtpOption : public RtpSRSetting, public RtpOptionsBase {
+	public:
+		RtpFormatKind getKind() override {
+			return RtpFormatKind::RTP;
+		};
+	};
+	class RtspOption : public RtpSRSetting, public RtpOptionsBase {
+	public:
+		RtpFormatKind getKind() override {
+			return RtpFormatKind::RTSP;
+		};
+	};
+	class RtpInOption : public RtpOption {
+	public:
+		std::string makeDummySdp();
+	};
+	class RtpOutOption : public RtpOption {
+	public:
+	};
+
+	class RtspOutOption : public RtpSRSetting, public RtpOptionsBase {
+	public:
+	};
+	class RtspInOption : public RtpSRSetting, public RtpOptionsBase {
+	public:
+	};
 
 	// IO Format
 	struct IOFormat {
@@ -188,6 +225,7 @@ namespace rtpsr {
 		void               wait();
 		std::future_status wait_for(int mills);
 		bool               isActive() const;
+
 	private:
 		std::atomic<bool>        active = false;
 		std::shared_future<bool> future;
