@@ -1,5 +1,10 @@
 # CHANGELOG 
 
+
+## 2020-10-28 v0.2.3
+
+C++ class refactorings & cleeanups.
+
 ## 2020-09-03 v0.2.2
 
 Added GitHub workflow and funding pages.
