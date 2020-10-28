@@ -17,7 +17,8 @@ CompactNamespaces: true
 FixNamespaceComments: true 
 
 SpacesBeforeTrailingComments: 4
-
+AllowAllArgumentsOnNextLine: false
+BinPackArguments: false
 BreakBeforeBraces: Custom
 BraceWrapping:   
   AfterClass:      false

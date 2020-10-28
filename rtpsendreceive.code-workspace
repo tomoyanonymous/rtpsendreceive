@@ -5,12 +5,7 @@
 		}
 	],
 	"settings": {
-		"C_Cpp.autocomplete": "Disabled",
-		"C_Cpp.formatting": "Disabled",
-		"C_Cpp.errorSquiggles": "Disabled",
-		"C_Cpp.intelliSenseEngine": "Disabled",
-		"C_Cpp.clang_format_style": "{ BasedOnStyle: Google}",
-		"C_Cpp.enhancedColorization": "Disabled",
+		"C_Cpp.configurationWarnings": "Disabled",
 		"clangd.arguments": [
 			"-clang-tidy",
 			"-background-index",

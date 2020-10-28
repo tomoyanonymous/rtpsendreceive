@@ -7,38 +7,41 @@
 
 #include <cmath>
 #define CATCH_CONFIG_NO_CPP17_UNCAUGHT_EXCEPTIONS
-#include "c74_min_unittest.h"  // required unit test header
+#include "c74_min_unittest.h"    // required unit test header
 
 #include "lockfree_ringbuffer_test.hpp"
 TEST_CASE("RTSP loopback") {
-    //   av_log_set_level(AV_LOG_TRACE);
-    rtpsr::RtpSRSetting setting = {48000, 1, 128};
-    rtpsr::Url url = {"127.0.0.1", 30000};
+	//   av_log_set_level(AV_LOG_TRACE);
+	rtpsr::RtpSRSetting setting = {48000, 1, 128};
+	rtpsr::Url          url     = {"127.0.0.1", 30000};
 
-    rtpsr::RtpReceiver receiver(setting, url, rtpsr::Codec::PCM_s16BE);
-    rtpsr::RtpSender sender(setting, url, rtpsr::Codec::PCM_s16BE);
+	rtpsr::RtpReceiver receiver(setting, url, rtpsr::Codec::PCM_s16BE);
+	rtpsr::RtpSender   sender(setting, url, rtpsr::Codec::PCM_s16BE);
 
-    auto rres = receiver.wait_connection.wait_for(std::chrono::seconds(3));
-    auto sres = sender.wait_connection.wait_for(std::chrono::seconds(3));
-    if(rres ==std::future_status::timeout||sres==std::future_status::timeout){
-      throw std::runtime_error("timeout");
-    }
-    std::vector<double> ref;
-    for (int i = 0; i < 128; i++) {
-      auto r = ((double)std::rand() / RAND_MAX) * 2 - 1.0;
-      ref.emplace_back(r);
-      sender.getInput().setBuffer(r, i, 0);
-    }
-    sender.sendData();
-    receiver.receiveData();
-    std::vector<double> answer;
+	auto rres = receiver.wait_connection.wait_for(std::chrono::seconds(3));
+	auto sres = sender.wait_connection.wait_for(std::chrono::seconds(3));
+	if (rres == std::future_status::timeout || sres == std::future_status::timeout) {
+		throw std::runtime_error("timeout");
+	}
+	std::vector<double> ref;
+	std::vector<short>  input;
+	for (int i = 0; i < 128; i++) {
+		int16_t s  = std::rand() / RAND_MAX;
+		auto    ds = ((double)s) * 2 - 1.0;
+		ref.emplace_back(ds);
+		input.emplace_back(s);
+	}
+	sender.input_buf.writeRange(input, input.size());
+	sender.sendData();
+	receiver.receiveData();
+	std::vector<int16_t> answer_s(input.size(), 0);
+	std::vector<double>  answer;
+	receiver.output_buf.readRange(answer_s, input.size());
+	for (int i = 0; i < input.size(); i++) {
+		answer.emplace_back(rtpsr::convertSampleToDouble(answer_s[i]));
+	}
 
-    for (int i = 0; i < 128; i++) {
-      answer.emplace_back(receiver.getOutput().readBuffer<double>(i, 0));
-    }
-
-    REQUIRE(REQUIRE_VECTOR_APPROX(answer, ref) == true);
-
+	REQUIRE(REQUIRE_VECTOR_APPROX(answer, ref) == true);
 }
 // TEST_CASE("RTSP Opus loopback") {
 //   try {
@@ -70,4 +73,3 @@ TEST_CASE("RTSP loopback") {
 //     std::exit(EXIT_FAILURE);
 //   }
 // }
-

@@ -20,7 +20,11 @@ public:
 	MIN_AUTHOR {"Tomoya Matsuura"};
 	MIN_RELATED {"rtpreceive_tilde"};
 	rtpsend_tilde(const atoms& args = {}) {
+		instance_count += 1;
 		m_initialized = true;
+	}
+	~rtpsend_tilde() {
+		instance_count -= 1;
 	}
 	attribute<int, threadsafe::no, limit::clamp> channels {this, "channels", 1, range {1, 16}};
 	attribute<symbol>                            address {this, "address", "127.0.0.1"};
@@ -39,10 +43,9 @@ attribute<int> port {this, "port", 30000};
 attribute<int> active {this, "active", 0, setter {MIN_FUNCTION {int res = args[0];
 if (m_initialized && rtpsender != nullptr) {
 	if (res <= 0) {
-		rtpsender->loopstate.active = false;
+		rtpsender->asynclooper.halt();
 	}
 	else {
-		rtpsender->loopstate.active = true;
 		rtpsender->launchLoop();
 	}
 }
@@ -75,7 +78,9 @@ return {};
 ;
 
 message<> dspsetup {this, "dspsetup", MIN_FUNCTION {double newvecsize = args[1];
-resetSender(newvecsize);
+if (m_initialized) {
+	resetSender(newvecsize);
+}
 return {};
 }
 }
@@ -83,17 +88,19 @@ return {};
 
 void operator()(audio_bundle input, audio_bundle output) {
 
-	int chs = std::min<int>(input.channel_count(), channels.get());
-	for (auto i = 0; i < input.frame_count(); i++) {
-		for (auto channel = 0; channel < chs; channel++) {
-			double  in {input.samples(channel)[i]};
-			int16_t s                 = rtpsr::convertDoubleToSample(in);
-			iarray[i * chs + channel] = s;
+	if (rtpsender != nullptr) {
+		int chs = std::min<int>(input.channel_count(), channels.get());
+		for (auto i = 0; i < input.frame_count(); i++) {
+			for (auto channel = 0; channel < chs; channel++) {
+				double  in {input.samples(channel)[i]};
+				int16_t s                 = rtpsr::convertDoubleToSample(in);
+				iarray[i * chs + channel] = s;
+			}
 		}
-	}
-	bool write_success = rtpsender->input_buf.writeRange(iarray, iarray.size());
-	if (!write_success) {
-		// cerr << "ring buffer is full!" <<std::endl;
+		bool write_success = rtpsender->writeToInput(iarray);
+		if (!write_success) {
+			// cerr << "ring buffer is full!" <<std::endl;
+		}
 	}
 }
 static long setDspState(void* obj, long state) {
@@ -104,8 +111,8 @@ static long setDspState(void* obj, long state) {
 private:
 std::unique_ptr<rtpsr::RtpSender> rtpsender;
 std::vector<int16_t>              iarray;
+static int                        instance_count;
 void                              resetSender(double newvecsize) {
-    rtpsender.reset();
     iarray.resize((int)newvecsize * channels);
     symbol              c = codec;
     rtpsr::RtpSRSetting setting {(int)samplerate(), channels, (int)newvecsize};
@@ -120,5 +127,5 @@ void                              resetSender(double newvecsize) {
 }
 }
 ;
-
+int rtpsend_tilde::instance_count = 0;
 MIN_EXTERNAL(rtpsend_tilde);
