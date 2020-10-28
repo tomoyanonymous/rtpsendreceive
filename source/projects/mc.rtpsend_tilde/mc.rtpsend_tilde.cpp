@@ -115,9 +115,8 @@ void resetSender(double newvecsize) {
 	iarray.resize((int)newvecsize * channels);
 	symbol c = codec;
 	try {
-		auto setting = std::make_unique<rtpsr::RtpSRSetting>(rtpsr::RtpSRSetting {samplerate(), channels, (int)newvecsize});
-		rtpsender    = std::make_unique<rtpsr::RtpSender>(std::move(setting),
-            rtpsr::Url {address.get(), port},
+		auto option = std::make_unique<rtpsr::RtspOutOption>(rtpsr::Url {address.get(), port}, samplerate(), channels, (int)newvecsize);
+		rtpsender   = std::make_unique<rtpsr::RtpSender>(std::move(option),
             rtpsr::getCodecByName(c),
             std::chrono::milliseconds((long long)retry_rate.get()),
             cout);
