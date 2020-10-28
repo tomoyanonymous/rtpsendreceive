@@ -33,6 +33,59 @@ namespace rtpsr {
 	std::string getSdpUrl(Url& url) {
 		return getSdpUrl(url.address, url.port);
 	}
+	RtpOptionsBase::RtpOptionsBase(Url&& url)
+	: url(url) {
+		dict.emplace("protocol_whitelist", "file,udp,rtp,tcp,rtsp");
+	}
+	void RtpOptionsBase::generateOptions() {
+		dict.clear();
+		dict.emplace("reorder_queue_size", reorder_queue_size);
+		dict.emplace("packet_size", packet_size);
+		dict.emplace("buffer_size", buffer_size);
+	}
+	RtpOption::RtpOption(Url&& url, double samplerate, int channels, int buffersize)
+	: RtpOptionsBase(std::move(url))
+	, RtpSRSetting({samplerate, channels, buffersize}) { }
+	void RtpOption::generateOptions() {
+		RtpOptionsBase::generateOptions();
+		// todo::filter_source;
+	}
+
+	RtspOption::RtspOption(Url&& url, double samplerate, int channels, int buffersize)
+	: RtpOptionsBase(std::move(url))
+	, RtpSRSetting({samplerate, channels, buffersize}) {
+		// dict.emplace("allowed_media_types",nullptr);
+		dict.emplace("protocol_whitelist", "file,udp,rtp,tcp,rtsp");
+	}
+	void RtspOption::generateOptions() {
+		RtpOptionsBase::generateOptions();
+		dict.emplace("rtsp_transport", getProtocolString(rtsp_transport));
+		dict.emplace("min_port", port_range.first);
+		dict.emplace("max_port", port_range.second);
+		dict.emplace("listen_timeout", listen_timeout);
+		// for compatibility of old ffmpeg
+		dict.emplace("timeout", listen_timeout);
+		dict.emplace("stimeout", socket_timeout);
+	}
+	void RtspInOption::generateOptions() {
+		RtspOption::generateOptions();
+		dict.emplace("rtsp_flags", "listen");
+	}
+	std::string RtspOption::getProtocolString(TransPortProtocol p) {
+		switch (p) {
+			using Protocol = RtspOption::TransPortProtocol;
+			case Protocol::UDP:
+				return "udp";
+			case Protocol::TCP:
+				return "tcp";
+			case Protocol::UDP_MULTICAST:
+				return "udp_multicast";
+			case Protocol::HTTP:
+				return "http";
+			case Protocol::HTTPS:
+				return "https";
+		}
+	}
 
 	std::string RtpInOption::makeDummySdp() {
 		std::string sdp_content =

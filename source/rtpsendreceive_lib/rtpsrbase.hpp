@@ -69,36 +69,64 @@ namespace rtpsr {
 	}
 
 	struct RtpOptionsBase {
-		Url                           url;
+		explicit RtpOptionsBase(Url&& url);
+		Url url;
+		// maximum reorder delay to be set to audioformatcontext
+		int max_delay;
+		// number of packet of reorder queue
+		size_t                reorder_queue_size;
+		size_t                packet_size;
+		size_t                buffer_size;
+		virtual RtpFormatKind getKind() = 0;
+		virtual void          generateOptions();
+		AVDictionary**        getParam() {
+            avoptions = std::make_unique<AVOptionBase>(std::move(dict));
+            return avoptions->get();
+		}
+		AVOptionBase::container_t     dict;
 		std::unique_ptr<AVOptionBase> avoptions;
-		int                           max_delay;
-		virtual RtpFormatKind         getKind() = 0;
 	};
 	class RtpOption : public RtpSRSetting, public RtpOptionsBase {
 	public:
+		explicit RtpOption(Url&& url, double samplerate, int channels, int buffersize);
 		RtpFormatKind getKind() override {
 			return RtpFormatKind::RTP;
 		};
+		void generateOptions() override;
+		bool filter_source;
 	};
 	class RtspOption : public RtpSRSetting, public RtpOptionsBase {
 	public:
+		explicit RtspOption(Url&& url, double samplerate, int channels, int buffersize);
+
 		RtpFormatKind getKind() override {
 			return RtpFormatKind::RTSP;
 		};
+		void generateOptions() override;
+		enum class TransPortProtocol { UDP = 0, TCP, UDP_MULTICAST, HTTP, HTTPS } rtsp_transport;
+		int                 listen_timeout;    // unit:seconds
+		int                 socket_timeout;    // unit:microseconds
+		std::pair<int, int> port_range;
+
+	private:
+		static std::string getProtocolString(TransPortProtocol p);
 	};
 	class RtpInOption : public RtpOption {
 	public:
 		std::string makeDummySdp();
+		bool        use_customio;
+		bool        rtcp_to_source;
 	};
 	class RtpOutOption : public RtpOption {
 	public:
 	};
 
-	class RtspOutOption : public RtpSRSetting, public RtpOptionsBase {
+	class RtspOutOption : public RtspOption {
 	public:
 	};
-	class RtspInOption : public RtpSRSetting, public RtpOptionsBase {
+	class RtspInOption : public RtspOption {
 	public:
+		void generateOptions() override;
 	};
 
 	// IO Format
