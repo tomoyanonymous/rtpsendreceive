@@ -12,26 +12,24 @@ namespace rtpsr {
 		this->codec = std::make_unique<Encoder>(*s, codec);
 		init();
 	}
-	RtpSender::RtpSender(std::unique_ptr<RtpInOption> option, Codec codec, std::chrono::milliseconds init_retry_rate, std::ostream& logger)
+	RtpSender::RtpSender(std::unique_ptr<RtpOutOption> option, Codec codec, std::chrono::milliseconds init_retry_rate, std::ostream& logger)
 	: RtpSRBase(*static_cast<RtpSRSetting*>(option.get()), logger)
 	, init_retry_rate(init_retry_rate) {
 		pollingrate = duration_type(static_cast<double>(setting_ref.framesize) * 0.5 * 48000 / setting_ref.samplerate);
 		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * 2);
-		auto opt    = std::make_unique<RtpOutOption>(option->url, setting_ref.samplerate, setting_ref.channels, setting_ref.framesize);
-		output      = std::make_unique<RtpOutFormat>(std::move(opt));
+		output      = std::make_unique<RtpOutFormat>(std::move(option));
 		this->codec = std::make_unique<Encoder>(setting_ref, codec);
 		init();
 	}
 
-	RtpSender::RtpSender(std::unique_ptr<RtspInOption> option, Codec codec, std::chrono::milliseconds init_retry_rate, std::ostream& logger)
+	RtpSender::RtpSender(
+		std::unique_ptr<RtspOutOption> option, Codec codec, std::chrono::milliseconds init_retry_rate, std::ostream& logger)
 	: RtpSRBase(*static_cast<RtpSRSetting*>(option.get()), logger)
 	, init_retry_rate(init_retry_rate) {
 		pollingrate = duration_type(static_cast<double>(setting_ref.framesize) * 0.5 * 48000 / setting_ref.samplerate);
-
-		input         = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * 2);
-		auto avoption = std::make_unique<RtspOutOption>(option->url, setting_ref.samplerate, setting_ref.channels, setting_ref.framesize);
-		output        = std::make_unique<RtspOutFormat>(std::move(avoption));
-		this->codec   = std::make_unique<Encoder>(setting_ref, codec);
+		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * 2);
+		output      = std::make_unique<RtspOutFormat>(std::move(option));
+		this->codec = std::make_unique<Encoder>(setting_ref, codec);
 		init();
 	}
 

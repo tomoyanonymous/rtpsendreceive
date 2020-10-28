@@ -9,6 +9,20 @@ namespace rtpsr {
 		this->codec = std::make_unique<Decoder>(*s, codec);
 		init();
 	}
+	RtpReceiver::RtpReceiver(std::unique_ptr<RtpInOption> s, Codec codec, std::ostream& logger)
+	: RtpSRBase(*s, logger) {
+		input       = std::make_unique<RtpInFormat>(std::move(s));
+		output      = std::make_unique<CustomCbAsyncOutFormat>(*s, frame->nb_samples * 2);
+		this->codec = std::make_unique<Decoder>(*s, codec);
+		init();
+	}
+	RtpReceiver::RtpReceiver(std::unique_ptr<RtspInOption> s, Codec codec, std::ostream& logger)
+	: RtpSRBase(*s, logger) {
+		input       = std::make_unique<RtspInFormat>(std::move(s));
+		output      = std::make_unique<CustomCbAsyncOutFormat>(*s, frame->nb_samples * 2);
+		this->codec = std::make_unique<Decoder>(*s, codec);
+		init();
+	}
 	RtpReceiver::~RtpReceiver() {
 		std::cerr << "rtpreceiver destructor called" << std::endl;
 		bool res1 = init_asyncloop.halt();

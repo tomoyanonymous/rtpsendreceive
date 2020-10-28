@@ -6,10 +6,10 @@ namespace rtpsr {
 		explicit RtpSender(std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec,
 			std::chrono::milliseconds init_retry_rate = std::chrono::milliseconds(500), std::ostream& logger = std::cerr);
 		// launch with raw rtp version;
-		explicit RtpSender(std::unique_ptr<RtpInOption> option, Codec codec,
+		explicit RtpSender(std::unique_ptr<RtpOutOption> option, Codec codec,
 			std::chrono::milliseconds init_retry_rate = std::chrono::milliseconds(500), std::ostream& logger = std::cerr);
 		// launch with rtsp version
-		explicit RtpSender(std::unique_ptr<RtspInOption> option, Codec codec,
+		explicit RtpSender(std::unique_ptr<RtspOutOption> option, Codec codec,
 			std::chrono::milliseconds init_retry_rate = std::chrono::milliseconds(500), std::ostream& logger = std::cerr);
 		~RtpSender();
 

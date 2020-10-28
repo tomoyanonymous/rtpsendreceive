@@ -4,6 +4,9 @@
 namespace rtpsr {
 	struct RtpReceiver : public RtpSRBase {
 		explicit RtpReceiver(std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec, std::ostream& logger = std::cerr);
+		explicit RtpReceiver(std::unique_ptr<RtpInOption> s,  Codec codec, std::ostream& logger = std::cerr);
+		explicit RtpReceiver(std::unique_ptr<RtspInOption> s,  Codec codec, std::ostream& logger = std::cerr);
+
 		~RtpReceiver();
 
 		void launchLoop() override;
