@@ -30,15 +30,25 @@ namespace rtpsr {
 			return true;    // return result;
 		});
 	}
-
+	RtpSender::~RtpSender() {
+		bool res1 = init_asyncloop.halt();
+		bool res2 = asynclooper.halt();
+		if (res1 && res2) {
+			av_write_trailer(output->ctx);
+			if (output->ctx->pb != nullptr) {
+				avio_close(output->ctx->pb);
+			}
+			avformat_close_input(&input->ctx);
+		}
+	}
 	AVOptionBase::container_t RtpSender::makeCtxParams() {
 		return {
 			{"protocol_whitelist", "file,udp,rtp,tcp,rtsp"},
 			{"rtsp_transport", "udp"},
 			{"enable-protocol", "rtp"},
 			{"enable-protocol", "udp"},
-			{"enable-muxer", "rtsp"},
-			{"enable-demuxer", "rtsp"},
+			// {"enable-muxer", "rtsp"},
+			// {"enable-demuxer", "rtsp"},
 			{"stimeout", "1000000"},
 		};
 	}
