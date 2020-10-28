@@ -3,14 +3,13 @@
 namespace rtpsr {
 	RtpReceiver::RtpReceiver(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger)
 	: RtpSRBase(s, logger)
-	, output_buf(s.framesize) {
+	 {
 		input       = std::make_unique<RtpInFormat>(url, setting);
-		output      = std::make_unique<CustomCbOutFormat>(setting);
+		output      = std::make_unique<CustomCbAsyncOutFormat>(setting,frame->nb_samples *2);
 		this->codec = std::make_unique<Decoder>(s, codec);
 		setCtxParams(&params);
 		tmpbuf.resize(frame->nb_samples * setting.channels * 2);
-		output_buf.resize(frame->nb_samples * setting.channels * 2);
-		polling_rate_cache    = std::chrono::seconds(0);
+		dtosbuffer.resize(frame->nb_samples * setting.channels);
 		input->ctx->max_delay = 1000000;
 		auto& future          = init_asyncloop.launch([&](std::atomic<bool> const& loopstate) {
             int res = 1;
@@ -53,6 +52,28 @@ namespace rtpsr {
 	}
 
 
+	// return value:stopped_index;
+	bool RtpReceiver::pushToOutput() {
+		auto* asyncoutput = dynamic_cast<CustomCbAsyncOutFormat*>(output.get());
+		auto* frameref    = av_frame_get_plane_buffer(frame, 0);
+		auto  size        = frame->nb_samples * setting.channels;
+		tmpbuf.resize(size);
+		std::memcpy(tmpbuf.data(), frameref->data, size * sizeof(int16_t));
+		bool res = asyncoutput->tryPushRingBuffer(tmpbuf);
+		av_packet_unref(packet);
+		return res;
+	}
+	bool RtpReceiver::readFromOutput(std::vector<sample_t>& dest) {
+		auto* asyncoutput = dynamic_cast<CustomCbAsyncOutFormat*>(output.get());
+		return asyncoutput->tryPopRingBuffer(dest);
+	}
+	bool RtpReceiver::readFromOutput(std::vector<double>& dest) {
+		assert(dtosbuffer.size() == dest.size());
+		int count = 0;
+		std::generate(dtosbuffer.begin(), dtosbuffer.end(), [&]() { return rtpsr::convertDoubleToSample(dest.at(count++)); });
+		return readFromOutput(dtosbuffer);
+	}
+
 	bool RtpReceiver::receiveData() {
 		av_init_packet(packet);
 		int res = av_read_frame(input->ctx, packet);
@@ -61,16 +82,6 @@ namespace rtpsr {
 		}
 		checkAvError(res);
 		return true;
-	}
-	// return value:stopped_index;
-	bool RtpReceiver::pushToOutput() {
-		auto* frameref = av_frame_get_plane_buffer(frame, 0);
-		auto  size     = frame->nb_samples * setting.channels;
-		tmpbuf.resize(size);
-		std::memcpy(tmpbuf.data(), frameref->data, size * sizeof(int16_t));
-		bool res = output_buf.writeRange(tmpbuf, frame->nb_samples * setting.channels);
-		av_packet_unref(packet);
-		return res;
 	}
 	std::future<bool>& RtpReceiver::launchloop() {
 		return asynclooper.launch([&](std::atomic<bool> const& loopstate) {

@@ -36,8 +36,9 @@ namespace rtpsr {
 		}
 		AVFormatContext* ctx;
 		RtpSRSetting&    setting;
-    protected:
-		AVDictionary*    avoptions = nullptr;
+
+	protected:
+		AVDictionary* avoptions = nullptr;
 	};
 
 	struct CustomCbFormat {
@@ -45,10 +46,10 @@ namespace rtpsr {
 	};
 	class CustomCbAsyncFormat {
 	public:
-		explicit CustomCbAsyncFormat(int buffer_size)
+		explicit CustomCbAsyncFormat(size_t buffer_size)
 		: buffer(buffer_size) { }
-		virtual void pushRingBuffer(std::vector<sample_t> const& input);
-		virtual void popRingBuffer(std::vector<sample_t>& dest);
+		virtual bool tryPushRingBuffer(std::vector<sample_t> const& input);
+		virtual bool tryPopRingBuffer(std::vector<sample_t>& dest);
 
 	private:
 		LockFreeRingbuf<sample_t> buffer;
@@ -70,32 +71,10 @@ namespace rtpsr {
 		}
 	};
 
-	class CustomCbAsyncInFormat : public CustomCbAsyncFormat {
+	class CustomCbAsyncInFormat : public InFormat, public CustomCbAsyncFormat {
 	public:
-		explicit CustomCbAsyncInFormat(size_t buffer_size);
+		explicit CustomCbAsyncInFormat(RtpSRSetting& s, size_t buffer_size);
 		~CustomCbAsyncInFormat() = default;
-		void pushRingBuffer(std::vector<sample_t> const& input) final {
-			CustomCbAsyncFormat::pushRingBuffer(input);
-		}
-
-	protected:
-		void popRingBuffer(std::vector<sample_t>& dest) final {
-			CustomCbAsyncFormat::popRingBuffer(dest);
-		}
-	};
-
-	class CustomCbAsyncOutFormat : public CustomCbAsyncFormat {
-	public:
-		explicit CustomCbAsyncOutFormat(size_t buffer_size);
-		~CustomCbAsyncOutFormat() = default;
-		void popRingBuffer(std::vector<sample_t>& dest) final {
-			CustomCbAsyncFormat::popRingBuffer(dest);
-		}
-
-	protected:
-		void pushRingBuffer(std::vector<sample_t> const& input) final {
-			CustomCbAsyncFormat::pushRingBuffer(input);
-		}
 	};
 
 
@@ -150,6 +129,14 @@ namespace rtpsr {
 			return static_cast<double>(buffer.at(pos * setting.channels + channel)) / INT16_MAX;
 		}
 	};
+
+
+	class CustomCbAsyncOutFormat : public OutFormat, public CustomCbAsyncFormat {
+	public:
+		explicit CustomCbAsyncOutFormat(RtpSRSetting& s,size_t buffer_size);
+		~CustomCbAsyncOutFormat() = default;
+	};
+
 	struct RtpOutFormat : public OutFormat {
 		explicit RtpOutFormat(Url& url, RtpSRSetting& s);
 		Url url;

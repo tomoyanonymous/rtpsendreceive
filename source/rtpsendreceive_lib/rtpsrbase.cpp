@@ -4,7 +4,7 @@ namespace rtpsr {
 
 	bool RtpInFormat::tryConnectInput() {
 		auto* ifmt = av_find_input_format("rtsp");
-		auto res = avformat_open_input(&ctx, getSdpUrl(url).c_str(), ifmt, &avoptions);
+		auto  res  = avformat_open_input(&ctx, getSdpUrl(url).c_str(), ifmt, &avoptions);
 		if (res == -60 || res == -61 || res == -22) {
 			return false;
 		}
@@ -26,19 +26,31 @@ namespace rtpsr {
 	}
 
 
-	void CustomCbAsyncFormat::pushRingBuffer(std::vector<sample_t> const& input) {
+	bool CustomCbAsyncFormat::tryPushRingBuffer(std::vector<sample_t> const& input) {
+    auto size = input.size();
+    if(buffer.getWriteMargin()<size){
+      return false;
+    }
 		buffer.writeRange(input, input.size());
+    return true;
 	}
 
-	void CustomCbAsyncFormat::popRingBuffer(std::vector<sample_t>& dest) {
+	bool CustomCbAsyncFormat::tryPopRingBuffer(std::vector<sample_t>& dest) {
+    auto size = dest.size();
+    if(buffer.getReadMargin()<size){
+      return false;
+    }
 		buffer.readRange(dest, dest.size());
+    return true;
 	}
 
 
-	CustomCbAsyncInFormat::CustomCbAsyncInFormat(size_t buffer_size)
-	: CustomCbAsyncFormat(buffer_size) { }
-	CustomCbAsyncOutFormat::CustomCbAsyncOutFormat(size_t buffer_size)
-	: CustomCbAsyncFormat(buffer_size) { }
+	CustomCbAsyncInFormat::CustomCbAsyncInFormat(RtpSRSetting& s, size_t buffer_size)
+	: InFormat(s)
+	, CustomCbAsyncFormat(std::max((int)buffer_size, s.framesize) * s.channels) { }
+	CustomCbAsyncOutFormat::CustomCbAsyncOutFormat(RtpSRSetting& s, size_t buffer_size)
+	: OutFormat(s)
+	, CustomCbAsyncFormat(std::max((int)buffer_size, s.framesize) * s.channels) { }
 
 
 	int CustomCbInFormat::readPacket(void* userdata, uint8_t* avio_buf, int buf_size) {
@@ -68,9 +80,14 @@ namespace rtpsr {
 	: url(url)
 	, OutFormat(s) {
 		avformat_network_init();
-		auto  dest       = getSdpUrl(url);
-		auto* fmt_output = av_guess_format("rtsp", dest.c_str(), nullptr);
+    auto url_tmp      = getSdpUrl(url);
+		auto* fmt_output = av_guess_format("rtsp", url_tmp.c_str(), nullptr);
 		ctx->oformat     = fmt_output;
+    
+		ctx->url =  (char*)av_malloc(url_tmp.size() + sizeof(char));
+		av_strlcpy(ctx->url, url_tmp.c_str(), url_tmp.size() + sizeof(char));
+		checkAvError(avformat_init_output(ctx, &params));
+    checkAvError(avio_open(&ctx->pb, ctx->url, AVIO_FLAG_WRITE));
 	}
 	CodecBase::CodecBase(RtpSRSetting& s, Codec c, bool isencoder)
 	: codec(c) {

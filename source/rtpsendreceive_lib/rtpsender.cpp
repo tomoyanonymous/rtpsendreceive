@@ -2,22 +2,13 @@
 
 namespace rtpsr {
 	RtpSender::RtpSender(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger)
-	: RtpSRBase(s, logger)
-	, input_buf(s.framesize) {
-		input       = std::make_unique<CustomCbInFormat>(setting);
+	: RtpSRBase(s, logger) {
+		input       = std::make_unique<CustomCbAsyncInFormat>(setting, setting.framesize * 2);
 		output      = std::make_unique<RtpOutFormat>(url, setting);
 		this->codec = std::make_unique<Encoder>(s, codec);
 		initStream();
-		setCtxParams(&params);
-		input_buf.resize(frame->nb_samples * s.channels * 2);
-		framebuf.resize(frame->nb_samples * s.channels * 2);
-		url_tmp      = getSdpUrl(url);
-		char* urlctx = (char*)av_malloc(url_tmp.size() + sizeof(char));
-		av_strlcpy(urlctx, url_tmp.c_str(), url_tmp.size() + sizeof(char));
-		output->ctx->url = urlctx;
-		checkAvError(avformat_init_output(output->ctx, &params));
+		dtosbuffer.resize(setting.framesize * 2 * setting.channels);
 		auto& future = init_asyncloop.launch([&](std::atomic<bool> const& isactive) {
-			checkAvError(avio_open(&output->ctx->pb, urlctx, AVIO_FLAG_WRITE));
 			while (isactive) {
 				int res = avformat_write_header(output->ctx, nullptr);
 				if (res >= 0) {
@@ -26,14 +17,14 @@ namespace rtpsr {
 				}
 				if (res == -60 || res == -61 || res == -22) {
 					std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-					logger << "rtpsender: connection to " << url_tmp << " refused,retry in 2000ms" << std::endl;
+					logger << "rtpsender: connection to " << url.address << ":" << url.port << " refused,retry in 2000ms" << std::endl;
 				}
 				else {
 					checkAvError(res);
 					break;
 				}
 			}
-			// return result;
+			return true;    // return result;
 		});
 	}
 
@@ -44,19 +35,31 @@ namespace rtpsr {
 		checkAvError(av_dict_set(dict, "enable-protocol", "udp", 0));
 		checkAvError(av_dict_set(dict, "enable-muxer", "rtsp", 0));
 		checkAvError(av_dict_set(dict, "enable-demuxer", "rtsp", 0));
-		checkAvError(av_dict_set(dict, "stimeout", "1000000",
-			0));    // wait up to 10 seconds until connect
+		// wait up to 10 seconds until connect
+		checkAvError(av_dict_set(dict, "stimeout", "1000000", 0));
+	}
+	bool RtpSender::writeToInput(std::vector<sample_t> const& input) {
+		auto* asyncinput = dynamic_cast<CustomCbAsyncInFormat*>(this->input.get());
+		return asyncinput->tryPushRingBuffer(input);
+	}
+	bool RtpSender::writeToInput(std::vector<double> const& input) {
+		assert(dtosbuffer.size() == input.size());
+		int count = 0;
+		std::generate(dtosbuffer.begin(), dtosbuffer.end(), [&]() { return rtpsr::convertDoubleToSample(input.at(count++)); });
+		return writeToInput(dtosbuffer);
 	}
 	bool RtpSender::fillFrame() {
+		auto*  asyncinput       = dynamic_cast<CustomCbAsyncInFormat*>(input.get());
 		size_t packet_framesize = frame->nb_samples * setting.channels;
-		if (input_buf.getReadMargin() < packet_framesize) {
-			return false;
-		}
+
 		framebuf.resize(packet_framesize);
-		input_buf.readRange(framebuf, packet_framesize);
-		checkAvError(avcodec_fill_audio_frame(
-			frame, setting.channels, AV_SAMPLE_FMT_S16, (uint8_t*)framebuf.data(), sizeof(sample_t) * packet_framesize, 0));
-		return true;
+		bool res = asyncinput->tryPopRingBuffer(framebuf);
+		if (res) {
+			checkAvError(avcodec_fill_audio_frame(
+				frame, setting.channels, AV_SAMPLE_FMT_S16, (uint8_t*)framebuf.data(), sizeof(sample_t) * packet_framesize, 0));
+			return true;
+		}
+		return false;
 	}
 	void RtpSender::sendData() {
 		//   av_read_frame(input->ctx, packet);

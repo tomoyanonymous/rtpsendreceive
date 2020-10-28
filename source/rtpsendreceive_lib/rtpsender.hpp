@@ -18,27 +18,20 @@ namespace rtpsr {
 		}
 		AVDictionary* params    = nullptr;
 		int64_t       timecount = 0;
-		std::string   url_tmp;
-		// communication entrypoint between max
 
-		LockFreeRingbuf<sample_t> input_buf;
 		std::vector<sample_t>     framebuf;
 		std::future<bool>&        launchLoop() override;
 		duration_type             pollingrate = duration_type(static_cast<double>(setting.framesize) * 0.5 * 48000 / setting.samplerate);
 		static void               setCtxParams(AVDictionary** dict);
-		auto&                     getInput() {
-            return *dynamic_cast<CustomCbInFormat*>(input.get());
-		}
-		auto& getBuffer() {
-			return getInput().buffer;
-		}
-		auto* getBufPointer() {
-			return reinterpret_cast<uint8_t*>(getBuffer().data());
-		}
+		// communication entrypoint between max
+		bool writeToInput(std::vector<sample_t> const& input);
+		bool writeToInput(std::vector<double> const& input);
 
 	private:
 		bool fillFrame();
 		void sendData();
+		std::vector<sample_t>     dtosbuffer;
+
 	};
 
 }    // namespace rtpsr
