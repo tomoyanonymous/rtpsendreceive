@@ -3,7 +3,8 @@
 
 namespace rtpsr {
 	struct RtpSender : public RtpSRBase {
-		explicit RtpSender(std::unique_ptr<RtpSRSetting> s, Url& url, Codec codec, std::ostream& logger = std::cerr);
+		explicit RtpSender(std::unique_ptr<RtpSRSetting> s, Url& url, Codec codec,
+			std::chrono::milliseconds init_retry_rate = std::chrono::milliseconds(500), std::ostream& logger = std::cerr);
 		~RtpSender();
 
 		void launchLoop() override;
@@ -19,6 +20,7 @@ namespace rtpsr {
 		void                      sendData();
 		std::vector<sample_t>     dtosbuffer;
 		duration_type             pollingrate = duration_type(static_cast<double>(setting->framesize) * 0.5 * 48000 / setting->samplerate);
+		const std::chrono::milliseconds init_retry_rate;
 	};
 
 }    // namespace rtpsr

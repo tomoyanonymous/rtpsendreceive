@@ -1,8 +1,10 @@
 #include "rtpsender.hpp"
 
 namespace rtpsr {
-	RtpSender::RtpSender(std::unique_ptr<RtpSRSetting> s, Url& url, Codec codec, std::ostream& logger)
-	: RtpSRBase(std::move(s), logger) {
+	RtpSender::RtpSender(
+		std::unique_ptr<RtpSRSetting> s, Url& url, Codec codec, std::chrono::milliseconds init_retry_rate, std::ostream& logger)
+	: RtpSRBase(std::move(s), logger)
+	, init_retry_rate(init_retry_rate) {
 		input       = std::make_unique<CustomCbAsyncInFormat>(*setting, setting->framesize * 2);
 		auto option = std::make_unique<AVOptionBase>(makeCtxParams());
 		output      = std::make_unique<RtpOutFormat>(url, *setting, std::move(option));
@@ -18,9 +20,9 @@ namespace rtpsr {
 						logger << "rtpsender: connected" << std::endl;
 						break;
 					}
-					std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+					std::this_thread::sleep_for(init_retry_rate);
 					logger << "rtpsender: connection to " << rtpout->url.address << ":" << std::to_string(rtpout->url.port)
-						   << " refused,retry in 2000ms" << std::endl;
+						   << " refused,retry in " << std::to_string(init_retry_rate.count()) << "ms." << std::endl;
 				}
 				catch (std::runtime_error& e) {
 					throw e;
