@@ -109,6 +109,17 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		});
 		return sdp_content;
 	}
+int RtpInOption::readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size) {
+  auto octx = static_cast<SdpOpaque*>(userdata);
+  if (octx->pos == octx->data.end()) {
+    return 0;
+  }
+  auto dist = static_cast<int>(std::distance(octx->pos, octx->data.end()));
+  auto count = std::min(buf_size, dist);
+  std::copy(octx->pos, octx->pos + count, avio_buf);
+  octx->pos += count;
+  return count;
+}
 
 	// IO Format
 

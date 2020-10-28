@@ -114,6 +114,7 @@ namespace rtpsr {
 	class RtpInOption : public RtpOption {
 	public:
 		std::string makeDummySdp();
+		static int readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size);
 		bool        use_customio;
 		bool        rtcp_to_source;
 	};
