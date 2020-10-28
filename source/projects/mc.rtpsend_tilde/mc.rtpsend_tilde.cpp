@@ -39,10 +39,9 @@ attribute<int> port {this, "port", 30000};
 attribute<int> active {this, "active", 0, setter {MIN_FUNCTION {int res = args[0];
 if (m_initialized && rtpsender != nullptr) {
 	if (res <= 0) {
-		rtpsender->loopstate.active = false;
+		rtpsender->asynclooper.halt();
 	}
 	else {
-		rtpsender->loopstate.active = true;
 		rtpsender->launchLoop();
 	}
 }
@@ -91,7 +90,7 @@ void operator()(audio_bundle input, audio_bundle output) {
 			iarray[i * chs + channel] = s;
 		}
 	}
-	bool write_success = rtpsender->input_buf.writeRange(iarray, iarray.size());
+	bool write_success = rtpsender->writeToInput(iarray);
 	if (!write_success) {
 		// cerr << "ring buffer is full!" <<std::endl;
 	}

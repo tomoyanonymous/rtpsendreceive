@@ -41,12 +41,10 @@ attribute<int> port {this, "port", 30000};
 attribute<int> active {this, "active", 0, setter {MIN_FUNCTION {int res = args[0];
 if (m_initialized && rtpreceiver != nullptr) {
 	if (res <= 0) {
-		rtpreceiver->loopstate.active = false;
-    rtpreceiver->initloop=false;
+		rtpreceiver->asynclooper.halt();
 	}
 	else {
-		rtpreceiver->loopstate.active = true;
-		rtpreceiver->launchloop();
+		rtpreceiver->launchLoop();
 	}
 }
 return {};
@@ -94,11 +92,11 @@ static long setDspState(void* obj, long state) {
 	return state;
 }
 void operator()(audio_bundle input, audio_bundle output) {
+		output.clear();
 	int  chs     = std::min<int>(output.channel_count(), channels.get());
-	bool readres = rtpreceiver->output_buf.readRange(iarray, iarray.size());
+	bool readres = rtpreceiver->readFromOutput(iarray);
 	if (!readres) {
 		// cerr << "stream underflow detected!" << std::endl;
-		output.clear();
 		return;
 	}
 	for (auto i = 0; i < output.frame_count(); i++) {
