@@ -1,5 +1,8 @@
 #pragma once
 
+#include <variant>
+#include <unordered_map>
+
 #include "rtpsendreceive_lib.hpp"
 #include "lockfree_ringbuffer.hpp"
 
@@ -14,6 +17,35 @@ namespace rtpsr {
 			throw std::runtime_error(str);
 		}
 	}
+
+	struct AVOptionBase {
+		using keytype     = std::string;
+		using valtype     = std::variant<std::monostate, std::string, int>;
+		using container_t = std::unordered_map<keytype, valtype>;
+		AVOptionBase()    = default;
+		AVOptionBase(container_t&& init) {
+			for (auto& [key, val] : init) {
+				assert(!std::holds_alternative<std::monostate>(val));
+				if (std::holds_alternative<int>(val)) {
+					checkAvError(av_dict_set_int(&this->params, key.c_str(), std::get<int>(val), 0));
+				}
+				if (std::holds_alternative<std::string>(val)) {
+					checkAvError(av_dict_set(&this->params, key.c_str(), std::get<std::string>(val).c_str(), 0));
+				}
+			}
+			container = std::move(init);
+		}
+		~AVOptionBase() {
+			av_dict_free(&params);
+		}
+		AVDictionary** get() {
+			return &params;
+		}
+
+	private:
+		AVDictionary* params    = nullptr;
+		container_t   container = {};
+	};
 
 	struct RtpSRSetting {
 		int samplerate;
@@ -96,14 +128,16 @@ namespace rtpsr {
 		return getSdpUrl(url.address, url.port);
 	}
 	struct RtpInFormat : public InFormat {
-		RtpInFormat(Url& url, RtpSRSetting& s)
+		RtpInFormat(Url& url, RtpSRSetting& s, AVOptionBase&& options = {})
 		: url(url)
-		, InFormat(s) {
+		, InFormat(s)
+		, options(options) {
 			avformat_network_init();
 		}
 		~RtpInFormat();
-		bool tryConnectInput();
-		Url  url;
+		bool         tryConnectInput();
+		Url          url;
+		AVOptionBase options;
 	};
 
 	struct OutFormat : public IOFormat {
@@ -133,13 +167,14 @@ namespace rtpsr {
 
 	class CustomCbAsyncOutFormat : public OutFormat, public CustomCbAsyncFormat {
 	public:
-		explicit CustomCbAsyncOutFormat(RtpSRSetting& s,size_t buffer_size);
+		explicit CustomCbAsyncOutFormat(RtpSRSetting& s, size_t buffer_size);
 		~CustomCbAsyncOutFormat() = default;
 	};
 
 	struct RtpOutFormat : public OutFormat {
-		explicit RtpOutFormat(Url& url, RtpSRSetting& s);
-		Url url;
+		explicit RtpOutFormat(Url& url, RtpSRSetting& s, AVOptionBase&& options = {});
+		Url          url;
+		AVOptionBase options;
 	};
 
 	struct CodecBase {
@@ -179,7 +214,8 @@ namespace rtpsr {
 		template<class F>
 		std::future<bool>& launch(F&& fn) {
 			active = true;
-			return std::async(std::launch::async, fn, active);
+			future=  std::move(std::async(std::launch::async, std::move(fn)));
+      return future;
 		}
 		bool halt() {
 			if (future.valid()) {

@@ -169,7 +169,7 @@ namespace rtpsr {
 	enum class Codec { PCM_s16BE, OPUS, INVALID = -1 };
 
 
-	template<class T>
+template<class T>
 	class AvSmartPtr {
 	public:
 		AvSmartPtr() {

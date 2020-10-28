@@ -4,12 +4,12 @@ namespace rtpsr {
 	RtpSender::RtpSender(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger)
 	: RtpSRBase(s, logger) {
 		input       = std::make_unique<CustomCbAsyncInFormat>(setting, setting.framesize * 2);
-		output      = std::make_unique<RtpOutFormat>(url, setting);
+		output      = std::make_unique<RtpOutFormat>(url, setting, makeCtxParams());
 		this->codec = std::make_unique<Encoder>(s, codec);
 		initStream();
 		dtosbuffer.resize(setting.framesize * 2 * setting.channels);
-		auto& future = init_asyncloop.launch([&](std::atomic<bool> const& isactive) {
-			while (isactive) {
+		auto& future = init_asyncloop.launch([&]() {
+			while (init_asyncloop.isActive()) {
 				int res = avformat_write_header(output->ctx, nullptr);
 				if (res >= 0) {
 					logger << "rtpsender: connected" << std::endl;
@@ -28,15 +28,16 @@ namespace rtpsr {
 		});
 	}
 
-	void RtpSender::setCtxParams(AVDictionary** dict) {
-		checkAvError(av_dict_set(dict, "protocol_whitelist", "file,udp,rtp,tcp,rtsp", 0));
-		checkAvError(av_dict_set(dict, "rtsp_transport", "udp", 0));
-		checkAvError(av_dict_set(dict, "enable-protocol", "rtp", 0));
-		checkAvError(av_dict_set(dict, "enable-protocol", "udp", 0));
-		checkAvError(av_dict_set(dict, "enable-muxer", "rtsp", 0));
-		checkAvError(av_dict_set(dict, "enable-demuxer", "rtsp", 0));
-		// wait up to 10 seconds until connect
-		checkAvError(av_dict_set(dict, "stimeout", "1000000", 0));
+	AVOptionBase::container_t RtpSender::makeCtxParams() {
+		return {
+			{"protocol_whitelist", "file,udp,rtp,tcp,rtsp"},
+			{"rtsp_transport", "udp"},
+			{"enable-protocol", "rtp"},
+			{"enable-protocol", "udp"},
+			{"enable-muxer", "rtsp"},
+			{"enable-demuxer", "rtsp"},
+			{"stimeout", "1000000"},
+		};
 	}
 	bool RtpSender::writeToInput(std::vector<sample_t> const& input) {
 		auto* asyncinput = dynamic_cast<CustomCbAsyncInFormat*>(this->input.get());
@@ -93,17 +94,19 @@ namespace rtpsr {
 		}
 	}
 	std::future<bool>& RtpSender::launchLoop() {
-		return asynclooper.launch([&](std::atomic<bool> const& isactive) {
+		return asynclooper.launch([&]() {
 			try {
 				init_asyncloop.wait();
-				while (isactive) {
+				while (asynclooper.isActive()) {
 					sendData();
 					std::this_thread::sleep_for(pollingrate);
 				}
 			}
 			catch (std::exception& e) {
 				std::cerr << "Error happend in polling loop:" << e.what() << std::endl;
+				return false;
 			}
+			return true;
 		});
 	}
 }    // namespace rtpsr

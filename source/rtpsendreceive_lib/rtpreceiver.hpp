@@ -9,15 +9,15 @@ namespace rtpsr {
 		explicit RtpReceiver(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger = std::cerr);
 		~RtpReceiver();
 
-		std::future<bool>&        launchloop();
+		AVOptionBase::container_t makeCtxParams();
+		std::future<bool>&        launchLoop() override;
 		bool                      pushToOutput();
-		void                      setCtxParams(AVDictionary** dict);
-		bool readFromOutput(std::vector<sample_t> & dest);
-		bool readFromOutput(std::vector<double> & dest);
-		private:
-		std::vector<int16_t>      dtosbuffer;
-		std::vector<int16_t>      tmpbuf;
-		bool                      receiveData();
+		bool                      readFromOutput(std::vector<sample_t>& dest);
+		bool                      readFromOutput(std::vector<double>& dest);
 
+	private:
+		std::vector<int16_t> dtosbuffer;
+		std::vector<int16_t> tmpbuf;
+		bool                 receiveData();
 	};
 }    // namespace rtpsr

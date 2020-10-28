@@ -27,21 +27,21 @@ namespace rtpsr {
 
 
 	bool CustomCbAsyncFormat::tryPushRingBuffer(std::vector<sample_t> const& input) {
-    auto size = input.size();
-    if(buffer.getWriteMargin()<size){
-      return false;
-    }
+		auto size = input.size();
+		if (buffer.getWriteMargin() < size) {
+			return false;
+		}
 		buffer.writeRange(input, input.size());
-    return true;
+		return true;
 	}
 
 	bool CustomCbAsyncFormat::tryPopRingBuffer(std::vector<sample_t>& dest) {
-    auto size = dest.size();
-    if(buffer.getReadMargin()<size){
-      return false;
-    }
+		auto size = dest.size();
+		if (buffer.getReadMargin() < size) {
+			return false;
+		}
 		buffer.readRange(dest, dest.size());
-    return true;
+		return true;
 	}
 
 
@@ -76,18 +76,18 @@ namespace rtpsr {
 		memcpy(address, avio_buf, buf_size);
 		return buf_size;
 	}
-	RtpOutFormat::RtpOutFormat(Url& url, RtpSRSetting& s)
+	RtpOutFormat::RtpOutFormat(Url& url, RtpSRSetting& s, AVOptionBase&& options)
 	: url(url)
-	, OutFormat(s) {
+	, OutFormat(s)
+	, options(options) {
 		avformat_network_init();
-    auto url_tmp      = getSdpUrl(url);
+		auto  url_tmp    = getSdpUrl(url);
 		auto* fmt_output = av_guess_format("rtsp", url_tmp.c_str(), nullptr);
 		ctx->oformat     = fmt_output;
-    
-		ctx->url =  (char*)av_malloc(url_tmp.size() + sizeof(char));
+		ctx->url         = (char*)av_malloc(url_tmp.size() + sizeof(char));
 		av_strlcpy(ctx->url, url_tmp.c_str(), url_tmp.size() + sizeof(char));
-		checkAvError(avformat_init_output(ctx, &params));
-    checkAvError(avio_open(&ctx->pb, ctx->url, AVIO_FLAG_WRITE));
+		checkAvError(avformat_init_output(ctx, options.get()));
+		checkAvError(avio_open(&ctx->pb, ctx->url, AVIO_FLAG_WRITE));
 	}
 	CodecBase::CodecBase(RtpSRSetting& s, Codec c, bool isencoder)
 	: codec(c) {
