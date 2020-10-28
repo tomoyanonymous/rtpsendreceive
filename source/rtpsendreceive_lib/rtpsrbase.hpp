@@ -304,7 +304,7 @@ namespace rtpsr {
 	};
 
 	struct RtpSRBase {
-		explicit RtpSRBase(std::unique_ptr<RtpSRSetting> s, std::ostream& logger = std::cerr);
+		explicit RtpSRBase(RtpSRSetting const&s, std::ostream& logger = std::cerr);
 		~RtpSRBase();
 		virtual void launchLoop() = 0;
 		AsyncLooper  asynclooper;
@@ -312,7 +312,7 @@ namespace rtpsr {
 
 	protected:
 		void                          initStream() const;
-		std::unique_ptr<RtpSRSetting> setting;
+		const RtpSRSetting& setting_ref;
 		std::unique_ptr<InFormat>     input;
 		std::unique_ptr<OutFormat>    output;
 		std::unique_ptr<CodecBase>    codec;

@@ -2,11 +2,11 @@
 
 namespace rtpsr {
 	RtpReceiver::RtpReceiver(std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec, std::ostream& logger)
-	: RtpSRBase(std::move(s), logger) {
-		auto option = std::make_unique<RtspInOption>(url, setting->samplerate, setting->channels, setting->framesize);
+	: RtpSRBase(*s, logger) {
+		auto option = std::make_unique<RtspInOption>(url, s->samplerate, s->channels, s->framesize);
 		input       = std::make_unique<RtspInFormat>(std::move(option));
-		output      = std::make_unique<CustomCbAsyncOutFormat>(*setting, frame->nb_samples * 2);
-		this->codec = std::make_unique<Decoder>(*setting, codec);
+		output      = std::make_unique<CustomCbAsyncOutFormat>(*s, frame->nb_samples * 2);
+		this->codec = std::make_unique<Decoder>(*s, codec);
 		init();
 	}
 	RtpReceiver::~RtpReceiver() {
@@ -19,8 +19,8 @@ namespace rtpsr {
 	}
 
 	void RtpReceiver::init() {
-		tmpbuf.resize(frame->nb_samples * setting->channels * 2);
-		dtosbuffer.resize(frame->nb_samples * setting->channels);
+		tmpbuf.resize(frame->nb_samples * setting_ref.channels * 2);
+		dtosbuffer.resize(frame->nb_samples * setting_ref.channels);
 		input->ctx->max_delay = 1000000;
 		init_asyncloop.launch([&]() {
 			logger << "rtpreceiver waiting incoming connection..." << std::endl;
@@ -40,7 +40,7 @@ namespace rtpsr {
 	bool RtpReceiver::pushToOutput() {
 		auto* asyncoutput = dynamic_cast<CustomCbAsyncOutFormat*>(output.get());
 		auto* frameref    = av_frame_get_plane_buffer(frame, 0);
-		auto  size        = frame->nb_samples * setting->channels;
+		auto  size        = frame->nb_samples * setting_ref.channels;
 		tmpbuf.resize(size);
 		std::memcpy(tmpbuf.data(), frameref->data, size * sizeof(int16_t));
 		bool res = asyncoutput->tryPushRingBuffer(tmpbuf);
