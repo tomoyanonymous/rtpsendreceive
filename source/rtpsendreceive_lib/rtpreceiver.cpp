@@ -3,25 +3,26 @@
 namespace rtpsr {
 	RtpReceiver::RtpReceiver(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger)
 	: RtpSRBase(s, logger) {
-		input       = std::make_unique<RtpInFormat>(url, setting, makeCtxParams());
+		auto option = std::make_unique<AVOptionBase>(makeCtxParams());
+		input       = std::make_unique<RtpInFormat>(url, setting, std::move(option));
 		output      = std::make_unique<CustomCbAsyncOutFormat>(setting, frame->nb_samples * 2);
 		this->codec = std::make_unique<Decoder>(s, codec);
 		tmpbuf.resize(frame->nb_samples * setting.channels * 2);
 		dtosbuffer.resize(frame->nb_samples * setting.channels);
 		input->ctx->max_delay = 1000000;
-		auto& future          = init_asyncloop.launch([&]() {
-            while (init_asyncloop.isActive()) {
-                logger << "rtpreceiver waiting incoming connection..." << std::endl;
-                // this start blocking...
-                bool connection_res = dynamic_cast<RtpInFormat*>(input.get())->tryConnectInput();
-                if (connection_res) {
-                    initStream();
-                    logger << "rtpreceiver connected" << std::endl;
-                    break;
-                }
-            }
-            return true;
-        });
+		init_asyncloop.launch([&]() {
+			logger << "rtpreceiver waiting incoming connection..." << std::endl;
+			while (init_asyncloop.isActive()) {
+				// this start blocking...
+				bool connection_res = dynamic_cast<RtpInFormat*>(input.get())->tryConnectInput();
+				if (connection_res) {
+					initStream();
+					logger << "rtpreceiver connected" << std::endl;
+					break;
+				}
+			}
+			return true;
+		});
 	}
 	RtpReceiver::~RtpReceiver() {
 		std::cerr << "rtpreceiver destructor called" << std::endl;
@@ -73,13 +74,16 @@ namespace rtpsr {
 		checkAvError(res);
 		return true;
 	}
-	std::future<bool>& RtpReceiver::launchLoop() {
-		return asynclooper.launch([&]() {
+	void RtpReceiver::launchLoop() {
+		asynclooper.launch([&]() {
 			auto* decoder        = dynamic_cast<Decoder*>(codec.get());
 			bool  isdecoderempty = false;
 			bool  isdecoderfull  = false;
 			bool  res            = true;
 			bool  writeres       = true;
+			if (input->ctx == nullptr) {
+				return false;
+			}
 			try {
 				init_asyncloop.wait();
 				while (asynclooper.isActive()) {

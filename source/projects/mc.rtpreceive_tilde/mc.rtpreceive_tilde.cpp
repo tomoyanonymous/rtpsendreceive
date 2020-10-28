@@ -39,14 +39,7 @@ public:
 ;
 attribute<int> port {this, "port", 30000};
 attribute<int> active {this, "active", 0, setter {MIN_FUNCTION {int res = args[0];
-if (m_initialized && rtpreceiver != nullptr) {
-	if (res <= 0) {
-		rtpreceiver->asynclooper.halt();
-	}
-	else {
-		rtpreceiver->launchLoop();
-	}
-}
+if (m_initialized && rtpreceiver != nullptr) { }
 return {};
 }
 }
@@ -92,7 +85,7 @@ static long setDspState(void* obj, long state) {
 	return state;
 }
 void operator()(audio_bundle input, audio_bundle output) {
-		output.clear();
+	output.clear();
 	int  chs     = std::min<int>(output.channel_count(), channels.get());
 	bool readres = rtpreceiver->readFromOutput(iarray);
 	if (!readres) {
@@ -132,6 +125,7 @@ void resetReceiver(rtpsr::RtpSRSetting& s, rtpsr::Url& url, rtpsr::Codec c) {
 
 	try {
 		rtpreceiver = std::make_unique<rtpsr::RtpReceiver>(s, url, c, cout);
+		rtpreceiver->launchLoop();
 	}
 	catch (std::exception& e) {
 		std::cerr << e.what() << std::endl;

@@ -10,7 +10,7 @@ namespace rtpsr {
 		~RtpReceiver();
 
 		AVOptionBase::container_t makeCtxParams();
-		std::future<bool>&        launchLoop() override;
+		void                      launchLoop() override;
 		bool                      pushToOutput();
 		bool                      readFromOutput(std::vector<sample_t>& dest);
 		bool                      readFromOutput(std::vector<double>& dest);

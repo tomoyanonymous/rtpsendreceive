@@ -4,7 +4,7 @@ namespace rtpsr {
 
 	bool RtpInFormat::tryConnectInput() {
 		auto* ifmt = av_find_input_format("rtsp");
-		auto  res  = avformat_open_input(&ctx, getSdpUrl(url).c_str(), ifmt, &avoptions);
+		auto  res  = avformat_open_input(&ctx, getSdpUrl(url).c_str(), ifmt, options->get());
 		if (res == -60 || res == -61 || res == -22) {
 			return false;
 		}
@@ -76,19 +76,32 @@ namespace rtpsr {
 		memcpy(address, avio_buf, buf_size);
 		return buf_size;
 	}
-	RtpOutFormat::RtpOutFormat(Url& url, RtpSRSetting& s, AVOptionBase&& options)
+	RtpOutFormat::RtpOutFormat(Url& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
 	: url(url)
 	, OutFormat(s)
-	, options(options) {
+	, options(std::move(options)) {
+
 		avformat_network_init();
 		auto  url_tmp    = getSdpUrl(url);
 		auto* fmt_output = av_guess_format("rtsp", url_tmp.c_str(), nullptr);
 		ctx->oformat     = fmt_output;
 		ctx->url         = (char*)av_malloc(url_tmp.size() + sizeof(char));
 		av_strlcpy(ctx->url, url_tmp.c_str(), url_tmp.size() + sizeof(char));
-		checkAvError(avformat_init_output(ctx, options.get()));
-		checkAvError(avio_open(&ctx->pb, ctx->url, AVIO_FLAG_WRITE));
 	}
+	bool RtpOutFormat::tryConnect() {
+		checkAvError(avformat_init_output(ctx, this->options->get()));
+		checkAvError(avio_open(&ctx->pb, ctx->url, AVIO_FLAG_WRITE));
+		int rcode = avformat_write_header(ctx, nullptr);
+		if (rcode >= 0) {
+			return true;
+		}
+		if (rcode == -60 || rcode == -61 || rcode == -22) {
+			return false;
+		}
+		checkAvError(rcode);
+		return false;
+	}
+
 	CodecBase::CodecBase(RtpSRSetting& s, Codec c, bool isencoder)
 	: codec(c) {
 		auto* avcodec = (isencoder) ? avcodec_find_encoder_by_name(getCodecName(codec).c_str())

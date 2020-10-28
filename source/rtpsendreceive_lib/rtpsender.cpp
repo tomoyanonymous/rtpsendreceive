@@ -4,23 +4,26 @@ namespace rtpsr {
 	RtpSender::RtpSender(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger)
 	: RtpSRBase(s, logger) {
 		input       = std::make_unique<CustomCbAsyncInFormat>(setting, setting.framesize * 2);
-		output      = std::make_unique<RtpOutFormat>(url, setting, makeCtxParams());
+		auto option = std::make_unique<AVOptionBase>(makeCtxParams());
+		output      = std::make_unique<RtpOutFormat>(url, setting, std::move(option));
 		this->codec = std::make_unique<Encoder>(s, codec);
 		initStream();
 		dtosbuffer.resize(setting.framesize * 2 * setting.channels);
-		auto& future = init_asyncloop.launch([&]() {
+		init_asyncloop.launch([&]() {
 			while (init_asyncloop.isActive()) {
-				int res = avformat_write_header(output->ctx, nullptr);
-				if (res >= 0) {
-					logger << "rtpsender: connected" << std::endl;
-					break;
-				}
-				if (res == -60 || res == -61 || res == -22) {
+				auto* rtpout = dynamic_cast<RtpOutFormat*>(output.get());
+				try {
+					bool res = rtpout->tryConnect();
+					if (res) {
+						logger << "rtpsender: connected" << std::endl;
+						break;
+					}
 					std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-					logger << "rtpsender: connection to " << url.address << ":" << url.port << " refused,retry in 2000ms" << std::endl;
+					logger << "rtpsender: connection to " << rtpout->url.address << ":" << std::to_string(rtpout->url.port) << " refused,retry in 2000ms"
+						   << std::endl;
 				}
-				else {
-					checkAvError(res);
+				catch (std::runtime_error& e) {
+					throw e;
 					break;
 				}
 			}
@@ -93,10 +96,18 @@ namespace rtpsr {
 			av_packet_unref(packet);
 		}
 	}
-	std::future<bool>& RtpSender::launchLoop() {
-		return asynclooper.launch([&]() {
+	void RtpSender::launchLoop() {
+		asynclooper.launch([&]() {
 			try {
-				init_asyncloop.wait();
+				while (true) {
+					if (!asynclooper.isActive()) {
+						return false;
+					}
+					auto res = init_asyncloop.wait_for(20);
+					if(res == std::future_status::ready){
+						break;
+					}
+				}
 				while (asynclooper.isActive()) {
 					sendData();
 					std::this_thread::sleep_for(pollingrate);
