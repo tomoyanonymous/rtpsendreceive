@@ -3,9 +3,7 @@
 
 cmake_minimum_required(VERSION 3.0)
 
-set(C74_MIN_API_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../min-api)
-include(${C74_MIN_API_DIR}/script/min-pretarget.cmake)
-
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "Minimum OS X deployment version" FORCE)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 set(CMAKE_MACOSX_RPATH 1)
@@ -22,6 +20,7 @@ add_library(
 	rtpsrbase.cpp rtpsender.cpp rtpreceiver.cpp
 )
 
+target_compile_features(rtpsendreceive PUBLIC cxx_std_17)
 target_link_libraries(rtpsendreceive PUBLIC  ${DEPENDENT_LIBS})
 
 include(rtpsendreceive_lib_test.cmake)
