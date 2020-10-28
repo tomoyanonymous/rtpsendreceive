@@ -39,7 +39,14 @@ public:
 }
 ;
 
-attribute<int> port {this, "port", 30000};
+attribute<int>    port {this, "port", 30000};
+attribute<double> retry_rate {this, "retry_rate", 500.0, description {"Retry intervals in milliseconds at connection"}};
+attribute<double> reorder_queue_size {this, "reorder_queue_size", 500.0, description {"number of packets for reorder queue"}};
+attribute<bool>   use_rtsp {this,
+    "use_rtsp",
+    true,
+    description {"if set to false, use raw rtp protocol instead of using rtsp mux/demuxer(Some options are ignored)."}};
+
 attribute<int> active {this, "active", 0, setter {MIN_FUNCTION {int res = args[0];
 if (m_initialized && rtpsender != nullptr) {
 	if (res <= 0) {
@@ -109,22 +116,38 @@ static long setDspState(void* obj, long state) {
 }
 
 private:
+void resetSender(double newvecsize) {
+	iarray.resize((int)newvecsize * channels);
+	symbol c = codec;
+	try {
+
+		if (use_rtsp) {
+			auto option = std::make_unique<rtpsr::RtspOutOption>(rtpsr::Url {address.get(), port}, samplerate(), channels, (int)newvecsize);
+			setOptions(*static_cast<rtpsr::RtpOptionsBase*>(option.get()));
+			rtpsender = std::make_unique<rtpsr::RtpSender>(std::move(option),
+				rtpsr::getCodecByName(c),
+				std::chrono::milliseconds((long long)retry_rate.get()),
+				cout);
+		}
+		else {
+			auto option = std::make_unique<rtpsr::RtpOutOption>(rtpsr::Url {address.get(), port}, samplerate(), channels, (int)newvecsize);
+			setOptions(*static_cast<rtpsr::RtpOptionsBase*>(option.get()));
+			rtpsender = std::make_unique<rtpsr::RtpSender>(std::move(option),
+				rtpsr::getCodecByName(c),
+				std::chrono::milliseconds((long long)retry_rate.get()),
+				cout);
+		}
+	}
+	catch (std::exception& e) {
+		std::cerr << e.what() << std::endl;
+	}
+}
+void setOptions(rtpsr::RtpOptionsBase& opt) {
+	opt.reorder_queue_size = reorder_queue_size;
+}
 std::unique_ptr<rtpsr::RtpSender> rtpsender;
 std::vector<int16_t>              iarray;
 static int                        instance_count;
-void                              resetSender(double newvecsize) {
-    iarray.resize((int)newvecsize * channels);
-    symbol              c = codec;
-    rtpsr::RtpSRSetting setting {(int)samplerate(), channels, (int)newvecsize};
-    rtpsr::Url          url {address.get(), port};
-
-    try {
-        rtpsender = std::make_unique<rtpsr::RtpSender>(setting, url, rtpsr::getCodecByName(c), cout);
-    }
-    catch (std::exception& e) {
-        std::cerr << e.what() << std::endl;
-    }
-}
 }
 ;
 int rtpsend_tilde::instance_count = 0;

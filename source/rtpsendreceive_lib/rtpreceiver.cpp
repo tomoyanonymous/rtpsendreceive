@@ -1,28 +1,27 @@
 #include "rtpreceiver.hpp"
 
 namespace rtpsr {
-	RtpReceiver::RtpReceiver(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger)
-	: RtpSRBase(s, logger) {
-		auto option = std::make_unique<AVOptionBase>(makeCtxParams());
-		input       = std::make_unique<RtpInFormat>(url, setting, std::move(option));
-		output      = std::make_unique<CustomCbAsyncOutFormat>(setting, frame->nb_samples * 2);
-		this->codec = std::make_unique<Decoder>(s, codec);
-		tmpbuf.resize(frame->nb_samples * setting.channels * 2);
-		dtosbuffer.resize(frame->nb_samples * setting.channels);
-		input->ctx->max_delay = 1000000;
-		init_asyncloop.launch([&]() {
-			logger << "rtpreceiver waiting incoming connection..." << std::endl;
-			while (init_asyncloop.isActive()) {
-				// this start blocking...
-				bool connection_res = dynamic_cast<RtpInFormat*>(input.get())->tryConnectInput();
-				if (connection_res) {
-					initStream();
-					logger << "rtpreceiver connected" << std::endl;
-					break;
-				}
-			}
-			return true;
-		});
+	RtpReceiver::RtpReceiver(std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec, std::ostream& logger)
+	: RtpSRBase(*s, logger) {
+		auto option = std::make_unique<RtspInOption>(url, setting_ref.samplerate, setting_ref.channels, setting_ref.framesize);
+		input       = std::make_unique<RtspInFormat>(std::move(option));
+		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 2);
+		this->codec = std::make_unique<Decoder>(setting_ref, codec);
+		init();
+	}
+	RtpReceiver::RtpReceiver(std::unique_ptr<RtpInOption> s, Codec codec, std::ostream& logger)
+	: RtpSRBase(*s, logger) {
+		input       = std::make_unique<RtpInFormat>(std::move(s));
+		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 2);
+		this->codec = std::make_unique<Decoder>(setting_ref, codec);
+		init();
+	}
+	RtpReceiver::RtpReceiver(std::unique_ptr<RtspInOption> s, Codec codec, std::ostream& logger)
+	: RtpSRBase(*s, logger) {
+		input       = std::make_unique<RtspInFormat>(std::move(s));
+		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 2);
+		this->codec = std::make_unique<Decoder>(setting_ref, codec);
+		init();
 	}
 	RtpReceiver::~RtpReceiver() {
 		std::cerr << "rtpreceiver destructor called" << std::endl;
@@ -32,27 +31,30 @@ namespace rtpsr {
 			avformat_close_input(&input->ctx);
 		}
 	}
-	rtpsr::AVOptionBase::container_t RtpReceiver::makeCtxParams() {
-		return {{"protocol_whitelist", "file,udp,rtp,tcp,rtsp"},
-			{"rtsp_transport", "udp"},
-			{"enable-protocol", "rtp"},
-			{"enable-protocol", "udp"},
-			{"timeout", 20000},
-			{"stimeout", "1000000"},        
-			{"min_port",5000},
-			{"max_port",65000},                              // tcp connection
-			{"reorder_queue_size", 100000},                               // 0.05sec
-			{"buffer_size", setting.framesize * setting.channels * 4},    // 0.05sec
-			{"rtsp_flags", "listen"},
-			{"allowed_media_types", "audio"}};
+
+	void RtpReceiver::init() {
+		tmpbuf.resize(frame->nb_samples * setting_ref.channels * 2);
+		dtosbuffer.resize(frame->nb_samples * setting_ref.channels);
+		input->ctx->max_delay = 1000000;
+		init_asyncloop.launch([&]() {
+			logger << "rtpreceiver waiting incoming connection..." << std::endl;
+			while (init_asyncloop.isActive()) {
+				// this start blocking...
+				bool connection_res = dynamic_cast<RtpInFormatBase*>(input.get())->tryConnectInput();
+				if (connection_res) {
+					initStream();
+					logger << "rtpreceiver connected" << std::endl;
+					break;
+				}
+			}
+			return true;
+		});
 	}
-
-
 	// return value:stopped_index;
 	bool RtpReceiver::pushToOutput() {
 		auto* asyncoutput = dynamic_cast<CustomCbAsyncOutFormat*>(output.get());
 		auto* frameref    = av_frame_get_plane_buffer(frame, 0);
-		auto  size        = frame->nb_samples * setting.channels;
+		auto  size        = frame->nb_samples * setting_ref.channels;
 		tmpbuf.resize(size);
 		std::memcpy(tmpbuf.data(), frameref->data, size * sizeof(int16_t));
 		bool res = asyncoutput->tryPushRingBuffer(tmpbuf);

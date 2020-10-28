@@ -15,7 +15,6 @@ jobs:
       matrix:
         os:
           - macos-latest
-          - macos-10.14
         config:
           - Debug
           - Release
@@ -26,7 +25,7 @@ jobs:
       - if: contains(matrix.os, 'macos')
         name: deps-macos
         run: |
-          brew update
+          brew upgrade
           brew install opus
       - name: install-ffmpeg
         run: |

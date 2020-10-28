@@ -3,7 +3,10 @@
 
 namespace rtpsr {
 	struct RtpReceiver : public RtpSRBase {
-		explicit RtpReceiver(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger = std::cerr);
+		explicit RtpReceiver(std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec, std::ostream& logger = std::cerr);
+		explicit RtpReceiver(std::unique_ptr<RtpInOption> s,  Codec codec, std::ostream& logger = std::cerr);
+		explicit RtpReceiver(std::unique_ptr<RtspInOption> s,  Codec codec, std::ostream& logger = std::cerr);
+
 		~RtpReceiver();
 
 		void launchLoop() override;
@@ -13,7 +16,7 @@ namespace rtpsr {
 	private:
 		std::vector<int16_t>      dtosbuffer;
 		std::vector<int16_t>      tmpbuf;
-		AVOptionBase::container_t makeCtxParams();
+		void init();
 		bool                      pushToOutput();
 		bool                      receiveData();
 	};
