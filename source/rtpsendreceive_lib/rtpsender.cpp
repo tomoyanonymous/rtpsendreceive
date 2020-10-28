@@ -47,8 +47,6 @@ namespace rtpsr {
 			{"rtsp_transport", "udp"},
 			{"enable-protocol", "rtp"},
 			{"enable-protocol", "udp"},
-			// {"enable-muxer", "rtsp"},
-			// {"enable-demuxer", "rtsp"},
 			{"stimeout", "1000000"},
 		};
 	}

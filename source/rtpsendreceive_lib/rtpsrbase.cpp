@@ -1,20 +1,56 @@
 #include "rtpsrbase.hpp"
 
 namespace rtpsr {
-
-	bool RtpInFormat::tryConnectInput() {
-		auto* ifmt = av_find_input_format("rtsp");
-		auto  res  = avformat_open_input(&ctx, getSdpUrl(url).c_str(), ifmt, options->get());
-		if (res == -60 || res == -61 || res == -22) {
-			return false;
+	void checkAvError(int error_code) {
+		if (error_code < 0) {
+			char str[4096];
+			av_make_error_string(str, 4096, error_code);
+			throw std::runtime_error(str);
 		}
-		if (res < 0) {
-			checkAvError(res);
+	}
+	AVOptionBase::AVOptionBase(container_t&& init) {
+		for (auto& [key, val] : init) {
+			assert(!std::holds_alternative<std::monostate>(val));
+			if (std::holds_alternative<int>(val)) {
+				checkAvError(av_dict_set_int(&this->params, key.c_str(), std::get<int>(val), 0));
+				allocated |= true;
+			}
+			if (std::holds_alternative<std::string>(val)) {
+				checkAvError(av_dict_set(&this->params, key.c_str(), std::get<std::string>(val).c_str(), 0));
+				allocated |= true;
+			}
 		}
-		return true;
+		container = std::move(init);
+	}
+	AVOptionBase::~AVOptionBase() {
+		if (allocated) {
+			av_dict_free(&params);
+		}
+	}
+	std::string getSdpUrl(std::string const& address, int port) {
+		return "udp://" + address + ":" + std::to_string(port) + "/live.sdp";
+	}
+	std::string getSdpUrl(Url& url) {
+		return getSdpUrl(url.address, url.port);
 	}
 
+	// IO Format
 
+	IOFormat::IOFormat(RtpSRSetting& setting)
+	: setting(setting) {
+		ctx = avformat_alloc_context();
+	}
+	IOFormat::~IOFormat() {
+		avformat_free_context(ctx);
+	}
+	// InFormat
+	InFormat::InFormat(RtpSRSetting& s)
+	: IOFormat(s) { }
+	// OutFormat
+	OutFormat::OutFormat(RtpSRSetting& s)
+	: IOFormat(s) { }
+
+	// old cutomcallback format
 	CustomCbInFormat::CustomCbInFormat(RtpSRSetting& s)
 	: InFormat(s) {
 		buffer.resize(setting.framesize * setting.channels);
@@ -24,33 +60,6 @@ namespace rtpsr {
 		ctx->flags |= AVFMT_FLAG_CUSTOM_IO;
 		ctx->pb = avioctx;
 	}
-
-
-	bool CustomCbAsyncFormat::tryPushRingBuffer(std::vector<sample_t> const& input) {
-		auto size = input.size();
-		if (buffer.getWriteMargin() < size) {
-			return false;
-		}
-		buffer.writeRange(input, input.size());
-		return true;
-	}
-
-	bool CustomCbAsyncFormat::tryPopRingBuffer(std::vector<sample_t>& dest) {
-		auto size = dest.size();
-		if (buffer.getReadMargin() < size) {
-			return false;
-		}
-		buffer.readRange(dest, dest.size());
-		return true;
-	}
-
-
-	CustomCbAsyncInFormat::CustomCbAsyncInFormat(RtpSRSetting& s, size_t buffer_size)
-	: InFormat(s)
-	, CustomCbAsyncFormat(std::max((int)buffer_size, s.framesize) * s.channels) { }
-	CustomCbAsyncOutFormat::CustomCbAsyncOutFormat(RtpSRSetting& s, size_t buffer_size)
-	: OutFormat(s)
-	, CustomCbAsyncFormat(std::max((int)buffer_size, s.framesize) * s.channels) { }
 
 
 	int CustomCbInFormat::readPacket(void* userdata, uint8_t* avio_buf, int buf_size) {
@@ -76,11 +85,57 @@ namespace rtpsr {
 		memcpy(address, avio_buf, buf_size);
 		return buf_size;
 	}
+
+	// CustomCbAsyncFormat
+	bool CustomCbAsyncFormat::tryPushRingBuffer(std::vector<sample_t> const& input) {
+		auto size = input.size();
+		if (buffer.getWriteMargin() < size) {
+			return false;
+		}
+		buffer.writeRange(input, input.size());
+		return true;
+	}
+	bool CustomCbAsyncFormat::tryPopRingBuffer(std::vector<sample_t>& dest) {
+		auto size = dest.size();
+		if (buffer.getReadMargin() < size) {
+			return false;
+		}
+		buffer.readRange(dest, dest.size());
+		return true;
+	}
+	CustomCbAsyncInFormat::CustomCbAsyncInFormat(RtpSRSetting& s, size_t buffer_size)
+	: InFormat(s)
+	, CustomCbAsyncFormat(std::max((int)buffer_size, s.framesize) * s.channels) { }
+	CustomCbAsyncOutFormat::CustomCbAsyncOutFormat(RtpSRSetting& s, size_t buffer_size)
+	: OutFormat(s)
+	, CustomCbAsyncFormat(std::max((int)buffer_size, s.framesize) * s.channels) { }
+
+	// Rtp Format base
+	RtpFormatBase::RtpFormatBase(std::unique_ptr<AVOptionBase> options)
+	: options(std::move(options)) { }
+
+	// Rtp Input
+	RtpInFormat::RtpInFormat(Url& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
+	: url(url)
+	, RtpFormatBase(std::move(options))
+	, InFormat(s) {
+		avformat_network_init();
+	}
+	bool RtpInFormat::tryConnectInput() {
+		auto* ifmt = av_find_input_format("rtsp");
+		auto  res  = avformat_open_input(&ctx, getSdpUrl(url).c_str(), ifmt, options->get());
+		if (res == -60 || res == -61 || res == -22) {
+			return false;
+		}
+		if (res < 0) {
+			checkAvError(res);
+		}
+		return true;
+	}
 	RtpOutFormat::RtpOutFormat(Url& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
 	: url(url)
-	, OutFormat(s)
-	, options(std::move(options)) {
-
+	, RtpFormatBase(std::move(options))
+	, OutFormat(s) {
 		avformat_network_init();
 		auto  url_tmp    = getSdpUrl(url);
 		auto* fmt_output = av_guess_format("rtsp", url_tmp.c_str(), nullptr);
@@ -101,6 +156,7 @@ namespace rtpsr {
 		checkAvError(rcode);
 		return false;
 	}
+
 
 	CodecBase::CodecBase(RtpSRSetting& s, Codec c, bool isencoder)
 	: codec(c) {
@@ -141,6 +197,26 @@ namespace rtpsr {
 		return checkIsErrAgain(avcodec_receive_packet(ctx, packet));
 	}
 
+	bool AsyncLooper::halt() {
+		if (active) {
+			active = false;
+			wait();
+		}
+		return true;
+	}
+	void AsyncLooper::wait() {
+		future.wait();
+		bool res = future.get();
+	}
+
+	bool AsyncLooper::isActive() const {
+		return active;
+	}
+	std::future_status AsyncLooper::wait_for(int mills) {
+		return future.wait_for(std::chrono::milliseconds(mills));
+	}
+	
+	//RtpSRBase
 
 	RtpSRBase::RtpSRBase(RtpSRSetting& s, std::ostream& logger)
 	: setting(s)

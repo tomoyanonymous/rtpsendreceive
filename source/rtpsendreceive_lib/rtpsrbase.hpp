@@ -10,38 +10,21 @@
 namespace rtpsr {
 
 
-	inline void checkAvError(int error_code) {
-		if (error_code < 0) {
-			char str[4096];
-			av_make_error_string(str, 4096, error_code);
-			throw std::runtime_error(str);
-		}
-	}
+	void checkAvError(int error_code);
+
+	struct SdpOpaque {
+		using Vector = std::vector<uint8_t>;
+		Vector           data;
+		Vector::iterator pos;
+	};
 
 	struct AVOptionBase {
 		using keytype     = std::string;
 		using valtype     = std::variant<std::monostate, std::string, int>;
 		using container_t = std::unordered_map<keytype, valtype>;
 		AVOptionBase()    = delete;
-		explicit AVOptionBase(container_t&& init) {
-			for (auto& [key, val] : init) {
-				assert(!std::holds_alternative<std::monostate>(val));
-				if (std::holds_alternative<int>(val)) {
-					checkAvError(av_dict_set_int(&this->params, key.c_str(), std::get<int>(val), 0));
-					allocated |= true;
-				}
-				if (std::holds_alternative<std::string>(val)) {
-					checkAvError(av_dict_set(&this->params, key.c_str(), std::get<std::string>(val).c_str(), 0));
-					allocated |= true;
-				}
-			}
-			container = std::move(init);
-		}
-		~AVOptionBase() {
-			if (allocated) {
-				av_dict_free(&params);
-			}
-		}
+		explicit AVOptionBase(container_t&& init);
+		~AVOptionBase();
 		AVDictionary** get() {
 			return &params;
 		}
@@ -62,24 +45,33 @@ namespace rtpsr {
 		// how sample format?
 		return sizeof(double) * s.framesize * s.channels;
 	}
+	struct Url {
+		std::string address = "127.0.0.1";
+		int         port    = 30000;
+	};
+	std::string getSdpUrl(std::string const& address, int port);
+	std::string getSdpUrl(Url& url);
 
+	// IO Format
 	struct IOFormat {
-		explicit IOFormat(RtpSRSetting& setting)
-		: setting(setting) {
-			ctx = avformat_alloc_context();
-		}
-		virtual ~IOFormat() {
-			avformat_free_context(ctx);
-		}
+		explicit IOFormat(RtpSRSetting& setting);
+		virtual ~IOFormat();
 		AVFormatContext* ctx;
 		RtpSRSetting&    setting;
-
-	protected:
+	};
+	struct InFormat : public IOFormat {
+		explicit InFormat(RtpSRSetting& s);
+		~InFormat() override = default;
+		virtual void connectInput() {};
+	};
+	struct OutFormat : public IOFormat {
+		explicit OutFormat(RtpSRSetting& s);
+		virtual ~OutFormat() = default;
+		virtual void startOutput() {};
 	};
 
-	struct CustomCbFormat {
-		rtpsr::buffertype buffer;
-	};
+	// Custom Callback Async Format
+	// Uses LockFreeRingbuffer. This does not uses libavformat. Data are assumed to be taken from avframe directly.
 	class CustomCbAsyncFormat {
 	public:
 		explicit CustomCbAsyncFormat(size_t buffer_size)
@@ -91,13 +83,21 @@ namespace rtpsr {
 		LockFreeRingbuf<sample_t> buffer;
 	};
 
-	struct InFormat : public IOFormat {
-		explicit InFormat(RtpSRSetting& s)
-		: IOFormat(s) {};
-		~InFormat() override = default;
-		virtual void connectInput() {};
+	class CustomCbAsyncInFormat final : public InFormat, public CustomCbAsyncFormat {
+	public:
+		explicit CustomCbAsyncInFormat(RtpSRSetting& s, size_t buffer_size);
+		~CustomCbAsyncInFormat() final = default;
+	};
+	class CustomCbAsyncOutFormat final : public OutFormat, public CustomCbAsyncFormat {
+	public:
+		explicit CustomCbAsyncOutFormat(RtpSRSetting& s, size_t buffer_size);
+		~CustomCbAsyncOutFormat() final = default;
 	};
 
+	// old classes for synchronous reading
+	struct CustomCbFormat {
+		rtpsr::buffertype buffer;
+	};
 	struct CustomCbInFormat : public InFormat, public CustomCbFormat {
 		explicit CustomCbInFormat(RtpSRSetting& s);
 		~CustomCbInFormat() = default;
@@ -107,51 +107,6 @@ namespace rtpsr {
 			buffer[pos * setting.channels + channel] = static_cast<rtpsr::sample_t>(sample * INT16_MAX);
 		}
 	};
-
-	class CustomCbAsyncInFormat final : public InFormat, public CustomCbAsyncFormat {
-	public:
-		explicit CustomCbAsyncInFormat(RtpSRSetting& s, size_t buffer_size);
-		~CustomCbAsyncInFormat() final = default;
-	};
-
-
-	struct SdpOpaque {
-		using Vector = std::vector<uint8_t>;
-		Vector           data;
-		Vector::iterator pos;
-	};
-
-	struct Url {
-		std::string address = "127.0.0.1";
-		int         port    = 30000;
-	};
-	inline std::string getSdpUrl(std::string const& address, int port) {
-		return "udp://" + address + ":" + std::to_string(port) + "/live.sdp";
-	}
-
-	inline std::string getSdpUrl(Url& url) {
-		return getSdpUrl(url.address, url.port);
-	}
-	struct RtpInFormat final : public InFormat {
-		RtpInFormat(Url& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
-		: url(url)
-		, InFormat(s)
-		, options(std::move(options)) {
-			avformat_network_init();
-		}
-		~RtpInFormat() final = default;
-		bool                          tryConnectInput();
-		Url                           url;
-		std::unique_ptr<AVOptionBase> options;
-	};
-
-	struct OutFormat : public IOFormat {
-		explicit OutFormat(RtpSRSetting& s)
-		: IOFormat(s) {};
-		virtual ~OutFormat() = default;
-		virtual void startOutput() {};
-	};
-
 	struct CustomCbOutFormat : public OutFormat, public CustomCbFormat {
 		explicit CustomCbOutFormat(RtpSRSetting& s);
 		~CustomCbOutFormat() { }
@@ -170,19 +125,24 @@ namespace rtpsr {
 		}
 	};
 
-
-	class CustomCbAsyncOutFormat final : public OutFormat, public CustomCbAsyncFormat {
-	public:
-		explicit CustomCbAsyncOutFormat(RtpSRSetting& s, size_t buffer_size);
-		~CustomCbAsyncOutFormat() final = default;
-	};
-
-	struct RtpOutFormat : public OutFormat {
-		explicit RtpOutFormat(Url& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
-		Url  url;
-		bool tryConnect();
-
+	// rtp in out format.
+	struct RtpFormatBase {
+		RtpFormatBase() = delete;
+		explicit RtpFormatBase(std::unique_ptr<AVOptionBase> options);
 		std::unique_ptr<AVOptionBase> options;
+	};
+	struct RtpInFormat final : public InFormat, public RtpFormatBase {
+		RtpInFormat() = delete;
+		explicit RtpInFormat(Url& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
+		~RtpInFormat() final = default;
+		bool tryConnectInput();
+		Url  url;
+	};
+	struct RtpOutFormat final : public OutFormat, public RtpFormatBase {
+		explicit RtpOutFormat(Url& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
+		~RtpOutFormat() final = default;
+		bool tryConnect();
+		Url  url;
 	};
 
 	struct CodecBase {
@@ -224,24 +184,10 @@ namespace rtpsr {
 			active = true;
 			future = std::async(std::launch::async, std::move(fn));
 		}
-		bool halt() {
-			if (active) {
-				active = false;
-				wait();
-			}
-			return true;
-		}
-		void wait() {
-			future.wait();
-			bool res = future.get();
-		}
-		auto wait_for(int mills) {
-			return future.wait_for(std::chrono::milliseconds(mills));
-		}
-		bool isActive() const {
-			return active;
-		}
-
+		bool               halt();
+		void               wait();
+		std::future_status wait_for(int mills);
+		bool               isActive() const;
 	private:
 		std::atomic<bool>        active = false;
 		std::shared_future<bool> future;
@@ -264,13 +210,5 @@ namespace rtpsr {
 		AVFrame*                   frame;
 		std::ostream&              logger;
 	};
-
-	struct ConnectionCb {
-		void*                      opaque = nullptr;
-		std::function<void(void*)> cb     = [](void* v) {};
-	};
-	inline void triggerCallback(ConnectionCb& cb) {
-		cb.cb(cb.opaque);
-	}
 
 }    // namespace rtpsr
