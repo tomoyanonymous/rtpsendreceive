@@ -56,6 +56,18 @@ namespace rtpsr {
 
 	enum class RtpFormatKind { RTP = 0, RTSP = 1 };
 
+	inline std::string toString(RtpFormatKind k) {
+		switch (k) {
+			case RtpFormatKind::RTP:
+				return "rtp";
+			case RtpFormatKind::RTSP:
+				return "rtsp";
+			default:
+				assert(false);
+				return "";
+		}
+	}
+
 	struct RtpOptionsBase {
 		Url                           url;
 		std::unique_ptr<AVOptionBase> avoptions;
