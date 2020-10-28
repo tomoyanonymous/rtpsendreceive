@@ -63,7 +63,7 @@ namespace rtpsr {
 		: setting(setting) {
 			ctx = avformat_alloc_context();
 		}
-		~IOFormat() {
+		virtual ~IOFormat() {
 			avformat_free_context(ctx);
 		}
 		AVFormatContext* ctx;
@@ -90,6 +90,7 @@ namespace rtpsr {
 	struct InFormat : public IOFormat {
 		explicit InFormat(RtpSRSetting& s)
 		: IOFormat(s) {};
+		~InFormat() override = default;
 		virtual void connectInput() {};
 	};
 
@@ -103,10 +104,10 @@ namespace rtpsr {
 		}
 	};
 
-	class CustomCbAsyncInFormat : public InFormat, public CustomCbAsyncFormat {
+	class CustomCbAsyncInFormat final : public InFormat, public CustomCbAsyncFormat {
 	public:
 		explicit CustomCbAsyncInFormat(RtpSRSetting& s, size_t buffer_size);
-		~CustomCbAsyncInFormat() = default;
+		~CustomCbAsyncInFormat() final = default;
 	};
 
 
@@ -127,14 +128,14 @@ namespace rtpsr {
 	inline std::string getSdpUrl(Url& url) {
 		return getSdpUrl(url.address, url.port);
 	}
-	struct RtpInFormat : public InFormat {
+	struct RtpInFormat final : public InFormat {
 		RtpInFormat(Url& url, RtpSRSetting& s, AVOptionBase&& options = {})
 		: url(url)
 		, InFormat(s)
 		, options(options) {
 			avformat_network_init();
 		}
-		~RtpInFormat();
+		~RtpInFormat() final = default;
 		bool         tryConnectInput();
 		Url          url;
 		AVOptionBase options;
@@ -143,6 +144,7 @@ namespace rtpsr {
 	struct OutFormat : public IOFormat {
 		explicit OutFormat(RtpSRSetting& s)
 		: IOFormat(s) {};
+		virtual ~OutFormat() = default;
 		virtual void startOutput() {};
 	};
 
@@ -165,10 +167,10 @@ namespace rtpsr {
 	};
 
 
-	class CustomCbAsyncOutFormat : public OutFormat, public CustomCbAsyncFormat {
+	class CustomCbAsyncOutFormat final : public OutFormat, public CustomCbAsyncFormat {
 	public:
 		explicit CustomCbAsyncOutFormat(RtpSRSetting& s, size_t buffer_size);
-		~CustomCbAsyncOutFormat() = default;
+		~CustomCbAsyncOutFormat() final = default;
 	};
 
 	struct RtpOutFormat : public OutFormat {
@@ -214,8 +216,8 @@ namespace rtpsr {
 		template<class F>
 		std::future<bool>& launch(F&& fn) {
 			active = true;
-			future=  std::move(std::async(std::launch::async, std::move(fn)));
-      return future;
+			future = std::move(std::async(std::launch::async, std::move(fn)));
+			return future;
 		}
 		bool halt() {
 			if (future.valid()) {
@@ -240,6 +242,8 @@ namespace rtpsr {
 		explicit RtpSRBase(RtpSRSetting& s, std::ostream& logger = std::cerr);
 		~RtpSRBase();
 		virtual std::future<bool>& launchLoop() = 0;
+		AsyncLooper                asynclooper;
+		AsyncLooper                init_asyncloop;
 
 	protected:
 		void                       initStream() const;
@@ -247,8 +251,6 @@ namespace rtpsr {
 		std::unique_ptr<InFormat>  input;
 		std::unique_ptr<OutFormat> output;
 		std::unique_ptr<CodecBase> codec;
-		AsyncLooper                asynclooper;
-		AsyncLooper                init_asyncloop;
 		AVPacket*                  packet;
 		AVFrame*                   frame;
 		std::ostream&              logger;
