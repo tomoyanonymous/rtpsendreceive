@@ -241,13 +241,13 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 
 	// RtpSRBase
 
-	RtpSRBase::RtpSRBase(RtpSRSetting& s, std::ostream& logger)
-	: setting(s)
+	RtpSRBase::RtpSRBase(std::unique_ptr<RtpSRSetting> s, std::ostream& logger)
+	: setting(std::move(s))
 	, logger(logger) {
 		frame             = av_frame_alloc();
-		frame->nb_samples = setting.framesize;
+		frame->nb_samples = setting->framesize;
 		packet            = av_packet_alloc();
-		av_new_packet(packet, getBufSize(setting));
+		av_new_packet(packet, getBufSize(*setting));
 	}
 
 	RtpSRBase::~RtpSRBase() {

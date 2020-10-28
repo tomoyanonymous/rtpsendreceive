@@ -115,11 +115,12 @@ static int                        instance_count;
 void                              resetSender(double newvecsize) {
     iarray.resize((int)newvecsize * channels);
     symbol              c = codec;
-    rtpsr::RtpSRSetting setting {(int)samplerate(), channels, (int)newvecsize};
+    std::unique_ptr<rtpsr::RtpSRSetting> setting;
     rtpsr::Url          url {address.get(), port};
 
     try {
-        rtpsender = std::make_unique<rtpsr::RtpSender>(setting, url, rtpsr::getCodecByName(c), cout);
+		setting = std::make_unique<rtpsr::RtpSRSetting>(rtpsr::RtpSRSetting{samplerate(), channels, (int)newvecsize});
+        rtpsender = std::make_unique<rtpsr::RtpSender>(std::move(setting), url, rtpsr::getCodecByName(c), cout);
     }
     catch (std::exception& e) {
         std::cerr << e.what() << std::endl;

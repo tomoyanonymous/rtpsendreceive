@@ -38,9 +38,9 @@ namespace rtpsr {
 	};
 
 	struct RtpSRSetting {
-		int samplerate;
-		int channels;
-		int framesize;
+		double samplerate;
+		int    channels;
+		int    framesize;
 	};
 
 	inline size_t getBufSize(RtpSRSetting& s) {
@@ -244,21 +244,21 @@ namespace rtpsr {
 	};
 
 	struct RtpSRBase {
-		explicit RtpSRBase(RtpSRSetting& s, std::ostream& logger = std::cerr);
+		explicit RtpSRBase(std::unique_ptr<RtpSRSetting> s, std::ostream& logger = std::cerr);
 		~RtpSRBase();
 		virtual void launchLoop() = 0;
 		AsyncLooper  asynclooper;
 		AsyncLooper  init_asyncloop;
 
 	protected:
-		void                       initStream() const;
-		RtpSRSetting               setting;
-		std::unique_ptr<InFormat>  input;
-		std::unique_ptr<OutFormat> output;
-		std::unique_ptr<CodecBase> codec;
-		AVPacket*                  packet;
-		AVFrame*                   frame;
-		std::ostream&              logger;
+		void                          initStream() const;
+		std::unique_ptr<RtpSRSetting> setting;
+		std::unique_ptr<InFormat>     input;
+		std::unique_ptr<OutFormat>    output;
+		std::unique_ptr<CodecBase>    codec;
+		AVPacket*                     packet;
+		AVFrame*                      frame;
+		std::ostream&                 logger;
 	};
 
 }    // namespace rtpsr

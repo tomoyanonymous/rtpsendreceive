@@ -1,14 +1,14 @@
 #include "rtpreceiver.hpp"
 
 namespace rtpsr {
-	RtpReceiver::RtpReceiver(RtpSRSetting& s, Url& url, Codec codec, std::ostream& logger)
-	: RtpSRBase(s, logger) {
+	RtpReceiver::RtpReceiver(std::unique_ptr<RtpSRSetting> s, Url& url, Codec codec, std::ostream& logger)
+	: RtpSRBase(std::move(s), logger) {
 		auto option = std::make_unique<AVOptionBase>(makeCtxParams());
-		input       = std::make_unique<RtpInFormat>(url, setting, std::move(option));
-		output      = std::make_unique<CustomCbAsyncOutFormat>(setting, frame->nb_samples * 2);
-		this->codec = std::make_unique<Decoder>(s, codec);
-		tmpbuf.resize(frame->nb_samples * setting.channels * 2);
-		dtosbuffer.resize(frame->nb_samples * setting.channels);
+		input       = std::make_unique<RtpInFormat>(url, *setting, std::move(option));
+		output      = std::make_unique<CustomCbAsyncOutFormat>(*setting, frame->nb_samples * 2);
+		this->codec = std::make_unique<Decoder>(*setting, codec);
+		tmpbuf.resize(frame->nb_samples * setting->channels * 2);
+		dtosbuffer.resize(frame->nb_samples * setting->channels);
 		input->ctx->max_delay = 1000000;
 		init_asyncloop.launch([&]() {
 			logger << "rtpreceiver waiting incoming connection..." << std::endl;
@@ -42,7 +42,7 @@ namespace rtpsr {
 			{"min_port",5000},
 			{"max_port",65000},                              // tcp connection
 			{"reorder_queue_size", 100000},                               // 0.05sec
-			{"buffer_size", setting.framesize * setting.channels * 4},    // 0.05sec
+			{"buffer_size", setting->framesize * setting->channels * 4},    // 0.05sec
 			{"rtsp_flags", "listen"},
 			{"allowed_media_types", "audio"}};
 	}
@@ -52,7 +52,7 @@ namespace rtpsr {
 	bool RtpReceiver::pushToOutput() {
 		auto* asyncoutput = dynamic_cast<CustomCbAsyncOutFormat*>(output.get());
 		auto* frameref    = av_frame_get_plane_buffer(frame, 0);
-		auto  size        = frame->nb_samples * setting.channels;
+		auto  size        = frame->nb_samples * setting->channels;
 		tmpbuf.resize(size);
 		std::memcpy(tmpbuf.data(), frameref->data, size * sizeof(int16_t));
 		bool res = asyncoutput->tryPushRingBuffer(tmpbuf);

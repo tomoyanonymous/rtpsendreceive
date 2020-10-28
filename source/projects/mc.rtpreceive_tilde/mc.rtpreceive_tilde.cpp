@@ -106,25 +106,25 @@ std::shared_ptr<rtpsr::RtpReceiver> rtpreceiver {nullptr};
 std::vector<rtpsr::sample_t>        iarray;
 double                              frame_size = vector_size();
 void                                resetChannel(int channel) {
-    symbol              c = codec;
-    rtpsr::RtpSRSetting setting {(int)samplerate(), channel, (int)frame_size};
-    rtpsr::Url          url {address.get(), port};
-    resetReceiver(setting, url, rtpsr::getCodecByName(c));
+    symbol     c = codec;
+    auto       setting = std::make_unique<rtpsr::RtpSRSetting>(rtpsr::RtpSRSetting {samplerate(), channel, (int)frame_size});
+    rtpsr::Url url {address.get(), port};
+    resetReceiver(std::move(setting), url, rtpsr::getCodecByName(c));
 }
 
 void resetReceiver(double newvecsize) {
 	iarray.resize(newvecsize * channels);
-	frame_size            = newvecsize;
-	symbol              c = codec;
-	rtpsr::RtpSRSetting setting {(int)samplerate(), channels, (int)newvecsize};
-	rtpsr::Url          url {address.get(), port};
-	resetReceiver(setting, url, rtpsr::getCodecByName(c));
+	frame_size         = newvecsize;
+	symbol     c       = codec;
+	auto       setting = std::make_unique<rtpsr::RtpSRSetting>(rtpsr::RtpSRSetting {samplerate(), channels, (int)newvecsize});
+	rtpsr::Url url {address.get(), port};
+	resetReceiver(std::move(setting), url, rtpsr::getCodecByName(c));
 }
-void resetReceiver(rtpsr::RtpSRSetting& s, rtpsr::Url& url, rtpsr::Codec c) {
+void resetReceiver(std::unique_ptr<rtpsr::RtpSRSetting> s, rtpsr::Url& url, rtpsr::Codec c) {
 	rtpreceiver.reset();
 
 	try {
-		rtpreceiver = std::make_unique<rtpsr::RtpReceiver>(s, url, c, cout);
+		rtpreceiver = std::make_unique<rtpsr::RtpReceiver>(std::move(s), url, c, cout);
 		rtpreceiver->launchLoop();
 	}
 	catch (std::exception& e) {
