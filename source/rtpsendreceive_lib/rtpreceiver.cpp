@@ -33,9 +33,10 @@ namespace rtpsr {
 	}
 
 	void RtpReceiver::init() {
+		auto* rtpinput = dynamic_cast<RtpInFormatBase*>(input.get());
 		tmpbuf.resize(frame->nb_samples * setting_ref.channels * 2);
 		dtosbuffer.resize(frame->nb_samples * setting_ref.channels);
-		input->ctx->max_delay = 1000000;
+		input->ctx->max_delay = rtpinput->option->max_delay;
 		init_asyncloop.launch([&]() {
 			logger << "rtpreceiver waiting incoming connection..." << std::endl;
 			while (init_asyncloop.isActive()) {

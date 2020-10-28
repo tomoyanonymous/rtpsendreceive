@@ -46,6 +46,8 @@ return {};
 }
 ;
 attribute<double> reorder_queue_size {this, "reorder_queue_size", 500.0, description {"number of packets for reorder queue"}};
+attribute<int> max_delay {this, "max_delay", 500000, description {"maximum accepted delay for reordering(in microseconds)"}};
+
 attribute<bool>   use_rtsp {this,
     "use_rtsp",
     true,
@@ -110,8 +112,9 @@ private:
 std::shared_ptr<rtpsr::RtpReceiver> rtpreceiver {nullptr};
 std::vector<rtpsr::sample_t>        iarray;
 double                              frame_size = vector_size();
-void                                resetChannel(int channel) {
-    resetReceiver(vector_size(), channels);
+
+void resetChannel(int channel) {
+	resetReceiver(vector_size(), channels);
 }
 
 void resetReceiver(double newvecsize, int channel) {
@@ -152,6 +155,7 @@ void resetReceiver(std::unique_ptr<rtpsr::RtpInOption> s) {
 
 void setOptions(rtpsr::RtpOptionsBase& opt) {
 	opt.reorder_queue_size = reorder_queue_size;
+	opt.max_delay = max_delay;
 }
 
 static long setOutChans(void* obj, long outletindex) {

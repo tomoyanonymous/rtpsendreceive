@@ -44,8 +44,9 @@ namespace rtpsr {
 	}
 	RtpOption::RtpOption(Url const& url, double samplerate, int channels, int buffersize)
 	: RtpOptionsBase(std::move(url))
-	, RtpSRSetting({samplerate, channels, buffersize})
-	, buffer_size(buffersize * channels * 4) { }
+	, RtpSRSetting({samplerate, channels, buffersize}) {
+		buffer_size = buffersize * channels * 4;
+	}
 	void RtpOption::generateOptions() {
 		RtpOptionsBase::generateOptions();
 		dict.emplace("buffer_size", buffer_size);

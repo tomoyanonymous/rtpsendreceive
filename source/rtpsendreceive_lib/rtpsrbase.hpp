@@ -70,13 +70,17 @@ namespace rtpsr {
 
 	struct RtpOptionsBase {
 		explicit RtpOptionsBase(Url const& url);
-		virtual ~RtpOptionsBase()=default;
+		virtual ~RtpOptionsBase() = default;
 		const Url url;
 
 		// number of packet of reorder queue
-		size_t                reorder_queue_size = 1000;
-		size_t                packet_size        = 1000;
-		virtual RtpFormatKind getKind()          = 0;
+		size_t reorder_queue_size = 1000;
+		size_t packet_size        = 1000;
+		// maximum reorder delay(in microseconds) to be set to audioformatcontext
+		int    max_delay = 500000;
+		size_t buffer_size;
+
+		virtual RtpFormatKind getKind() = 0;
 		virtual void          generateOptions();
 		AVDictionary**        getParam() {
             avoptions = std::make_unique<AVOptionBase>(std::move(dict));
@@ -92,10 +96,8 @@ namespace rtpsr {
 			return RtpFormatKind::RTP;
 		};
 		void generateOptions() override;
-		// maximum reorder delay(in microseconds) to be set to audioformatcontext
-		int    max_delay = 500000;
-		size_t buffer_size;
-		bool   filter_source = false;
+
+		bool filter_source = false;
 	};
 	class RtspOption : public RtpSRSetting, public RtpOptionsBase {
 	public:
