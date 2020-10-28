@@ -232,8 +232,19 @@ namespace rtpsr {
 	struct RtpOutFormatBase : public OutFormat, public RtpFormatBase {
 		explicit RtpOutFormatBase(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
 		~RtpOutFormatBase() = default;
-		bool tryConnect();
+		virtual bool tryConnect()=0;
 		Url  url;
+	};
+	struct RtspOutFormat : public RtpOutFormatBase {
+		RtspOutFormat() = delete;
+		explicit RtspOutFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
+		bool tryConnect() override;
+	};
+
+	struct RtpOutFormat : public RtpOutFormatBase {
+		RtpOutFormat() = delete;
+		explicit RtpOutFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options);
+		bool tryConnect() override;
 	};
 
 	struct CodecBase {

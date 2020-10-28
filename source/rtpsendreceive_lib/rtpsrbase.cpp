@@ -222,12 +222,12 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		}
 		return true;
 	}
-		RtpInFormat::RtpInFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
+	RtpInFormat::RtpInFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
 	: RtpInFormatBase(url, s, std::move(options)) { }
-	
+
 	bool RtpInFormat::tryConnectInput() {
 		auto* ifmt = av_find_input_format("sdp");
-		//todo
+		// todo
 		// auto  res  = avformat_open_input(&ctx, getSdpUrl(url).c_str(), ifmt, options->get());
 		// if (res == -60 || res == -61 || res == -22) {
 		// 	return false;
@@ -242,13 +242,20 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 	, RtpFormatBase(std::move(options))
 	, OutFormat(s) {
 		avformat_network_init();
+	}
+
+	RtspOutFormat::RtspOutFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
+	: RtpOutFormatBase(url, s, std::move(options)) { }
+	RtpOutFormat::RtpOutFormat(Url const& url, RtpSRSetting& s, std::unique_ptr<AVOptionBase> options)
+	: RtpOutFormatBase(url, s, std::move(options)) { }
+
+
+	bool RtspOutFormat::tryConnect() {
 		auto  url_tmp    = getSdpUrl(url);
 		auto* fmt_output = av_guess_format("rtsp", url_tmp.c_str(), nullptr);
 		ctx->oformat     = fmt_output;
 		ctx->url         = (char*)av_malloc(url_tmp.size() + sizeof(char));
 		av_strlcpy(ctx->url, url_tmp.c_str(), url_tmp.size() + sizeof(char));
-	}
-	bool RtpOutFormatBase::tryConnect() {
 		checkAvError(avformat_init_output(ctx, this->options->get()));
 		checkAvError(avio_open(&ctx->pb, ctx->url, AVIO_FLAG_WRITE));
 		int rcode = avformat_write_header(ctx, nullptr);
@@ -262,6 +269,27 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		return false;
 	}
 
+	bool RtpOutFormat::tryConnect() {
+		auto  url_tmp           = getSdpUrl(url);
+		auto* fmt_output        = av_guess_format("rtp", url_tmp.c_str(), nullptr);
+		fmt_output->mime_type   = "audio/L16";
+		fmt_output->audio_codec = AV_CODEC_ID_PCM_S16BE;
+		fmt_output->data_codec  = AV_CODEC_ID_PCM_S16BE;
+		ctx->oformat            = fmt_output;
+		ctx->url                = (char*)av_malloc(url_tmp.size() + sizeof(char));
+		av_strlcpy(ctx->url, url_tmp.c_str(), url_tmp.size() + sizeof(char));
+		checkAvError(avformat_init_output(ctx, this->options->get()));
+		checkAvError(avio_open(&ctx->pb, ctx->url, AVIO_FLAG_WRITE));
+		int rcode = avformat_write_header(ctx, nullptr);
+		if (rcode >= 0) {
+			return true;
+		}
+		if (rcode == -60 || rcode == -61 || rcode == -22) {
+			return false;
+		}
+		checkAvError(rcode);
+		return false;
+	}
 
 	CodecBase::CodecBase(RtpSRSetting& s, Codec c, bool isencoder)
 	: codec(c) {
