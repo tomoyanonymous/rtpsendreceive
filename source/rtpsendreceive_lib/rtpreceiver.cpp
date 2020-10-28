@@ -33,13 +33,18 @@ namespace rtpsr {
 		}
 	}
 	rtpsr::AVOptionBase::container_t RtpReceiver::makeCtxParams() {
-		return {{"protocol_whitelist", "file,udp,rtp,tcp,rtsp"}, {"rtsp_transport", "udp"}, {"enable-protocol", "rtp"},
-			{"enable-protocol", "udp"}, {"enable-muxer", "rtsp"}, {"enable-demuxer", "rtsp"}, {"timeout", 20000},
+		return {{"protocol_whitelist", "file,udp,rtp,tcp,rtsp"},
+			{"rtsp_transport", "udp"},
+			{"enable-protocol", "rtp"},
+			{"enable-protocol", "udp"},
+			{"enable-muxer", "rtsp"},
+			{"enable-demuxer", "rtsp"},
+			{"timeout", 20000},
 			{"stimeout", "1000000"},                                      // tcp connection
 			{"reorder_queue_size", 100000},                               // 0.05sec
 			{"buffer_size", setting.framesize * setting.channels * 4},    // 0.05sec
-
-			{"rtsp_flags", "listen"}, {"allowed_media_types", "audio"}};
+			{"rtsp_flags", "listen"},
+			{"allowed_media_types", "audio"}};
 	}
 
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <atomic>
 #include <algorithm>
+#include <atomic>
 
 template<typename T>
 class LockFreeRingbuf {
@@ -29,7 +29,8 @@ public:
 		buffer[write_index] = elem;
 		return true;
 	}
-	// read from read_index to specified size. note that size should be length of array, not a byte size
+	// read from read_index to specified size. note that size should be length of
+	// array, not a byte size
 	bool readRange(std::vector<T>& res_array, size_t size) {
 		if (getReadMargin() < size) {
 			return false;
@@ -66,7 +67,7 @@ public:
 		return true;
 	}
 	int getReadMargin() {
-		size_t localread = read_index;
+		size_t localread  = read_index;
 		size_t localwrite = write_index;
 
 		auto margin = localread - localwrite;
@@ -76,7 +77,6 @@ public:
 		return margin;
 	}
 	int getWriteMargin() {
-
 		return buffer.size() - getReadMargin();
 	}
 

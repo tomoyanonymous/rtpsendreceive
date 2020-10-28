@@ -32,13 +32,13 @@ TEST_CASE("RTSP loopback") {
 		input.emplace_back(s);
 	}
 	sender.input_buf.writeRange(input, input.size());
-  sender.sendData();
+	sender.sendData();
 	receiver.receiveData();
-	std::vector<int16_t> answer_s(input.size(),0);
+	std::vector<int16_t> answer_s(input.size(), 0);
 	std::vector<double>  answer;
 	receiver.output_buf.readRange(answer_s, input.size());
 	for (int i = 0; i < input.size(); i++) {
-	  answer.emplace_back(rtpsr::convertSampleToDouble(answer_s[i]));
+		answer.emplace_back(rtpsr::convertSampleToDouble(answer_s[i]));
 	}
 
 	REQUIRE(REQUIRE_VECTOR_APPROX(answer, ref) == true);

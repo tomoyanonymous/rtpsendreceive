@@ -19,8 +19,8 @@ namespace rtpsr {
 						break;
 					}
 					std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-					logger << "rtpsender: connection to " << rtpout->url.address << ":" << std::to_string(rtpout->url.port) << " refused,retry in 2000ms"
-						   << std::endl;
+					logger << "rtpsender: connection to " << rtpout->url.address << ":" << std::to_string(rtpout->url.port)
+						   << " refused,retry in 2000ms" << std::endl;
 				}
 				catch (std::runtime_error& e) {
 					throw e;
@@ -59,8 +59,12 @@ namespace rtpsr {
 		framebuf.resize(packet_framesize);
 		bool res = asyncinput->tryPopRingBuffer(framebuf);
 		if (res) {
-			checkAvError(avcodec_fill_audio_frame(
-				frame, setting.channels, AV_SAMPLE_FMT_S16, (uint8_t*)framebuf.data(), sizeof(sample_t) * packet_framesize, 0));
+			checkAvError(avcodec_fill_audio_frame(frame,
+				setting.channels,
+				AV_SAMPLE_FMT_S16,
+				(uint8_t*)framebuf.data(),
+				sizeof(sample_t) * packet_framesize,
+				0));
 			return true;
 		}
 		return false;
@@ -104,7 +108,7 @@ namespace rtpsr {
 						return false;
 					}
 					auto res = init_asyncloop.wait_for(20);
-					if(res == std::future_status::ready){
+					if (res == std::future_status::ready) {
 						break;
 					}
 				}

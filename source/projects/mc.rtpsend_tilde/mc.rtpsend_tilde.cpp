@@ -11,7 +11,6 @@
 
 using namespace c74::min;
 
-
 class rtpsend_tilde : public object<rtpsend_tilde>, public mc_operator<> {
 	bool m_initialized {false};
 

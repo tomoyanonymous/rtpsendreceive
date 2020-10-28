@@ -105,7 +105,13 @@ static int ff_pcm_read_packet_custom(AVFormatContext* s, AVPacket* pkt) {
 }
 
 static const AVOption pcm_options_C[] = {
-	{"sample_rate", "", offsetof(PCMAudioDemuxerContext_C, sample_rate), AV_OPT_TYPE_INT, {.i64 = 44100}, 0, INT_MAX,
+	{"sample_rate",
+		"",
+		offsetof(PCMAudioDemuxerContext_C, sample_rate),
+		AV_OPT_TYPE_INT,
+		{.i64 = 44100},
+		0,
+		INT_MAX,
 		AV_OPT_FLAG_DECODING_PARAM},
 	{"channels", "", offsetof(PCMAudioDemuxerContext_C, channels), AV_OPT_TYPE_INT, {.i64 = 1}, 0, INT_MAX, AV_OPT_FLAG_DECODING_PARAM},
 	{NULL},
@@ -169,7 +175,7 @@ namespace rtpsr {
 	enum class Codec { PCM_s16BE, OPUS, INVALID = -1 };
 
 
-template<class T>
+	template<class T>
 	class AvSmartPtr {
 	public:
 		AvSmartPtr() {
@@ -179,8 +185,8 @@ template<class T>
 		~AvSmartPtr() {
 			av_free(ptr);
 		}
-    //do not copy
-    T operator = (AvSmartPtr<T> i)=delete;
+		// do not copy
+		T operator=(AvSmartPtr<T> i) = delete;
 
 		T* get() {
 			return reinterpret_cast<T*>(ptr);
