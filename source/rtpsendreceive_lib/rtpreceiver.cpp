@@ -3,11 +3,22 @@
 namespace rtpsr {
 	RtpReceiver::RtpReceiver(std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec, std::ostream& logger)
 	: RtpSRBase(std::move(s), logger) {
-		// auto option = std::make_unique<AVOptionBase>(makeCtxParams());
 		auto option = std::make_unique<RtspInOption>(url, setting->samplerate, setting->channels, setting->framesize);
 		input       = std::make_unique<RtspInFormat>(std::move(option));
 		output      = std::make_unique<CustomCbAsyncOutFormat>(*setting, frame->nb_samples * 2);
 		this->codec = std::make_unique<Decoder>(*setting, codec);
+		init();
+	}
+	RtpReceiver::~RtpReceiver() {
+		std::cerr << "rtpreceiver destructor called" << std::endl;
+		bool res1 = init_asyncloop.halt();
+		bool res2 = asynclooper.halt();
+		if (res1 && res2) {
+			avformat_close_input(&input->ctx);
+		}
+	}
+
+	void RtpReceiver::init() {
 		tmpbuf.resize(frame->nb_samples * setting->channels * 2);
 		dtosbuffer.resize(frame->nb_samples * setting->channels);
 		input->ctx->max_delay = 1000000;
@@ -25,30 +36,6 @@ namespace rtpsr {
 			return true;
 		});
 	}
-	RtpReceiver::~RtpReceiver() {
-		std::cerr << "rtpreceiver destructor called" << std::endl;
-		bool res1 = init_asyncloop.halt();
-		bool res2 = asynclooper.halt();
-		if (res1 && res2) {
-			avformat_close_input(&input->ctx);
-		}
-	}
-	rtpsr::AVOptionBase::container_t RtpReceiver::makeCtxParams() {
-		return {{"protocol_whitelist", "file,udp,rtp,tcp,rtsp"},
-			{"rtsp_transport", "udp"},
-			{"enable-protocol", "rtp"},
-			{"enable-protocol", "udp"},
-			{"timeout", 20000},
-			{"stimeout", "1000000"},
-			{"min_port", 5000},
-			{"max_port", 65000},                                            // tcp connection
-			{"reorder_queue_size", 100000},                                 // 0.05sec
-			{"buffer_size", setting->framesize * setting->channels * 4},    // 0.05sec
-			{"rtsp_flags", "listen"},
-			{"allowed_media_types", "audio"}};
-	}
-
-
 	// return value:stopped_index;
 	bool RtpReceiver::pushToOutput() {
 		auto* asyncoutput = dynamic_cast<CustomCbAsyncOutFormat*>(output.get());

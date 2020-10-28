@@ -5,12 +5,25 @@ namespace rtpsr {
 		std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec, std::chrono::milliseconds init_retry_rate, std::ostream& logger)
 	: RtpSRBase(std::move(s), logger)
 	, init_retry_rate(init_retry_rate) {
-		input = std::make_unique<CustomCbAsyncInFormat>(*setting, setting->framesize * 2);
-		// auto option = std::make_unique<AVOptionBase>(makeCtxParams());
-
+		input       = std::make_unique<CustomCbAsyncInFormat>(*setting, setting->framesize * 2);
 		auto option = std::make_unique<RtspOutOption>(url, setting->samplerate, setting->channels, setting->framesize);
 		output      = std::make_unique<RtspOutFormat>(std::move(option));
 		this->codec = std::make_unique<Encoder>(*setting, codec);
+		init();
+	}
+
+	RtpSender::~RtpSender() {
+		bool res1 = init_asyncloop.halt();
+		bool res2 = asynclooper.halt();
+		if (res1 && res2) {
+			av_write_trailer(output->ctx);
+			if (output->ctx->pb != nullptr) {
+				avio_close(output->ctx->pb);
+			}
+			avformat_close_input(&input->ctx);
+		}
+	}
+	void RtpSender::init() {
 		initStream();
 		dtosbuffer.resize(setting->framesize * 2 * setting->channels);
 		init_asyncloop.launch([&]() {
@@ -23,8 +36,8 @@ namespace rtpsr {
 						break;
 					}
 					logger << "rtpsender: connection to " << rtpout->option->url.address << ":" << std::to_string(rtpout->option->url.port)
-						   << " refused,retry in " << std::to_string(this->init_retry_rate.count()) << "ms." << std::endl;
-					std::this_thread::sleep_for(this->init_retry_rate);
+						   << " refused,retry in " << std::to_string(init_retry_rate.count()) << "ms." << std::endl;
+					std::this_thread::sleep_for(init_retry_rate);
 				}
 				catch (std::runtime_error& e) {
 					throw e;
@@ -33,26 +46,6 @@ namespace rtpsr {
 			}
 			return true;    // return result;
 		});
-	}
-	RtpSender::~RtpSender() {
-		bool res1 = init_asyncloop.halt();
-		bool res2 = asynclooper.halt();
-		if (res1 && res2) {
-			av_write_trailer(output->ctx);
-			if (output->ctx->pb != nullptr) {
-				avio_close(output->ctx->pb);
-			}
-			avformat_close_input(&input->ctx);
-		}
-	}
-	AVOptionBase::container_t RtpSender::makeCtxParams() {
-		return {
-			{"protocol_whitelist", "file,udp,rtp,tcp,rtsp"},
-			{"rtsp_transport", "udp"},
-			{"enable-protocol", "rtp"},
-			{"enable-protocol", "udp"},
-			{"stimeout", "1000000"},
-		};
 	}
 	bool RtpSender::writeToInput(std::vector<sample_t> const& input) {
 		auto* asyncinput = dynamic_cast<CustomCbAsyncInFormat*>(this->input.get());

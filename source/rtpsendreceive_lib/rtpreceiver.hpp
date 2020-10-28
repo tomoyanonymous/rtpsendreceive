@@ -13,7 +13,7 @@ namespace rtpsr {
 	private:
 		std::vector<int16_t>      dtosbuffer;
 		std::vector<int16_t>      tmpbuf;
-		AVOptionBase::container_t makeCtxParams();
+		void init();
 		bool                      pushToOutput();
 		bool                      receiveData();
 	};
