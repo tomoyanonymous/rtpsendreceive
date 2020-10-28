@@ -5,6 +5,14 @@
 
 C++ class refactorings & cleeanups.
 
+2 new Attributes are added.
+
+use_rtsp(bool, default=true): you can choose either of using rtsp handshaking or raw rtp protocol.
+
+Note that, when using raw rtp protocol, receiver assumes audio parameter from internal parameters because it does no handshaking. Thus different paramters between sender and receiver in this mode may cause audio glitch or some unexpected behaviour. 
+
+Also, it has a bug that turning on&off of dsp quickly will cause temporary hang for 4~5 second.
+
 ## 2020-09-03 v0.2.2
 
 Added GitHub workflow and funding pages.
