@@ -56,6 +56,16 @@
 			<description></description>
 		</attribute>
 
+		<attribute name='max_port' get='1' set='1' type='long' size='1' >
+			<digest>minimum port number used for rtsp internal transport </digest>
+			<description>minimum port number used for rtsp internal transport </description>
+		</attribute>
+
+		<attribute name='min_port' get='1' set='1' type='long' size='1' >
+			<digest>minimum port number used for rtsp internal transport </digest>
+			<description>minimum port number used for rtsp internal transport </description>
+		</attribute>
+
 		<attribute name='codec' get='1' set='1' type='symbol' size='1' >
 			<digest></digest>
 			<description></description>

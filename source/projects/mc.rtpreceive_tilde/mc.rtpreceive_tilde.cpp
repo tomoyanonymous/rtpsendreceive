@@ -46,12 +46,16 @@ return {};
 }
 ;
 attribute<double> reorder_queue_size {this, "reorder_queue_size", 500.0, description {"number of packets for reorder queue"}};
-attribute<int> max_delay {this, "max_delay", 500000, description {"maximum accepted delay for reordering(in microseconds)"}};
+attribute<int>    max_delay {this, "max_delay", 500000, description {"maximum accepted delay for reordering(in microseconds)"}};
+attribute<int, threadsafe::no, limit::clamp> min_port {
+	this, "min_port", 5000, range {0, 1000000}, description {"minimum port number used for rtsp internal transport"}};
+attribute<int, threadsafe::no, limit::clamp> max_port {
+	this, "max_port", 65000, range {0, 1000000}, description {"minimum port number used for rtsp internal transport"}};
 
-attribute<bool>   use_rtsp {this,
-    "use_rtsp",
-    true,
-    description {"if set to false, use raw rtp protocol instead of using rtsp mux/demuxer(Some options are ignored)."}};
+attribute<bool> use_rtsp {this,
+	"use_rtsp",
+	true,
+	description {"if set to false, use raw rtp protocol instead of using rtsp mux/demuxer(Some options are ignored)."}};
 
 // attribute<bool>                              play {this, "play", true};
 attribute<int, threadsafe::no, limit::clamp> channels {this, "channels", 1, range {1, 16}};
@@ -135,6 +139,7 @@ void resetReceiver(double newvecsize, int channel) {
 void resetReceiver(std::unique_ptr<rtpsr::RtspInOption> s) {
 	rtpreceiver.reset();
 	try {
+		s->port_range = getPortRange();
 		rtpreceiver = std::make_unique<rtpsr::RtpReceiver>(std::move(s), rtpsr::getCodecByName(codec.get()), cout);
 		rtpreceiver->launchLoop();
 	}
@@ -155,9 +160,14 @@ void resetReceiver(std::unique_ptr<rtpsr::RtpInOption> s) {
 
 void setOptions(rtpsr::RtpOptionsBase& opt) {
 	opt.reorder_queue_size = reorder_queue_size;
-	opt.max_delay = max_delay;
+	opt.max_delay          = max_delay;
 }
-
+std::pair<int, int> getPortRange() {
+	if (min_port > max_port) {
+		min_port = max_port.get();
+	}
+	return std::pair(min_port.get(),max_port.get());
+}
 static long setOutChans(void* obj, long outletindex) {
 	auto chs = c74::max::object_attr_getlong(obj, c74::max::gensym("channels"));
 	return chs;

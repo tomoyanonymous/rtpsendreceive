@@ -47,6 +47,12 @@ attribute<bool>   use_rtsp {this,
     true,
     description {"if set to false, use raw rtp protocol instead of using rtsp mux/demuxer(Some options are ignored)."}};
 
+attribute<int, threadsafe::no, limit::clamp> min_port {
+	this, "min_port", 5000, range {0, 1000000}, description {"minimum port number used for rtsp internal transport"}};
+attribute<int, threadsafe::no, limit::clamp> max_port {
+	this, "max_port", 65000, range {0, 1000000}, description {"minimum port number used for rtsp internal transport"}};
+
+
 attribute<int> active {this, "active", 0, setter {MIN_FUNCTION {int res = args[0];
 if (m_initialized && rtpsender != nullptr) {
 	if (res <= 0) {
@@ -123,7 +129,9 @@ void resetSender(double newvecsize) {
 
 		if (use_rtsp) {
 			auto option = std::make_unique<rtpsr::RtspOutOption>(rtpsr::Url {address.get(), port}, samplerate(), channels, (int)newvecsize);
+			option->port_range = getPortRange();
 			setOptions(*static_cast<rtpsr::RtpOptionsBase*>(option.get()));
+
 			rtpsender = std::make_unique<rtpsr::RtpSender>(std::move(option),
 				rtpsr::getCodecByName(c),
 				std::chrono::milliseconds((long long)retry_rate.get()),
@@ -145,6 +153,13 @@ void resetSender(double newvecsize) {
 void setOptions(rtpsr::RtpOptionsBase& opt) {
 	opt.reorder_queue_size = reorder_queue_size;
 }
+std::pair<int, int> getPortRange() {
+	if (min_port > max_port) {
+		min_port = max_port.get();
+	}
+	return std::pair(min_port.get(),max_port.get());
+}
+
 std::unique_ptr<rtpsr::RtpSender> rtpsender;
 std::vector<int16_t>              iarray;
 static int                        instance_count;
