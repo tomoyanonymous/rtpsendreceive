@@ -41,17 +41,22 @@
 
 	<attributelist>
 
+		<attribute name='channels' get='1' set='1' type='long' size='1' >
+			<digest></digest>
+			<description></description>
+		</attribute>
+
+		<attribute name='reorder_queue_size' get='1' set='1' type='float64' size='1' >
+			<digest>number of packets for reorder queue </digest>
+			<description>number of packets for reorder queue </description>
+		</attribute>
+
 		<attribute name='active' get='1' set='1' type='long' size='1' >
 			<digest></digest>
 			<description></description>
 		</attribute>
 
 		<attribute name='port' get='1' set='1' type='long' size='1' >
-			<digest></digest>
-			<description></description>
-		</attribute>
-
-		<attribute name='channels' get='1' set='1' type='long' size='1' >
 			<digest></digest>
 			<description></description>
 		</attribute>

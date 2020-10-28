@@ -40,7 +40,9 @@ public:
 ;
 
 attribute<int>    port {this, "port", 30000};
-attribute<double> retry_rate {this, "retry_rate", 500.0};
+attribute<double> retry_rate {this, "retry_rate", 500.0, description {"Retry intervals in milliseconds at connection"}};
+attribute<double> reorder_queue_size {this, "reorder_queue_size", 500.0, description {"number of packets for reorder queue"}};
+
 
 attribute<int> active {this, "active", 0, setter {MIN_FUNCTION {int res = args[0];
 if (m_initialized && rtpsender != nullptr) {
@@ -116,7 +118,8 @@ void resetSender(double newvecsize) {
 	symbol c = codec;
 	try {
 		auto option = std::make_unique<rtpsr::RtspOutOption>(rtpsr::Url {address.get(), port}, samplerate(), channels, (int)newvecsize);
-		rtpsender   = std::make_unique<rtpsr::RtpSender>(std::move(option),
+		option->reorder_queue_size = reorder_queue_size;
+		rtpsender                  = std::make_unique<rtpsr::RtpSender>(std::move(option),
             rtpsr::getCodecByName(c),
             std::chrono::milliseconds((long long)retry_rate.get()),
             cout);

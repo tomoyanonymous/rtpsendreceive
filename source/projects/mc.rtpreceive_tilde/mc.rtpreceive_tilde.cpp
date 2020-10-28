@@ -45,6 +45,8 @@ return {};
 }
 }
 ;
+attribute<double> reorder_queue_size {this, "reorder_queue_size", 500.0, description {"number of packets for reorder queue"}};
+
 
 // attribute<bool>                              play {this, "play", true};
 attribute<int, threadsafe::no, limit::clamp> channels {this, "channels", 1, range {1, 16}};
@@ -75,7 +77,7 @@ return {};
 }
 ;
 message<> dspsetup {this, "dspsetup", MIN_FUNCTION {double newvecsize = args[1];
-resetReceiver(newvecsize);
+resetReceiver(newvecsize, channels);
 return {};
 }
 }
@@ -106,24 +108,21 @@ std::shared_ptr<rtpsr::RtpReceiver> rtpreceiver {nullptr};
 std::vector<rtpsr::sample_t>        iarray;
 double                              frame_size = vector_size();
 void                                resetChannel(int channel) {
-    symbol     c = codec;
-    rtpsr::Url url {address.get(), port};
-    auto       option = std::make_unique<rtpsr::RtspInOption>(url, samplerate(), channel, (int)frame_size);
-    resetReceiver(std::move(option), rtpsr::getCodecByName(c));
+    resetReceiver(vector_size(), channels);
 }
 
-void resetReceiver(double newvecsize) {
-	iarray.resize(newvecsize * channels);
-	frame_size   = newvecsize;
-	symbol     c = codec;
+void resetReceiver(double newvecsize, int channel) {
+	iarray.resize(newvecsize * channel);
+	frame_size = newvecsize;
 	rtpsr::Url url {address.get(), port};
-	auto       option = std::make_unique<rtpsr::RtspInOption>(url, samplerate(), channels.get(), (int)newvecsize);
-	resetReceiver(std::move(option), rtpsr::getCodecByName(c));
+	auto       option          = std::make_unique<rtpsr::RtspInOption>(url, samplerate(), channel, (int)newvecsize);
+	option->reorder_queue_size = reorder_queue_size;
+	resetReceiver(std::move(option));
 }
-void resetReceiver(std::unique_ptr<rtpsr::RtspInOption> s, rtpsr::Codec c) {
+void resetReceiver(std::unique_ptr<rtpsr::RtspInOption> s) {
 	rtpreceiver.reset();
 	try {
-		rtpreceiver = std::make_unique<rtpsr::RtpReceiver>(std::move(s), c, cout);
+		rtpreceiver = std::make_unique<rtpsr::RtpReceiver>(std::move(s), rtpsr::getCodecByName(codec.get()), cout);
 		rtpreceiver->launchLoop();
 	}
 	catch (std::exception& e) {

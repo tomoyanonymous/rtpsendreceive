@@ -42,8 +42,8 @@
 		</attribute>
 
 		<attribute name='retry_rate' get='1' set='1' type='float64' size='1' >
-			<digest></digest>
-			<description></description>
+			<digest>Retry intervals in milliseconds at connection </digest>
+			<description>Retry intervals in milliseconds at connection </description>
 		</attribute>
 
 		<attribute name='port' get='1' set='1' type='long' size='1' >
@@ -59,6 +59,11 @@
 		<attribute name='address' get='1' set='1' type='symbol' size='1' >
 			<digest></digest>
 			<description></description>
+		</attribute>
+
+		<attribute name='reorder_queue_size' get='1' set='1' type='float64' size='1' >
+			<digest>number of packets for reorder queue </digest>
+			<description>number of packets for reorder queue </description>
 		</attribute>
 
 		<attribute name='channels' get='1' set='1' type='long' size='1' >
