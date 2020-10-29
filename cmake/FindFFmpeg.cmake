@@ -73,6 +73,7 @@ macro(find_component _component _pkgconfig _library _header)
     HINTS
       ${PC_LIB${_component}_INCLUDEDIR}
       ${PC_LIB${_component}_INCLUDE_DIRS}
+      C:/ProgramData/chocolatey/lib/ffmpeg/include
     PATH_SUFFIXES
       ffmpeg
   )
@@ -81,6 +82,7 @@ macro(find_component _component _pkgconfig _library _header)
       HINTS
       ${PC_LIB${_component}_LIBDIR}
       ${PC_LIB${_component}_LIBRARY_DIRS}
+      C:/ProgramData/chocolatey/lib/ffmpeg/lib
   )
 
   set(${_component}_DEFINITIONS  ${PC_${_component}_CFLAGS_OTHER} CACHE STRING "The ${_component} CFLAGS.")
