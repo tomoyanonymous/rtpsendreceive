@@ -39,7 +39,7 @@ namespace rtpsr {
 	}
 	void RtpOptionsBase::generateOptions() {
 		dict.clear();
-		dict.emplace("reorder_queue_size", reorder_queue_size);
+		dict.emplace("reorder_queue_size", (int)reorder_queue_size);
 		dict.emplace("packet_size", (int)packet_size);
 	}
 	RtpOption::RtpOption(Url const& url, double samplerate, int channels, int buffersize)
@@ -49,7 +49,7 @@ namespace rtpsr {
 	}
 	void RtpOption::generateOptions() {
 		RtpOptionsBase::generateOptions();
-		dict.emplace("buffer_size", buffer_size);
+		dict.emplace("buffer_size", (int)buffer_size);
 		// todo::filter_source;
 	}
 
