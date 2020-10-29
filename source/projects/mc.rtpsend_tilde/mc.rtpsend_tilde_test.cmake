@@ -42,7 +42,7 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${TEST_NAME}.cpp")
 
 	set_property(TARGET ${TEST_NAME} PROPERTY CXX_STANDARD 17)
 	set_property(TARGET ${TEST_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
-	target_include_directories(${PROJECT_NAME} PUBLIC
+	target_include_directories(${TEST_NAME} PUBLIC
 	${C74_INCLUDES}
 	${C74_MIN_API_DIR}/test
 	${CMAKE_CURRENT_SOURCE_DIR}/../../rtpsendreceive_lib
