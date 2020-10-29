@@ -65,13 +65,16 @@ if(FFMPEG_FOUND)
 endif()
 find_library(OPUS_LIB
     NAMES libopus.a opus
-	PATHS "/usr/local/opt/opus/lib"
+	PATHS /usr/lib /usr/local/lib /usr/local/opt/opus/lib C:/ProgramData/chocolatey/lib/opus-tools/tools/lib
     NO_DEFAULT_PATH
-    REQUIRED
+    # REQUIRED
     )
 message("OPUS_LIB =${OPUS_LIB}")
 
-set(DEPENDENT_LIBS ${FFMPEG_LIBRARIES} ${OPUS_LIB})
+set(DEPENDENT_LIBS 
+${FFMPEG_LIBRARIES} 
+${OPUS_LIB}
+)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/source/rtpsendreceive_lib)
 

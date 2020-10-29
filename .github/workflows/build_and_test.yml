@@ -25,7 +25,7 @@ jobs:
       - if: contains(matrix.os, 'windows')
         name: deps-windows
         run: |
-          choco install cmake ninja opus-tools ffmpeg
+          choco install cmake pkgconfiglite ninja opus-tools ffmpeg
       - if: contains(matrix.os, 'macos')
         name: deps-macos
         run: |
@@ -54,6 +54,7 @@ jobs:
           files: .
           dest: rtpsendreceive-${{matrix.os}}.zip
       - uses: actions/upload-artifact@v2
+        continue-on-error: true
         with:
           name: rtpsendreceive-${{matrix.os}}
           path: ${{github.workspace}}/rtpsendreceive-${{matrix.os}}.zip

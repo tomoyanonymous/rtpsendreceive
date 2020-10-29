@@ -10,15 +10,16 @@ set(CMAKE_MACOSX_RPATH 1)
 endif()
 
 message("test!!! ${DEPENDENT_LIBS}")
-include_directories( 
-	"${FFMPEG_INCLUDE_DIR}" 
-)
+
 
 add_library( 
 	rtpsendreceive
 	STATIC
 	rtpsrbase.cpp rtpsender.cpp rtpreceiver.cpp
-)
+	)
+target_include_directories(rtpsendreceive 
+PUBLIC
+${FFMPEG_INCLUDE_DIRS})
 
 target_compile_features(rtpsendreceive PUBLIC cxx_std_17)
 target_link_libraries(rtpsendreceive PUBLIC  ${DEPENDENT_LIBS})
