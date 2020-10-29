@@ -11,12 +11,6 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${TEST_NAME}.cpp")
 
 	enable_testing()
 
-	include_directories( 
-		"${C74_INCLUDES}"
-		"${C74_MIN_API_DIR}/test"
-		# "${C74_MIN_API_DIR}/test/mock"
-	)
-    
 	add_definitions(
 		-DMIN_TEST
 	)
@@ -48,7 +42,11 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${TEST_NAME}.cpp")
 
 	set_property(TARGET ${TEST_NAME} PROPERTY CXX_STANDARD 17)
 	set_property(TARGET ${TEST_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
-
+	target_include_directories(${PROJECT_NAME} PUBLIC
+	${C74_INCLUDES}
+	${C74_MIN_API_DIR}/test
+	${CMAKE_CURRENT_SOURCE_DIR}/../../rtpsendreceive_lib
+	)
     target_link_libraries(${TEST_NAME} PUBLIC "mock_kernel" "rtpsendreceive")
 
 	if (APPLE)
