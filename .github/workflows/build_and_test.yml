@@ -15,19 +15,24 @@ jobs:
       matrix:
         os:
           - macos-latest
+          - windows-latest
         config:
           - Debug
           - Release
 
     steps:
       - uses: actions/checkout@v2
-      
+      - if: contains(matrix.os, 'windows')
+        name: deps-windows
+        run: |
+          choco install cmake ninja opus-tools ffmpeg
       - if: contains(matrix.os, 'macos')
         name: deps-macos
         run: |
           brew upgrade
-          brew install opus
-      - name: install-ffmpeg
+          brew install opus ninja
+      - if: contains(matrix.os, 'macos')
+        name: install-ffmpeg
         run: |
           git clone https://git.ffmpeg.org/ffmpeg.git /tmp/ffmpeg
           pushd /tmp/ffmpeg
@@ -37,11 +42,20 @@ jobs:
           make install
           popd
       - name: configure
-        run:
-          mkdir build && cd build && cmake ${{ matrix.cmake-generator }} -DCMAKE_BUILD_CONFIG=${{ matrix.config }} ..
-
+        run: |
+          mkdir build
+          cd build
+          cmake -G Ninja -DCMAKE_BUILD_CONFIG=${{ matrix.config }} ..
+          cd ..
       - name: build
         run: cmake --build build --config ${{ matrix.config }}
-
+      - uses: papeloto/action-zip@v1
+        with:
+          files: .
+          dest: rtpsendreceive-${{matrix.os}}.zip
+      - uses: actions/upload-artifact@v2
+        with:
+          name: rtpsendreceive-${{matrix.os}}
+          path: ${{github.workspace}}/rtpsendreceive-${{matrix.os}}.zip
       # - name: test
       #   run: cd build && ctest --build-config ${{ matrix.config }}
