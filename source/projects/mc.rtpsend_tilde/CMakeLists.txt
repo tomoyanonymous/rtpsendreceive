@@ -27,7 +27,7 @@ set(RTPSR_LIB "rtpsendreceive")
 
 target_include_directories(${PROJECT_NAME} PUBLIC
 ${C74_INCLUDES}
-${CMAKE_SOURCE_DIR}/source/rtpsendreceive_lib
+${CMAKE_CURRENT_SOURCE_DIR}/../../rtpsendreceive_lib
 )
 
 message(STATUS testlib!${RTPSR_LIB})
