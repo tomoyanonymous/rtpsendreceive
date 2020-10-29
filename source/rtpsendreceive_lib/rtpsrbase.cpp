@@ -40,7 +40,7 @@ namespace rtpsr {
 	void RtpOptionsBase::generateOptions() {
 		dict.clear();
 		dict.emplace("reorder_queue_size", reorder_queue_size);
-		dict.emplace("packet_size", packet_size);
+		dict.emplace("packet_size", (int)packet_size);
 	}
 	RtpOption::RtpOption(Url const& url, double samplerate, int channels, int buffersize)
 	: RtpOptionsBase(std::move(url))
