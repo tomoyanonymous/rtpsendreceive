@@ -28,7 +28,7 @@ jobs:
         run: |
           choco install cmake ninja msys2 --noprogress
           set MSYS2_PATH_TYPE=inherit
-          C:\tools\msys64\usr\bin\bash -lc "./build_ffmpeg_win.sh -b"
+          C:\tools\msys64\usr\bin\bash -lc "${{ github.workspace }}/build_ffmpeg_win.sh -b"
       - if: contains(matrix.os, 'macos')
         name: deps-macos
         run: |
