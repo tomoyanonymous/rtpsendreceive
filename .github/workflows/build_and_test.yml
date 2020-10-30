@@ -19,7 +19,8 @@ jobs:
         config:
           - Debug
           - Release
-
+    env:
+      FFMPEG_INSTALL_DIR: ${{ runner.workspace }}/ffmpeg_install
     steps:
       - uses: actions/checkout@v2
       - uses: ilammy/msvc-dev-cmd@v1

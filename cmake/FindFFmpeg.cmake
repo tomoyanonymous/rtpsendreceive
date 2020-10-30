@@ -83,6 +83,7 @@ macro(find_component _component _pkgconfig _library _header)
       ${PC_LIB${_component}_LIBDIR}
       ${PC_LIB${_component}_LIBRARY_DIRS}
       C:/tools/msys64/usr/lib
+      ${FFMPEG_INSTALL_DIR}
   )
 
   set(${_component}_DEFINITIONS  ${PC_${_component}_CFLAGS_OTHER} CACHE STRING "The ${_component} CFLAGS.")
