@@ -9,8 +9,8 @@ wget http://www.tortall.net/projects/yasm/releases/yasm-1.3.0-win64.exe -O /bin/
 
 pushd /tmp/ffmpeg
 
-./configure 
---disable-avfoundation \
+./configure \
+# --disable-avfoundation \
 --disable-iconv \
 --disable-filters \
 --disable-devices \
@@ -29,7 +29,6 @@ pushd /tmp/ffmpeg
 --disable-sdl2 \
 --disable-lzma \
 # --enable-libopus \
---disable-libopus \
 --arch=amd64 \
 --cpu=amd64 \
 --toolchain=msvc 

@@ -25,7 +25,7 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
       - if: contains(matrix.os, 'windows')
         name: deps-win
-        run: choco install cmake ninja msys2 --no-progress 
+        run: choco install ninja msys2 --no-progress 
       - if: contains(matrix.os, 'windows')
         run: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
