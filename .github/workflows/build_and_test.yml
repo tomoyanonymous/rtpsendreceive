@@ -24,17 +24,19 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ilammy/msvc-dev-cmd@v1
       - if: contains(matrix.os, 'windows')
+        name: deps-win
         run: |
           choco install cmake ninja msys2 --noprogress
           set MSYS2_PATH_TYPE=inherit
           C:\tools\msys64\usr\bin\bash -lc "./build_ffmpeg_win.sh -b"
       - if: contains(matrix.os, 'macos')
+        name: deps-macos
         run: |
           brew upgrade
           brew install opus ninja
           ./build_ffmpeg_macos.sh
       - name: configure project
-        run: cmake -G Ninja -B build -DCMAKE_BUILD_CONFIG=${{ matrix.config }} ..
+        run: cmake -G Ninja -B build -DCMAKE_BUILD_CONFIG=${{ matrix.config }} .
       - name: build
         run: cmake --build build --config ${{ matrix.config }}
       - uses: papeloto/action-zip@v1
