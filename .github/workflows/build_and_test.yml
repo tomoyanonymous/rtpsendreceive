@@ -22,31 +22,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - uses: ilammy/msvc-dev-cmd@v1
       - if: contains(matrix.os, 'windows')
-        name: deps-windows
         run: |
-          choco install cmake pkgconfiglite ninja opus-tools ffmpeg
+          choco install cmake ninja msys2 --noprogress
+          set MSYS2_PATH_TYPE=inherit
+          C:\tools\msys64\usr\bin\bash -lc "./build_ffmpeg_win.sh -b"
       - if: contains(matrix.os, 'macos')
-        name: deps-macos
         run: |
           brew upgrade
           brew install opus ninja
-      - if: contains(matrix.os, 'macos')
-        name: install-ffmpeg
-        run: |
-          git clone https://git.ffmpeg.org/ffmpeg.git /tmp/ffmpeg
-          pushd /tmp/ffmpeg
-          git checkout release/4.3
-          ./configure --prefix=/usr/local  --disable-avfoundation --disable-iconv --disable-filters --disable-devices --disable-shared --enable-static  --disable-optimizations  --disable-mmx --disable-audiotoolbox --disable-videotoolbox --disable-stripping   --disable-appkit --disable-zlib --disable-coreimage  --disable-bzlib --disable-securetransport --disable-sdl2 --disable-lzma --enable-libopus --pkg-config-flags=--static --cc=/usr/bin/clang --cxx=/usr/bin/clang++
-          make -j
-          make install
-          popd
-      - name: configure
-        run: |
-          mkdir build
-          cd build
-          cmake -G Ninja -DCMAKE_BUILD_CONFIG=${{ matrix.config }} ..
-          cd ..
+          ./build_ffmpeg_macos.sh
+      - name: configure project
+        run: cmake -G Ninja -B build -DCMAKE_BUILD_CONFIG=${{ matrix.config }} ..
       - name: build
         run: cmake --build build --config ${{ matrix.config }}
       - uses: papeloto/action-zip@v1
