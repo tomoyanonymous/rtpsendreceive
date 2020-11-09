@@ -12,13 +12,6 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "Minimum OS X deployment ve
 # MAX EXTERNAL
 #############################################################
 
-
-include_directories( 
-	"${C74_INCLUDES}" 
-	"${FFMPEG_INCLUDE_DIR}" 
-	${CMAKE_CURRENT_SOURCE_DIR}/../../rtpsendreceive_lib
-)
-
 set( SOURCE_FILES
 	${PROJECT_NAME}.cpp
 )
@@ -28,7 +21,10 @@ add_library(
 	MODULE
 	${SOURCE_FILES}
 )
-
+target_include_directories(${PROJECT_NAME} PUBLIC
+${C74_INCLUDES}
+${CMAKE_CURRENT_SOURCE_DIR}/../../rtpsendreceive_lib
+)
 set(RTPSR_LIB "rtpsendreceive")
 
 message(STATUS testlib!${RTPSR_LIB})

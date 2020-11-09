@@ -4,10 +4,10 @@
 ///	@license	Use of this source code is governed by the LGPL License
 /// found in the License.md file.
 
-#include <rtpsender.hpp>
 
 #include "c74_max.h"
 #include "c74_min.h"
+#include "rtpsender.hpp"
 
 using namespace c74::min;
 
@@ -157,7 +157,7 @@ std::pair<int, int> getPortRange() {
 	if (min_port > max_port) {
 		min_port = max_port.get();
 	}
-	return std::pair(min_port.get(),max_port.get());
+	return std::pair(min_port.get(), max_port.get());
 }
 
 std::unique_ptr<rtpsr::RtpSender> rtpsender;
