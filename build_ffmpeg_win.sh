@@ -18,7 +18,7 @@ pushd /tmp/ffmpeg
     --enable-x86asm \
     --arch=amd64 \
     --cpu=amd64 \
-    --prefix=${FFMPEG_INSTALL_DIR} \
+    --prefix=/usr \
     --toolchain=msvc 
 
 make -j
