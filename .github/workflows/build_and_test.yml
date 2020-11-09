@@ -19,7 +19,11 @@ jobs:
         config:
           - Debug
           - Release
-
+        include:
+          - os: windows-latest
+            vcpkg-target-triplet: x64-windows-static-rel
+          - os: macos-latest
+            vcpkg-target-triplet: x64-osx-rel
     steps:
       - uses: actions/checkout@v2
         with:
@@ -28,19 +32,19 @@ jobs:
       - if: contains(matrix.os, 'windows')
         name: Install ffmpeg via vcpkg
         run: |
-          cp .\vcpkg-helper\x64-windows-static-rel.cmake .\vcpkg\triplets\
+          cp .\vcpkg-helper\${{ matrix.vcpkg-target-triplet }}.cmake .\vcpkg\triplets\
           .\vcpkg\bootstrap-vcpkg.bat 
           .\vcpkg\vcpkg.exe install ffmpeg[avformat,avdevice,avcodec,core]:x64-windows-static-rel
       - if: contains(matrix.os, 'macos')
         name: Install ffmpeg via vcpkg(macos)
         run: |
-          cp ./vcpkg-helper/x64-osx-rel.cmake ./vcpkg/triplets/
+          cp ./vcpkg-helper/${{ matrix.vcpkg-target-triplet }}.cmake ./vcpkg/triplets/
           brew upgrade
           brew install yasm
           ./vcpkg/bootstrap-vcpkg.sh
-          ./vcpkg/vcpkg install ffmpeg[avformat,avdevice,avcodec,core]:x64-osx-rel
+          ./vcpkg/vcpkg install ffmpeg[avformat,avdevice,avcodec,core]:${{ matrix.vcpkg-target-triplet }}
       - name: configure project
-        run: cmake -B build -DCMAKE_BUILD_CONFIG=${{ matrix.config }} .
+        run: cmake -B build -DCMAKE_BUILD_CONFIG=${{ matrix.config }} . -DVCPKG_TARGET_TRIPRET=${{ matrix.vcpkg-target-triplet }}
       - name: build
         run: cmake --build build --config ${{ matrix.config }}
       - uses: papeloto/action-zip@v1
