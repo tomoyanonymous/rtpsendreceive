@@ -19,20 +19,21 @@ jobs:
         config:
           - Debug
           - Release
+        include:
+          - os: windows-latest
+            triplet: x64-windows-static
+          - os: macos-latest
+            triplet: x64-osx-static
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: true
       - uses: ilammy/msvc-dev-cmd@v1
-      - if: contains(matrix.os, 'windows')
-        name: deps-win
-        run: choco install ninja msys2 --no-progress 
+
       - if: contains(matrix.os, 'windows')
         run: |
-          set MSYS2_PATH_TYPE=inherit
-          C:\tools\msys64\usr\bin\bash -lc "./build_ffmpeg_win.sh -b"
-        shell: cmd
-        env:
-          HOME: ${{ runner.workspace }}/rtpsendreceive
+          .\vcpkg install ffmpeg[avformat,avdevice,avcode,core]:x64-windows-static
       - if: contains(matrix.os, 'macos')
         name: deps-macos
         run: |
@@ -40,7 +41,7 @@ jobs:
           brew install opus ninja
           ./build_ffmpeg_macos.sh
       - name: configure project
-        run: cmake -G Ninja -B build -DCMAKE_BUILD_CONFIG=${{ matrix.config }} .
+        run: cmake -B build -DCMAKE_BUILD_CONFIG=${{ matrix.config }} .
       - name: build
         run: cmake --build build --config ${{ matrix.config }}
       - uses: papeloto/action-zip@v1
