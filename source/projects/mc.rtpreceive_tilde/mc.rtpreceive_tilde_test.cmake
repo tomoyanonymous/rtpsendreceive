@@ -45,20 +45,18 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${TEST_NAME}.cpp")
 	)
 	set_property(TARGET ${TEST_NAME} PROPERTY CXX_STANDARD 17)
 	set_property(TARGET ${TEST_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
-
-    target_link_libraries(${TEST_NAME} PUBLIC "mock_kernel" "rtpsendreceive")
-
+	
+	
 	if (APPLE)
-        set_target_properties(${TEST_NAME} PROPERTIES LINK_FLAGS "-Wl,-F'${C74_MAX_API_DIR}/lib/mac', -weak_framework JitterAPI")
+	set_target_properties(${TEST_NAME} PROPERTIES LINK_FLAGS "-Wl,-F'${C74_MAX_API_DIR}/lib/mac', -weak_framework JitterAPI")
 	endif ()
 	if (WIN32)
-        set_target_properties(${TEST_NAME} PROPERTIES COMPILE_PDB_NAME ${TEST_NAME})
-
-		# target_link_libraries(${TEST_NAME} ${MaxAPI_LIB})
-		# target_link_libraries(${TEST_NAME} ${MaxAudio_LIB})
-		# target_link_libraries(${TEST_NAME} ${Jitter_LIB})
+	set_target_properties(${TEST_NAME} PROPERTIES COMPILE_PDB_NAME ${TEST_NAME})
+	
+	set(MAX_LIBS ${MaxAPI_LIB} ${MaxAudio_LIB} ${Jitter_LIB})
 	endif ()
-
+	target_link_libraries(${TEST_NAME} PUBLIC mock_kernel rtpsendreceive ${MAX_LIBS})
+	
 	add_test(NAME ${TEST_NAME}
 	         COMMAND ${TEST_NAME})
 	 

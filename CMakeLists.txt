@@ -53,7 +53,7 @@ if(NOT DEFINED VCPKG_TARGET_TRIPLET)
 if(APPLE)
 set(VCPKG_TARGET_TRIPLET x64-osx)
 elseif(WIN32)
-set(VCPKG_TARGET_TRIPLET x64-windows)
+set(VCPKG_TARGET_TRIPLET x64-windows-static)
 endif()
 endif()
 
