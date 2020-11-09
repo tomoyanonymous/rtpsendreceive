@@ -19,27 +19,24 @@ jobs:
         config:
           - Debug
           - Release
-        include:
-          - os: windows-latest
-            triplet: x64-windows-static
-          - os: macos-latest
-            triplet: x64-osx-static
 
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: true
       - uses: ilammy/msvc-dev-cmd@v1
-
       - if: contains(matrix.os, 'windows')
+        name: Install ffmpeg via vcpkg
         run: |
-          .\vcpkg install ffmpeg[avformat,avdevice,avcode,core]:x64-windows-static
+          cp .\vcpkg-helper\x64-windows-static-rel.cmake .\vcpkg\triplets\
+          .\vcpkg\vcpkg.exe install ffmpeg[avformat,avdevice,avcode,core]:x64-windows-static-rel
       - if: contains(matrix.os, 'macos')
-        name: deps-macos
+        name: Install ffmpeg via vcpkg(macos)
         run: |
+          cp ./vcpkg-helper/x64-macos-rel.cmake ./vcpkg/triplets/
           brew upgrade
-          brew install opus ninja
-          ./build_ffmpeg_macos.sh
+          brew install yasm
+          ./vcpkg/vcpkg install ffmpeg[avformat,avdevice,avcode,core]:x64-macos-rel
       - name: configure project
         run: cmake -B build -DCMAKE_BUILD_CONFIG=${{ matrix.config }} .
       - name: build

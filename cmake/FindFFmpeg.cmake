@@ -61,30 +61,30 @@ endmacro()
 
 macro(find_component _component _pkgconfig _library _header)
 
-  if (NOT WIN32)
-     # use pkg-config to get the directories and then use these values
-     # in the FIND_PATH() and FIND_LIBRARY() calls
-     find_package(PkgConfig)
-     if (PKG_CONFIG_FOUND)
-       pkg_check_modules(PC_${_component} ${_pkgconfig})
-     endif ()
-  else()
-  endif ()
+  # if (NOT WIN32)
+  #    # use pkg-config to get the directories and then use these values
+  #    # in the FIND_PATH() and FIND_LIBRARY() calls
+  #    find_package(PkgConfig)
+  #    if (PKG_CONFIG_FOUND)
+  #      pkg_check_modules(PC_${_component} ${_pkgconfig})
+  #    endif ()
+  # else()
+  # endif ()
   
   find_path(${_component}_INCLUDE_DIRS ${_header}
     PATHS
+    ${VCPKG_PATH}/include
       ${PC_LIB${_component}_INCLUDEDIR}
       ${PC_LIB${_component}_INCLUDE_DIRS}
-      ${VCPKG_PATH}/include
     PATH_SUFFIXES
       ffmpeg
   )
 
   find_library(${_component}_LIBRARIES NAMES ${_library}
       PATHS
+      ${VCPKG_PATH}/lib
       ${PC_LIB${_component}_LIBDIR}
       ${PC_LIB${_component}_LIBRARY_DIRS}
-      ${VCPKG_PATH}/lib
   )
 
   set(${_component}_DEFINITIONS  ${PC_${_component}_CFLAGS_OTHER} CACHE STRING "The ${_component} CFLAGS.")

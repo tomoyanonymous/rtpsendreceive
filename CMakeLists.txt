@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
 
-
 project(rtpsendreceive
         LANGUAGES CXX)
 
@@ -50,12 +49,17 @@ endif ()
 ### PROJECT_SPECIFIC LIBRARY(FFMPEG)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-set(VCPKG_PATH 
-${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x86-windows-static 
-${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x86-windows 
-${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x64-windows-static 
-${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x64-windows )
+if(NOT DEFINED VCPKG_TARGET_TRIPLET)
+if(APPLE)
+set(VCPKG_TARGET_TRIPLET x64-osx)
+elseif(WIN32)
+set(VCPKG_TARGET_TRIPLET x64-windows)
+endif()
+endif()
 
+set(VCPKG_PATH 
+${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/${VCPKG_TARGET_TRIPLET})
+message("vcpkg path: ${VCPKG_PATH}")
 find_package(FFmpeg 
 COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE 
 REQUIRED
