@@ -44,9 +44,9 @@ jobs:
           ./vcpkg/bootstrap-vcpkg.sh
           ./vcpkg/vcpkg install ffmpeg[avformat,avdevice,avcodec,core]:${{ matrix.vcpkg-target-triplet }}
       - name: configure project
-        run: cmake -B build -DCMAKE_BUILD_CONFIG=${{ matrix.config }} . -DVCPKG_TARGET_TRIPRET=${{ matrix.vcpkg-target-triplet }}
+        run: cmake -B build -DCMAKE_BUILD_CONFIG=${{ matrix.config }} . -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg-target-triplet }}
       - name: build
-        run: cmake --build build --config ${{ matrix.config }}
+        run: cmake --build build --config ${{ matrix.config }} -v
       - uses: papeloto/action-zip@v1
         with:
           files: .
