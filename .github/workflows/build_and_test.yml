@@ -29,6 +29,12 @@ jobs:
         with:
           submodules: true
       - uses: ilammy/msvc-dev-cmd@v1
+      - uses: actions/cache@v2
+        with:
+          path: ${{ github.workspace }}/.vcpkg/installed
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg/ports/ffmpeg/CONTROL') }}
+          restore-keys: |
+            ${{ runner.os }}-vcpkg-
       - if: contains(matrix.os, 'windows')
         name: Install ffmpeg via vcpkg
         run: |
