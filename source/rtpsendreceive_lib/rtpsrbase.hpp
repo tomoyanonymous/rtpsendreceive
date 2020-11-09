@@ -108,8 +108,8 @@ namespace rtpsr {
 		};
 		void generateOptions() override;
 		enum class TransPortProtocol { UDP = 0, TCP, UDP_MULTICAST, HTTP, HTTPS } rtsp_transport = TransPortProtocol::UDP;
-		int                 listen_timeout                                                       = 5000;       // unit:seconds
-		int                 socket_timeout                                                       = 1000000;    // unit:microseconds
+		int                 listen_timeout                                                       = 1000;       // unit:seconds
+		int                 socket_timeout                                                       = 500000;    // unit:microseconds
 		std::pair<int, int> port_range                                                           = {5000, 65000};
 
 	private:
@@ -222,7 +222,9 @@ namespace rtpsr {
 	};
 	struct RtpInFormatBase : public InFormat, public RtpFormatBase {
 		RtpInFormatBase(std::unique_ptr<RtpOptionsBase> opt)
-		: RtpFormatBase(std::move(opt)) {};
+		: RtpFormatBase(std::move(opt)) {
+
+		};
 		virtual bool tryConnectInput() = 0;
 	};
 
@@ -299,6 +301,7 @@ namespace rtpsr {
 			future = std::async(std::launch::async, std::move(fn));
 		}
 		bool               halt();
+		bool               forceHalt();
 		void               wait();
 		std::future_status wait_for(int mills);
 		bool               isActive() const;

@@ -100,7 +100,7 @@ void operator()(audio_bundle input, audio_bundle output) {
 	int  chs     = std::min<int>(output.channel_count(), channels.get());
 	bool readres = rtpreceiver->readFromOutput(iarray);
 	if (!readres) {
-		// cerr << "stream underflow detected!" << std::endl;
+		cerr << "stream underflow detected!" << std::endl;
 		return;
 	}
 	for (auto i = 0; i < output.frame_count(); i++) {

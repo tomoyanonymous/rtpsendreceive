@@ -5,29 +5,40 @@ namespace rtpsr {
 	: RtpSRBase(*s, logger) {
 		auto option = std::make_unique<RtspInOption>(url, setting_ref.samplerate, setting_ref.channels, setting_ref.framesize);
 		input       = std::make_unique<RtspInFormat>(std::move(option));
-		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 2);
+		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 4);
 		this->codec = std::make_unique<Decoder>(setting_ref, codec);
 		init();
 	}
 	RtpReceiver::RtpReceiver(std::unique_ptr<RtpInOption> s, Codec codec, std::ostream& logger)
 	: RtpSRBase(*s, logger) {
 		input       = std::make_unique<RtpInFormat>(std::move(s));
-		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 2);
+		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 4);
 		this->codec = std::make_unique<Decoder>(setting_ref, codec);
 		init();
 	}
 	RtpReceiver::RtpReceiver(std::unique_ptr<RtspInOption> s, Codec codec, std::ostream& logger)
 	: RtpSRBase(*s, logger) {
-		input       = std::make_unique<RtspInFormat>(std::move(s));
-		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 2);
-		this->codec = std::make_unique<Decoder>(setting_ref, codec);
+		input                          = std::make_unique<RtspInFormat>(std::move(s));
+		time_cache                     = std::chrono::high_resolution_clock::now();
+		input->ctx->interrupt_callback = AVIOInterruptCB {&RtpReceiver::timeoutCallback, this};
+		output                         = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 4);
+		this->codec                    = std::make_unique<Decoder>(setting_ref, codec);
 		init();
 	}
+	int RtpReceiver::timeoutCallback(void* opaque) {
+		auto receiver = reinterpret_cast<RtpReceiver*>(opaque);
+		auto dur      = std::chrono::high_resolution_clock::now() - receiver->time_cache;
+		if (dur > std::chrono::seconds(2)) {
+			return 1;
+		}
+		return 0;
+	}
+
 	RtpReceiver::~RtpReceiver() {
 		std::cerr << "rtpreceiver destructor called" << std::endl;
 		bool res1 = init_asyncloop.halt();
-		bool res2 = asynclooper.halt();
-		if (res1 && res2) {
+		asynclooper.wait_for(10000);
+		if (res1) {
 			avformat_close_input(&input->ctx);
 		}
 	}
@@ -55,7 +66,7 @@ namespace rtpsr {
 	bool RtpReceiver::pushToOutput() {
 		auto* asyncoutput = dynamic_cast<CustomCbAsyncOutFormat*>(output.get());
 		auto* frameref    = av_frame_get_plane_buffer(frame, 0);
-		auto  size        = frame->nb_samples * setting_ref.channels;
+		auto  size        = frame->nb_samples * frame->channels;
 		tmpbuf.resize(size);
 		std::memcpy(tmpbuf.data(), frameref->data, size * sizeof(int16_t));
 		bool res = asyncoutput->tryPushRingBuffer(tmpbuf);
@@ -74,6 +85,7 @@ namespace rtpsr {
 	}
 
 	bool RtpReceiver::receiveData() {
+		time_cache = std::chrono::high_resolution_clock::now();
 		av_init_packet(packet);
 		int res = av_read_frame(input->ctx, packet);
 		if (res == -60 || res == AVERROR_EOF) {
@@ -84,24 +96,33 @@ namespace rtpsr {
 	}
 	void RtpReceiver::launchLoop() {
 		asynclooper.launch([&]() {
-			auto* decoder        = dynamic_cast<Decoder*>(codec.get());
-			bool  isdecoderempty = false;
-			bool  isdecoderfull  = false;
-			bool  res            = true;
-			bool  writeres       = true;
+			auto* decoder  = dynamic_cast<Decoder*>(codec.get());
+			bool  res      = true;
 			if (input->ctx == nullptr) {
 				return false;
 			}
 			try {
 				init_asyncloop.wait();
 				while (asynclooper.isActive()) {
-					// block until data comes;
-					res = receiveData();
-					if (!res) { }
-					isdecoderfull  = decoder->sendPacket(packet);
-					isdecoderempty = decoder->receiveFrame(frame);
-					if (isdecoderempty) { }
-					writeres = pushToOutput();
+					bool isdecoderfull = false;
+					// block until data comes
+					while (!isdecoderfull) {
+						res = receiveData();
+						if (!res) {
+							break;
+						}
+						isdecoderfull = decoder->sendPacket(packet);
+					}
+					while (decoder->receiveFrame(frame) != true) {
+						bool  writeres = false;
+						while (!writeres) {
+							std::cerr << frame->pts << std::endl;;
+							writeres = pushToOutput();
+							if (!writeres) {
+								std::this_thread::sleep_for(std::chrono::milliseconds(20));
+							}
+						}
+					}
 				}
 			}
 			catch (std::exception& e) {

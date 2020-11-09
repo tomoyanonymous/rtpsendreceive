@@ -182,12 +182,7 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		return true;
 	}
 	bool CustomCbAsyncFormat::tryPopRingBuffer(std::vector<sample_t>& dest) {
-		auto size = dest.size();
-		if (buffer.getReadMargin() < size) {
-			return false;
-		}
-		buffer.readRange(dest, dest.size());
-		return true;
+		return buffer.readRange(dest,  dest.size());
 	}
 	CustomCbAsyncInFormat::CustomCbAsyncInFormat(RtpSRSetting const& s, size_t buffer_size)
 	: InFormat()
@@ -342,6 +337,10 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 			active = false;
 			wait();
 		}
+		return true;
+	}
+	bool AsyncLooper::forceHalt(){
+		active =false;
 		return true;
 	}
 	void AsyncLooper::wait() {

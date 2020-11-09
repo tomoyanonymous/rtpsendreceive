@@ -38,7 +38,8 @@ namespace rtpsr {
 		bool res1 = init_asyncloop.halt();
 		bool res2 = asynclooper.halt();
 		if (res1 && res2) {
-			av_write_trailer(output->ctx);
+			checkAvError( av_write_trailer(output->ctx));
+
 			if (output->ctx->pb != nullptr) {
 				avio_close(output->ctx->pb);
 			}
@@ -81,7 +82,7 @@ namespace rtpsr {
 	}
 	bool RtpSender::fillFrame() {
 		auto*  asyncinput       = dynamic_cast<CustomCbAsyncInFormat*>(input.get());
-		size_t packet_framesize = frame->nb_samples * setting_ref.channels;
+		size_t packet_framesize = frame->nb_samples* setting_ref.channels;
 
 		framebuf.resize(packet_framesize);
 		bool res = asyncinput->tryPopRingBuffer(framebuf);

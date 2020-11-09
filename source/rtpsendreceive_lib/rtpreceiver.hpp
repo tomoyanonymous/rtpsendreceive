@@ -12,7 +12,8 @@ namespace rtpsr {
 		void launchLoop() override;
 		bool readFromOutput(std::vector<sample_t>& dest);
 		bool readFromOutput(std::vector<double>& dest);
-
+		static int timeoutCallback(void * opaque);
+		std::chrono::high_resolution_clock::time_point time_cache;
 	private:
 		std::vector<int16_t>      dtosbuffer;
 		std::vector<int16_t>      tmpbuf;
