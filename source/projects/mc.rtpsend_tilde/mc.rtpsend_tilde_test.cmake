@@ -55,9 +55,9 @@ if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${TEST_NAME}.cpp")
 	if (WIN32)
         set_target_properties(${TEST_NAME} PROPERTIES COMPILE_PDB_NAME ${TEST_NAME})
 
-		# target_link_libraries(${TEST_NAME} ${MaxAPI_LIB})
-		# target_link_libraries(${TEST_NAME} ${MaxAudio_LIB})
-		# target_link_libraries(${TEST_NAME} ${Jitter_LIB})
+		target_link_libraries(${TEST_NAME} ${MaxAPI_LIB})
+		target_link_libraries(${TEST_NAME} ${MaxAudio_LIB})
+		target_link_libraries(${TEST_NAME} ${Jitter_LIB})
 	endif ()
 
 	add_test(NAME ${TEST_NAME}
