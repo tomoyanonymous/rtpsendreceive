@@ -34,11 +34,11 @@ jobs:
       - if: contains(matrix.os, 'macos')
         name: Install ffmpeg via vcpkg(macos)
         run: |
-          cp ./vcpkg-helper/x64-macos-rel.cmake ./vcpkg/triplets/
+          cp ./vcpkg-helper/x64-osx-rel.cmake ./vcpkg/triplets/
           brew upgrade
           brew install yasm
           ./vcpkg/bootstrap-vcpkg.sh
-          ./vcpkg/vcpkg install ffmpeg[avformat,avdevice,avcodec,core]:x64-macos-rel
+          ./vcpkg/vcpkg install ffmpeg[avformat,avdevice,avcodec,core]:x64-osx-rel
       - name: configure project
         run: cmake -B build -DCMAKE_BUILD_CONFIG=${{ matrix.config }} .
       - name: build
