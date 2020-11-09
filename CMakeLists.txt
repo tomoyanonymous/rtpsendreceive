@@ -61,7 +61,6 @@ set(VCPKG_PATH
 ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/${VCPKG_TARGET_TRIPLET})
 message("vcpkg path: ${VCPKG_PATH}")
 find_package(FFmpeg 
-COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE 
 REQUIRED
 ) #add here the list of ffmpeg components required
 # memo: building barematal ffmpeg for macos

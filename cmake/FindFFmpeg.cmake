@@ -99,10 +99,40 @@ macro(find_component _component _pkgconfig _library _header)
     ${_component}_VERSION)
 
 endmacro()
-
+if(NOT DEFINED FFMPEG_PLATFORM_DEPENDENT_LIBS)
+if(APPLE)
+  find_library(VT_UNIT VideoToolbox)
+  if (NOT VT_UNIT)
+      message(FATAL_ERROR "VideoToolbox not found")
+  endif()
+  find_library(AT_UNIT AudioToolbox)
+  if (NOT AT_UNIT)
+      message(FATAL_ERROR "AudioToolbox not found")
+  endif()
+  find_library(SEC_UNIT Security)
+  if (NOT SEC_UNIT)
+      message(FATAL_ERROR "Security not found")
+  endif()
+  find_library(CF_UNIT CoreFoundation)
+  if (NOT CF_UNIT)
+      message(FATAL_ERROR "CoreFoundation not found")
+  endif()
+  find_library(CM_UNIT CoreMedia)
+  if (NOT CM_UNIT)
+      message(FATAL_ERROR "CoreMedia not found")
+  endif()
+  find_library(CV_UNIT CoreVideo)
+  if (NOT CV_UNIT)
+      message(FATAL_ERROR "CoreVideo not found")
+  endif()
+  list(APPEND FFMPEG_PLATFORM_DEPENDENT_LIBS ${VT_UNIT} ${AT_UNIT} ${SEC_UNIT} ${CF_UNIT} ${CM_UNIT} ${CV_UNIT})
+endif()
+message("platform dependent libs :${FFMPEG_PLATFORM_DEPENDENT_LIBS}")
+endif()
 
 # Check for cached results. If there are skip the costly part.
 if (NOT FFMPEG_LIBRARIES)
+
 
   # Check for all possible component.
   find_component(AVCODEC    libavcodec    avcodec  libavcodec/avcodec.h)
@@ -130,10 +160,9 @@ if (NOT FFMPEG_LIBRARIES)
   if (FFMPEG_INCLUDE_DIRS)
     list(REMOVE_DUPLICATES FFMPEG_INCLUDE_DIRS)
   endif ()
-
   # cache the vars.
   set(FFMPEG_INCLUDE_DIRS ${FFMPEG_INCLUDE_DIRS} CACHE STRING "The FFmpeg include directories." FORCE)
-  set(FFMPEG_LIBRARIES    ${FFMPEG_LIBRARIES}    CACHE STRING "The FFmpeg libraries." FORCE)
+  set(FFMPEG_LIBRARIES    ${FFMPEG_LIBRARIES}   ${FFMPEG_PLATFORM_DEPENDENT_LIBS}  CACHE STRING "The FFmpeg libraries." FORCE)
   set(FFMPEG_DEFINITIONS  ${FFMPEG_DEFINITIONS}  CACHE STRING "The FFmpeg cflags." FORCE)
 
   mark_as_advanced(FFMPEG_INCLUDE_DIRS
