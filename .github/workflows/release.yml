@@ -32,42 +32,55 @@ jobs:
       matrix:
         os:
           - macos-latest
+          - windows-latest
         config:
           - Release
         include:
-            # - os: ubuntu-20.04
-            #   zip_postfix: Linux
-            - os: macos-latest
-              zip_postfix: macOS
+          - os: windows-latest
+            zip_postfix: Windows
+            vcpkg-target-triplet: x64-windows-static-rel
+            cache-path: ${{ github.workspace }}/vcpkg/installed
+          - os: macos-latest
+            zip_postfix: macOS
+            vcpkg-target-triplet: x64-osx-rel
+            cache-path: ${{ github.workspace }}\vcpkg\installed
     steps:
       - uses: actions/checkout@v2
-      - if: contains(matrix.os, 'macos')
-        name: deps-macos
+        with:
+          submodules: true
+      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: actions/cache@v2
+        id: ffmpeg-cache
+        with:
+          path: ${{ matrix.cache-path }}
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg/ports/ffmpeg/CONTROL') }}
+      - if: contains(matrix.os, 'windows') && (steps.ffmpeg-cache.outputs.cache-hit != 'true')
+        name: Install ffmpeg via vcpkg
         run: |
-          brew update
-          brew install opus
-      - name: install-ffmpeg
+          cp .\vcpkg-helper\${{ matrix.vcpkg-target-triplet }}.cmake .\vcpkg\triplets\
+          .\vcpkg\bootstrap-vcpkg.bat 
+          .\vcpkg\vcpkg.exe install ffmpeg[avformat,avdevice,avcodec,core]:x64-windows-static-rel
+      - if: contains(matrix.os, 'macos') && (steps.ffmpeg-cache.outputs.cache-hit != 'true')
+        name: Install ffmpeg via vcpkg(macos)
         run: |
-          git clone https://git.ffmpeg.org/ffmpeg.git /tmp/ffmpeg
-          pushd /tmp/ffmpeg
-          git checkout release/4.3
-          ./configure --prefix=/usr/local  --disable-avfoundation --disable-iconv --disable-filters --disable-devices --disable-shared --enable-static  --disable-optimizations  --disable-mmx --disable-audiotoolbox --disable-videotoolbox --disable-stripping   --disable-appkit --disable-zlib --disable-coreimage  --disable-bzlib --disable-securetransport --disable-sdl2 --disable-lzma --enable-libopus --pkg-config-flags=--static --cc=/usr/bin/clang --cxx=/usr/bin/clang++
-          make -j
-          make install
-          popd
-      - name: configure
-        run:
-          mkdir build && cd build && cmake ${{ matrix.cmake-generator }} -DCMAKE_BUILD_CONFIG=${{ matrix.config }} ..
-
+          cp ./vcpkg-helper/${{ matrix.vcpkg-target-triplet }}.cmake ./vcpkg/triplets/
+          brew upgrade
+          brew install yasm
+          ./vcpkg/bootstrap-vcpkg.sh
+          ./vcpkg/vcpkg install ffmpeg[avformat,avdevice,avcodec,core]:${{ matrix.vcpkg-target-triplet }}
+      - name: configure project
+        run: cmake -B build -DCMAKE_BUILD_CONFIG=${{ matrix.config }} . -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg-target-triplet }}
       - name: build
-        run: cmake --build build --config ${{ matrix.config }}
-
+        run: cmake --build build --config ${{ matrix.config }} -v
+        
       - name: Get the version
         id: get_version
         run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
 
-      - name: pack
-        run: pushd ../ && zip -r rtpsendreceive-${{ steps.get_version.outputs.VERSION }}-binary-${{ matrix.zip_postfix }}.zip  rtpsendreceive/ && popd
+      - uses: papeloto/action-zip@v1
+        with:
+          files: .
+          dest: rtpsendreceive-${{ steps.get_version.outputs.VERSION }}-binary-${{ matrix.zip_postfix }}.zip
 
       - name: Upload Compiled Binary
         id: upload-release-asset

@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 3.0)
 
-set(C74_MIN_API_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../min-api)
+set(C74_MIN_API_DIR ${CMAKE_SOURCE_DIR}/source/min-api)
 include(${C74_MIN_API_DIR}/script/min-pretarget.cmake)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "Minimum OS X deployment version" FORCE)
 
@@ -12,12 +12,6 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "Minimum OS X deployment ve
 # MAX EXTERNAL
 #############################################################
 
-
-include_directories( 
-	"${C74_INCLUDES}" 
-	"${FFMPEG_INCLUDE_DIR}" 
-	${CMAKE_CURRENT_SOURCE_DIR}/../../rtpsendreceive_lib
-)
 
 set( SOURCE_FILES
 	${PROJECT_NAME}.cpp
@@ -31,9 +25,13 @@ add_library(
 
 set(RTPSR_LIB "rtpsendreceive")
 
+target_include_directories(${PROJECT_NAME} PUBLIC
+${C74_INCLUDES}
+${CMAKE_CURRENT_SOURCE_DIR}/../../rtpsendreceive_lib
+)
+
 message(STATUS testlib!${RTPSR_LIB})
-target_link_libraries(${PROJECT_NAME} PUBLIC ${RTPSR_LIB})
-target_link_libraries(${PROJECT_NAME} PUBLIC  ${FFMPEG_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${RTPSR_LIB} ${FFMPEG_LIBRARIES})
 
 include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)
 message(STATUS ${CMAKE_SOURCE_DIR}/externals/mc.rtpsend~.mxo)
