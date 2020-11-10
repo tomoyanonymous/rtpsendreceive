@@ -39,15 +39,18 @@ jobs:
           key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg/ports/ffmpeg/CONTROL') }}
           restore-keys: |
             ${{ runner.os }}-vcpkg-
-      - name: Install ffmpeg via vcpkg
+      - if: contains(matrix.os, 'windows')
+        name: Install ffmpeg via vcpkg
         run: |
           cp .\vcpkg-helper\${{ matrix.vcpkg-target-triplet }}.cmake .\vcpkg\triplets\
           .\vcpkg\bootstrap-vcpkg.bat 
           .\vcpkg\vcpkg.exe install ffmpeg[avformat,avdevice,avcodec,core]:x64-windows-static-rel
-      - name: Install ffmpeg via vcpkg(macos)
+      - if: contains(matrix.os, 'macos')
+        name: Install ffmpeg via vcpkg(macos)
         run: |
           cp ./vcpkg-helper/${{ matrix.vcpkg-target-triplet }}.cmake ./vcpkg/triplets/
-          HOMEBREW_NO_AUTO_UPDATE=1 brew install yasm
+          brew upgrade
+          brew install yasm
           ./vcpkg/bootstrap-vcpkg.sh
           ./vcpkg/vcpkg install ffmpeg[avformat,avdevice,avcodec,core]:${{ matrix.vcpkg-target-triplet }}
       - name: configure project
