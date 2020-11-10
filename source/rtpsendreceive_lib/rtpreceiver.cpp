@@ -1,27 +1,27 @@
 #include "rtpreceiver.hpp"
 
 namespace rtpsr {
-	RtpReceiver::RtpReceiver(std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec, std::ostream& logger)
+	RtpReceiver::RtpReceiver(std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec,double ringbuf_multiple, std::ostream& logger)
 	: RtpSRBase(*s, logger) {
 		auto option = std::make_unique<RtspInOption>(url, setting_ref.samplerate, setting_ref.channels, setting_ref.framesize);
 		input       = std::make_unique<RtspInFormat>(std::move(option));
-		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 10.2);
+		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples *ringbuf_multiple);
 		this->codec = std::make_unique<Decoder>(setting_ref, codec);
 		init();
 	}
-	RtpReceiver::RtpReceiver(std::unique_ptr<RtpInOption> s, Codec codec, std::ostream& logger)
+	RtpReceiver::RtpReceiver(std::unique_ptr<RtpInOption> s, Codec codec,double ringbuf_multiple, std::ostream& logger)
 	: RtpSRBase(*s, logger) {
 		input       = std::make_unique<RtpInFormat>(std::move(s));
-		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 10.2);
+		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples *ringbuf_multiple);
 		this->codec = std::make_unique<Decoder>(setting_ref, codec);
 		init();
 	}
-	RtpReceiver::RtpReceiver(std::unique_ptr<RtspInOption> s, Codec codec, std::ostream& logger)
+	RtpReceiver::RtpReceiver(std::unique_ptr<RtspInOption> s, Codec codec,double ringbuf_multiple, std::ostream& logger)
 	: RtpSRBase(*s, logger) {
 		input                          = std::make_unique<RtspInFormat>(std::move(s));
 		time_cache                     = std::chrono::high_resolution_clock::now();
 		input->ctx->interrupt_callback = AVIOInterruptCB {&RtpReceiver::timeoutCallback, this};
-		output                         = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 10.2);
+		output                         = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples *ringbuf_multiple);
 		this->codec                    = std::make_unique<Decoder>(setting_ref, codec);
 		init();
 	}

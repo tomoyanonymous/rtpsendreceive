@@ -1,33 +1,34 @@
 #include "rtpsender.hpp"
 
 namespace rtpsr {
-	RtpSender::RtpSender(
-		std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec, std::chrono::milliseconds init_retry_rate, std::ostream& logger)
+	RtpSender::RtpSender(std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec, std::chrono::milliseconds init_retry_rate,
+		double ringbuf_multiple, std::ostream& logger)
 	: RtpSRBase(*s, logger)
 	, init_retry_rate(init_retry_rate)
 	, pollingrate(duration_type(static_cast<double>(s->framesize) * 0.5 * 48000 / s->samplerate)) {
-		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * 10.2);
+		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * ringbuf_multiple);
 		auto option = std::make_unique<RtspOutOption>(url, setting_ref.samplerate, setting_ref.channels, setting_ref.framesize);
 		output      = std::make_unique<RtspOutFormat>(std::move(option));
 		this->codec = std::make_unique<Encoder>(*s, codec);
 		init();
 	}
-	RtpSender::RtpSender(std::unique_ptr<RtpOutOption> option, Codec codec, std::chrono::milliseconds init_retry_rate, std::ostream& logger)
+	RtpSender::RtpSender(std::unique_ptr<RtpOutOption> option, Codec codec, std::chrono::milliseconds init_retry_rate,
+		double ringbuf_multiple, std::ostream& logger)
 	: RtpSRBase(*static_cast<RtpSRSetting*>(option.get()), logger)
 	, init_retry_rate(init_retry_rate) {
 		pollingrate = duration_type(static_cast<double>(setting_ref.framesize) * 0.5 * 48000 / setting_ref.samplerate);
-		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * 10.2);
+		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * ringbuf_multiple);
 		output      = std::make_unique<RtpOutFormat>(std::move(option));
 		this->codec = std::make_unique<Encoder>(setting_ref, codec);
 		init();
 	}
 
-	RtpSender::RtpSender(
-		std::unique_ptr<RtspOutOption> option, Codec codec, std::chrono::milliseconds init_retry_rate, std::ostream& logger)
+	RtpSender::RtpSender(std::unique_ptr<RtspOutOption> option, Codec codec, std::chrono::milliseconds init_retry_rate,
+		double ringbuf_multiple, std::ostream& logger)
 	: RtpSRBase(*static_cast<RtpSRSetting*>(option.get()), logger)
 	, init_retry_rate(init_retry_rate) {
 		pollingrate = duration_type(static_cast<double>(setting_ref.framesize) * 0.5 * 48000 / setting_ref.samplerate);
-		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * 10.2);
+		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * ringbuf_multiple);
 		output      = std::make_unique<RtspOutFormat>(std::move(option));
 		this->codec = std::make_unique<Encoder>(setting_ref, codec);
 		init();

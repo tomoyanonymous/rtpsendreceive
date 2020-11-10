@@ -4,13 +4,16 @@
 namespace rtpsr {
 	struct RtpSender : public RtpSRBase {
 		explicit RtpSender(std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec,
-			std::chrono::milliseconds init_retry_rate = std::chrono::milliseconds(init_retry_rate_int), std::ostream& logger = std::cerr);
+			std::chrono::milliseconds init_retry_rate = std::chrono::milliseconds(init_retry_rate_int), double ringbuf_multiple = 4.2,
+			std::ostream& logger = std::cerr);
 		// launch with raw rtp version;
 		explicit RtpSender(std::unique_ptr<RtpOutOption> option, Codec codec,
-			std::chrono::milliseconds init_retry_rate = std::chrono::milliseconds(init_retry_rate_int), std::ostream& logger = std::cerr);
+			std::chrono::milliseconds init_retry_rate = std::chrono::milliseconds(init_retry_rate_int), double ringbuf_multiple = 4.2,
+			std::ostream& logger = std::cerr);
 		// launch with rtsp version
 		explicit RtpSender(std::unique_ptr<RtspOutOption> option, Codec codec,
-			std::chrono::milliseconds init_retry_rate = std::chrono::milliseconds(init_retry_rate_int), std::ostream& logger = std::cerr);
+			std::chrono::milliseconds init_retry_rate = std::chrono::milliseconds(init_retry_rate_int), double ringbuf_multiple = 4.2,
+			std::ostream& logger = std::cerr);
 		~RtpSender();
 
 		void launchLoop() override;
@@ -22,6 +25,7 @@ namespace rtpsr {
 	private:
 		int64_t               timecount = 0;
 		std::vector<sample_t> framebuf;
+
 		// constructor must call init()
 		void                            init();
 		bool                            fillFrame();

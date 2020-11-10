@@ -51,6 +51,11 @@
 			<description>Retry intervals in milliseconds at connection </description>
 		</attribute>
 
+		<attribute name='ringbuf_framenum' get='1' set='1' type='float64' size='1' >
+			<digest>Size of an internal ring buffer (multiplied with signal vector size</digest>
+			<description>Size of an internal ring buffer (multiplied with signal vector size.) </description>
+		</attribute>
+
 		<attribute name='port' get='1' set='1' type='long' size='1' >
 			<digest>Destination Main Port </digest>
 			<description>Destination Main Port </description>

@@ -39,7 +39,8 @@ public:
 }
 }
 ;
-
+attribute<double> ringbuf_framenum {
+	this, "ringbuf_framenum", 4, range {1, 1000}, description {"Size of an internal ring buffer (multiplied with signal vector size.)"}};
 attribute<double> retry_rate {this, "retry_rate", 500.0, description {"Retry intervals in milliseconds at connection"}};
 attribute<double> reorder_queue_size {this, "reorder_queue_size", 500.0, description {"number of packets for reorder queue"}};
 attribute<bool>   use_rtsp {this,
@@ -137,6 +138,7 @@ void resetSender(double newvecsize) {
 			rtpsender = std::make_unique<rtpsr::RtpSender>(std::move(option),
 				rtpsr::getCodecByName(c),
 				std::chrono::milliseconds((long long)retry_rate.get()),
+				ringbuf_framenum,
 				cout);
 		}
 		else {
@@ -145,6 +147,7 @@ void resetSender(double newvecsize) {
 			rtpsender = std::make_unique<rtpsr::RtpSender>(std::move(option),
 				rtpsr::getCodecByName(c),
 				std::chrono::milliseconds((long long)retry_rate.get()),
+				ringbuf_framenum,
 				cout);
 		}
 	}

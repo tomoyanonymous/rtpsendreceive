@@ -99,7 +99,10 @@ message<> getlatency {this, "getlatency", MIN_FUNCTION {if (rtpreceiver != nullp
 }
 return {};
 }
-,description{"Outputs a packet latency in milliseconds at second outlet."}}
+, description {
+	"Outputs a packet latency in milliseconds at second outlet."
+}
+}
 ;
 
 static long setDspState(void* obj, long state) {
@@ -159,7 +162,7 @@ void resetReceiver(std::unique_ptr<rtpsr::RtspInOption> s) {
 	rtpreceiver.reset();
 	try {
 		s->port_range = getPortRange();
-		rtpreceiver   = std::make_unique<rtpsr::RtpReceiver>(std::move(s), rtpsr::getCodecByName(codec.get()), cout);
+		rtpreceiver   = std::make_unique<rtpsr::RtpReceiver>(std::move(s), rtpsr::getCodecByName(codec.get()), ringbuf_framenum, cout);
 		rtpreceiver->launchLoop();
 	}
 	catch (std::exception& e) {
@@ -169,7 +172,7 @@ void resetReceiver(std::unique_ptr<rtpsr::RtspInOption> s) {
 void resetReceiver(std::unique_ptr<rtpsr::RtpInOption> s) {
 	rtpreceiver.reset();
 	try {
-		rtpreceiver = std::make_unique<rtpsr::RtpReceiver>(std::move(s), rtpsr::getCodecByName(codec.get()), cout);
+		rtpreceiver = std::make_unique<rtpsr::RtpReceiver>(std::move(s), rtpsr::getCodecByName(codec.get()), ringbuf_framenum, cout);
 		rtpreceiver->launchLoop();
 	}
 	catch (std::exception& e) {
