@@ -142,6 +142,7 @@ namespace rtpsr {
 								break;    // frame is fully flushed, finish sending
 							}
 							sendData();
+							av_packet_unref(packet);
 						}
 					}
 

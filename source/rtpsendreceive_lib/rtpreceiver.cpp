@@ -114,9 +114,7 @@ namespace rtpsr {
 					bool isdecoderfull = false;
 					// block until data comes
 					res = receiveData();
-					while (!isdecoderfull) {
-						isdecoderfull = decoder->sendPacket(packet);
-					}
+					isdecoderfull = decoder->sendPacket(packet);
 					while (true) {
 						bool isempty = decoder->receiveFrame(frame);
 						if (isempty) {
@@ -129,7 +127,7 @@ namespace rtpsr {
 								std::this_thread::sleep_for(std::chrono::milliseconds(20));
 							}
 							else {
-								logger << "receiver pts:" << frame->pts << " |duration : " << frame->nb_samples <<" |latency :" << timecount-frame->pts << std::endl;
+								// logger << "receiver pts:" << frame->pts << " |duration : " << frame->nb_samples <<" |latency :" << timecount-frame->pts << std::endl;
 								timecount += frame->nb_samples;
 								break;
 							}
