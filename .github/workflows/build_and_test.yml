@@ -47,8 +47,7 @@ jobs:
       - name: Install ffmpeg via vcpkg(macos)
         run: |
           cp ./vcpkg-helper/${{ matrix.vcpkg-target-triplet }}.cmake ./vcpkg/triplets/
-          brew upgrade
-          brew install yasm
+          HOMEBREW_NO_AUTO_UPDATE=1 brew install yasm
           ./vcpkg/bootstrap-vcpkg.sh
           ./vcpkg/vcpkg install ffmpeg[avformat,avdevice,avcodec,core]:${{ matrix.vcpkg-target-triplet }}
       - name: configure project
