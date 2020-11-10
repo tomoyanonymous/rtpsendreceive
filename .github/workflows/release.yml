@@ -88,7 +88,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ../rtpsendreceive-${{ steps.get_version.outputs.VERSION }}-binary-${{ matrix.zip_postfix }}.zip
+          asset_path: ./rtpsendreceive-${{ steps.get_version.outputs.VERSION }}-binary-${{ matrix.zip_postfix }}.zip
           asset_name: rtpsendreceive-${{ steps.get_version.outputs.VERSION }}-binary-${{ matrix.zip_postfix }}.zip
           asset_content_type: application/zip
 
