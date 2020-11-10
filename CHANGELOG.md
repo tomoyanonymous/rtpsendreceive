@@ -1,6 +1,22 @@
 # CHANGELOG 
 
 
+## 2020-10-28 v0.3.0
+
+### Windows version is now available.
+
+ffmpeg is now installed from vcpkg, registered as submodule.
+
+### New Attributes
+
+ringbuf_framenum: set the buffer size of internal ringbuffer to collect samples asynchrounously between audio thread and network. Note that the number will be multiplied to Signal Vector Size in Audio Setting. Default is x4.
+
+### Packet Latency
+
+"getlatency" message for `mc.rtpreceiver~` outputs packet latency from second outlet. Note that this latency just taken from RTP packets' timestamp and does not include a latency caused from buffering. Generally, large signal vector size may causes a large latency, too small buffer size causes audio glitch. 128~512 is recommended.
+
+
+
 ## 2020-10-28 v0.2.3
 
 C++ class refactorings & cleeanups.
