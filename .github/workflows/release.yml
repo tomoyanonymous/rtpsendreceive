@@ -54,13 +54,13 @@ jobs:
         with:
           path: ${{ matrix.cache-path }}
           key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg/ports/ffmpeg/CONTROL') }}
-      - if: contains(matrix.os, 'windows') && (steps.ffmpeg-cache.outputs.cache-hit != 'true')
+      - if: contains(matrix.os, 'windows')
         name: Install ffmpeg via vcpkg
         run: |
           cp .\vcpkg-helper\${{ matrix.vcpkg-target-triplet }}.cmake .\vcpkg\triplets\
           .\vcpkg\bootstrap-vcpkg.bat 
           .\vcpkg\vcpkg.exe install ffmpeg[avformat,avdevice,avcodec,core]:x64-windows-static-rel
-      - if: contains(matrix.os, 'macos') && (steps.ffmpeg-cache.outputs.cache-hit != 'true')
+      - if: contains(matrix.os, 'macos') 
         name: Install ffmpeg via vcpkg(macos)
         run: |
           cp ./vcpkg-helper/${{ matrix.vcpkg-target-triplet }}.cmake ./vcpkg/triplets/
@@ -79,7 +79,7 @@ jobs:
 
       - uses: papeloto/action-zip@v1
         with:
-          files: .
+          files: docs externals help CHANGELOG.md package-info.json ReadMe.md screenshot.jpg License.md
           dest: rtpsendreceive-${{ steps.get_version.outputs.VERSION }}-binary-${{ matrix.zip_postfix }}.zip
 
       - name: Upload Compiled Binary

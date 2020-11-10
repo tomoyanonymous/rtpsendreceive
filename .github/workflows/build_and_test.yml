@@ -57,12 +57,12 @@ jobs:
         run: cmake --build build --config ${{ matrix.config }} -v
       - uses: papeloto/action-zip@v1
         with:
-          files: .
-          dest: rtpsendreceive-${{matrix.os}}.zip
+          files: docs externals help CHANGELOG.md package-info.json ReadMe.md screenshot.jpg License.md
+          dest: rtpsendreceive-${{matrix.os}}-${{matrix.config}}.zip
       - uses: actions/upload-artifact@v2
         continue-on-error: true
         with:
-          name: rtpsendreceive-${{matrix.os}}
-          path: ${{github.workspace}}/rtpsendreceive-${{matrix.os}}.zip
+          name: rtpsendreceive-${{matrix.os}}-${{matrix.config}}
+          path: ${{github.workspace}}/rtpsendreceive-${{matrix.os}}-${{matrix.config}}.zip
       # - name: test
       #   run: cd build && ctest --build-config ${{ matrix.config }}
