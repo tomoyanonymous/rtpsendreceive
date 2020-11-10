@@ -36,9 +36,7 @@ jobs:
         id: ffmpeg-cache
         with:
           path: ${{ matrix.cache-path }}
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg/ports/ffmpeg/CONTROL') }}
-          restore-keys: |
-            ${{ runner.os }}-vcpkg-
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg/ports/ffmpeg/CONTROL')}}-reset 
       - if: contains(matrix.os, 'windows')
         name: Install ffmpeg via vcpkg
         run: |
