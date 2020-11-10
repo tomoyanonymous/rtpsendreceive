@@ -26,7 +26,8 @@ public:
 		m_initialized = true;
 	}
 
-	attribute<symbol> address {this, "address", "127.0.0.1"};
+	attribute<symbol> address {this, "address", "127.0.0.1", description {"Your IP address for an appropriate network interface."}};
+	attribute<int>    port {this, "port", 30000, description {"A main incoming network port number."}};
 	attribute<symbol> codec {this, "codec", "pcm_s16be", setter {MIN_FUNCTION {auto c = rtpsr::getCodecByName(args[0]);
 	if (c == rtpsr::Codec::INVALID) {
 		cerr << "Invalid Codec Name.  Using pcm_s16be" << endl;
@@ -38,7 +39,6 @@ public:
 }
 }
 ;
-attribute<int> port {this, "port", 30000};
 attribute<int> active {this, "active", 0, setter {MIN_FUNCTION {int res = args[0];
 if (m_initialized && rtpreceiver != nullptr) { }
 return {};
@@ -47,7 +47,9 @@ return {};
 }
 ;
 attribute<double> reorder_queue_size {this, "reorder_queue_size", 500.0, description {"number of packets for reorder queue"}};
-attribute<int>    max_delay {this, "max_delay", 500000, description {"maximum accepted delay for reordering(in microseconds)"}};
+attribute<double> ringbuf_framenum {
+	this, "ringbuf_framenum", 4, range {1, 1000}, description {"Size of an internal ring buffer (multiplied with signal vector size.)"}};
+attribute<int> max_delay {this, "max_delay", 500000, description {"maximum accepted delay for reordering(in microseconds)"}};
 attribute<int, threadsafe::no, limit::clamp> min_port {
 	this, "min_port", 5000, range {0, 1000000}, description {"minimum port number used for rtsp internal transport"}};
 attribute<int, threadsafe::no, limit::clamp> max_port {

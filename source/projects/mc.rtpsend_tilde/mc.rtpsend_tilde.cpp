@@ -27,7 +27,8 @@ public:
 		instance_count -= 1;
 	}
 	attribute<int, threadsafe::no, limit::clamp> channels {this, "channels", 1, range {1, 16}};
-	attribute<symbol>                            address {this, "address", "127.0.0.1"};
+	attribute<symbol>                            address {this, "address", "127.0.0.1",description {"Destination IP Address(can be a domain name)"}};
+	attribute<int>                               port {this, "port", 30000,description {"Destination Main Port"}};
 	attribute<symbol> codec {this, "codec", "pcm_s16be", setter {MIN_FUNCTION {auto c = rtpsr::getCodecByName(args[0]);
 	if (c == rtpsr::Codec::INVALID) {
 		cerr << "Invalid Codec Name.  Using pcm_s16be" << endl;
@@ -39,7 +40,6 @@ public:
 }
 ;
 
-attribute<int>    port {this, "port", 30000};
 attribute<double> retry_rate {this, "retry_rate", 500.0, description {"Retry intervals in milliseconds at connection"}};
 attribute<double> reorder_queue_size {this, "reorder_queue_size", 500.0, description {"number of packets for reorder queue"}};
 attribute<bool>   use_rtsp {this,
