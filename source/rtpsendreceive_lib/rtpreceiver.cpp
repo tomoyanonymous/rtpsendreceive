@@ -5,14 +5,14 @@ namespace rtpsr {
 	: RtpSRBase(*s, logger) {
 		auto option = std::make_unique<RtspInOption>(url, setting_ref.samplerate, setting_ref.channels, setting_ref.framesize);
 		input       = std::make_unique<RtspInFormat>(std::move(option));
-		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 4);
+		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 10.2);
 		this->codec = std::make_unique<Decoder>(setting_ref, codec);
 		init();
 	}
 	RtpReceiver::RtpReceiver(std::unique_ptr<RtpInOption> s, Codec codec, std::ostream& logger)
 	: RtpSRBase(*s, logger) {
 		input       = std::make_unique<RtpInFormat>(std::move(s));
-		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 4);
+		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 10.2);
 		this->codec = std::make_unique<Decoder>(setting_ref, codec);
 		init();
 	}
@@ -21,7 +21,7 @@ namespace rtpsr {
 		input                          = std::make_unique<RtspInFormat>(std::move(s));
 		time_cache                     = std::chrono::high_resolution_clock::now();
 		input->ctx->interrupt_callback = AVIOInterruptCB {&RtpReceiver::timeoutCallback, this};
-		output                         = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 4);
+		output                         = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * 10.2);
 		this->codec                    = std::make_unique<Decoder>(setting_ref, codec);
 		init();
 	}
@@ -59,6 +59,7 @@ namespace rtpsr {
 					break;
 				}
 			}
+			isconnected = true;
 			return true;
 		});
 	}
@@ -88,7 +89,12 @@ namespace rtpsr {
 		time_cache = std::chrono::high_resolution_clock::now();
 		av_init_packet(packet);
 		int res = av_read_frame(input->ctx, packet);
-		if (res == -60 || res == AVERROR_EOF) {
+		if (res == AVERROR(ETIMEDOUT)) {
+			logger << avErrorString(res);
+			return false;    // timeout or eof(ignore)
+		}
+		if (res == AVERROR_EOF) {
+			logger << avErrorString(res);
 			return false;    // timeout or eof(ignore)
 		}
 		checkAvError(res);
@@ -96,30 +102,36 @@ namespace rtpsr {
 	}
 	void RtpReceiver::launchLoop() {
 		asynclooper.launch([&]() {
-			auto* decoder  = dynamic_cast<Decoder*>(codec.get());
-			bool  res      = true;
+			auto* decoder = dynamic_cast<Decoder*>(codec.get());
+			bool  res     = true;
 			if (input->ctx == nullptr) {
 				return false;
 			}
 			try {
 				init_asyncloop.wait();
+				timecount=0;
 				while (asynclooper.isActive()) {
 					bool isdecoderfull = false;
 					// block until data comes
+					res = receiveData();
 					while (!isdecoderfull) {
-						res = receiveData();
-						if (!res) {
-							break;
-						}
 						isdecoderfull = decoder->sendPacket(packet);
 					}
-					while (decoder->receiveFrame(frame) != true) {
-						bool  writeres = false;
-						while (!writeres) {
-							std::cerr << frame->pts << std::endl;;
-							writeres = pushToOutput();
+					while (true) {
+						bool isempty = decoder->receiveFrame(frame);
+						if (isempty) {
+							break;
+						}
+						while (true) {
+							bool writeres = pushToOutput();
 							if (!writeres) {
+								std::cerr << "receiver ring buffer is full!!" << std::endl;
 								std::this_thread::sleep_for(std::chrono::milliseconds(20));
+							}
+							else {
+								logger << "receiver pts:" << frame->pts << " |duration : " << frame->nb_samples <<" |latency :" << timecount-frame->pts << std::endl;
+								timecount += frame->nb_samples;
+								break;
 							}
 						}
 					}
@@ -132,5 +144,7 @@ namespace rtpsr {
 			return true;
 		});
 	}
-
+	bool RtpReceiver::isConnected() {
+		return isconnected.load();
+	}
 }    // namespace rtpsr

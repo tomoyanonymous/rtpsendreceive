@@ -3,10 +3,17 @@
 namespace rtpsr {
 	void checkAvError(int error_code) {
 		if (error_code < 0) {
-			char str[4096];
-			av_make_error_string(str, 4096, error_code);
-			throw std::runtime_error(str);
+			throw std::runtime_error(avErrorString(error_code));
 		}
+	}
+	std::string avErrorString(int error_code){
+		if (error_code < 0) {
+			std::string res("",4096);
+			av_make_error_string(res.data(), 4096, error_code);
+			return res;
+		}
+			return "";
+
 	}
 	AVOptionBase::AVOptionBase(container_t&& init) {
 		for (auto& [key, val] : init) {
@@ -174,12 +181,7 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 
 	// CustomCbAsyncFormat
 	bool CustomCbAsyncFormat::tryPushRingBuffer(std::vector<sample_t> const& input) {
-		auto size = input.size();
-		if (buffer.getWriteMargin() < size) {
-			return false;
-		}
-		buffer.writeRange(input, input.size());
-		return true;
+		return buffer.writeRange(input, input.size());
 	}
 	bool CustomCbAsyncFormat::tryPopRingBuffer(std::vector<sample_t>& dest) {
 		return buffer.readRange(dest,  dest.size());
@@ -317,7 +319,9 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 	Decoder::Decoder(RtpSRSetting const& s, Codec c)
 	: CodecBase(s, c, false) { }
 	Encoder::Encoder(RtpSRSetting const& s, Codec c)
-	: CodecBase(s, c, true) { }
+	: CodecBase(s, c, true) { 
+		ctx->frame_size = s.framesize;
+	}
 	bool Decoder::sendPacket(AVPacket* packet) {
 		return checkIsErrAgain(avcodec_send_packet(ctx, packet));
 	}

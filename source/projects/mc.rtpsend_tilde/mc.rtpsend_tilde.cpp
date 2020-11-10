@@ -101,19 +101,21 @@ return {};
 
 void operator()(audio_bundle input, audio_bundle output) {
 
-	if (rtpsender != nullptr) {
-		int chs = std::min<int>(input.channel_count(), channels.get());
-		for (auto i = 0; i < input.frame_count(); i++) {
-			for (auto channel = 0; channel < chs; channel++) {
-				double  in {input.samples(channel)[i]};
-				int16_t s                 = rtpsr::convertDoubleToSample(in);
-				iarray[i * chs + channel] = s;
-			}
+	if (rtpsender == nullptr) {
+		return;
+	}
+	if (!rtpsender->isConnected()) {
+		return;
+	}
+	int chs = std::min<int>(input.channel_count(), channels.get());
+	for (auto i = 0; i < input.frame_count(); i++) {
+		for (auto channel = 0; channel < chs; channel++) {
+			iarray.at(i * chs + channel) = rtpsr::convertDoubleToSample(input.samples(channel)[i]);
 		}
-		bool write_success = rtpsender->writeToInput(iarray);
-		if (!write_success) {
-			// cerr << "ring buffer is full!" <<std::endl;
-		}
+	}
+	bool write_success = rtpsender->writeToInput(iarray);
+	if (!write_success) {
+		// cerr << "ring buffer is full!" << std::endl;
 	}
 }
 static long setDspState(void* obj, long state) {

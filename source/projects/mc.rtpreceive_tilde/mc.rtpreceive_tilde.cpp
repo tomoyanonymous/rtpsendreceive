@@ -6,6 +6,7 @@
 /// found in the License.md file.
 
 #include "c74_min.h"
+#include "min_debugutils.hpp"
 #include "rtpreceiver.hpp"
 
 using namespace c74::min;
@@ -97,10 +98,18 @@ static long setDspState(void* obj, long state) {
 }
 void operator()(audio_bundle input, audio_bundle output) {
 	output.clear();
+	if (rtpreceiver == nullptr) {
+		return;
+	}
+	if (!rtpreceiver->isConnected()) {
+		return;
+	}
 	int  chs     = std::min<int>(output.channel_count(), channels.get());
 	bool readres = rtpreceiver->readFromOutput(iarray);
+	misscount.second++;
 	if (!readres) {
-		cerr << "stream underflow detected!" << std::endl;
+		misscount.first++;
+		cout << "stream underflow detected! " << std::to_string(misscount.first) << "/" << std::to_string(misscount.second) << std::endl;
 		return;
 	}
 	for (auto i = 0; i < output.frame_count(); i++) {
@@ -113,6 +122,7 @@ void operator()(audio_bundle input, audio_bundle output) {
 private:
 std::shared_ptr<rtpsr::RtpReceiver> rtpreceiver {nullptr};
 std::vector<rtpsr::sample_t>        iarray;
+std::pair<int, int>                 misscount;
 double                              frame_size = vector_size();
 
 void resetChannel(int channel) {
@@ -122,6 +132,7 @@ void resetChannel(int channel) {
 void resetReceiver(double newvecsize, int channel) {
 	iarray.resize(newvecsize * channel);
 	frame_size = newvecsize;
+	misscount  = {0, 0};
 	rtpsr::Url url {address.get(), port};
 	if (use_rtsp) {
 		auto option = std::make_unique<rtpsr::RtspInOption>(url, samplerate(), channel, (int)newvecsize);

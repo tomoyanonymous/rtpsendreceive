@@ -1,6 +1,6 @@
 #pragma once
 
-extern "C"{
+extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 #include "libavutil/avassert.h"
@@ -24,7 +24,7 @@ namespace rtpsr {
 
 
 	void checkAvError(int error_code);
-
+	std::string avErrorString(int error_code);
 	struct SdpOpaque {
 		using Vector = std::vector<uint8_t>;
 		Vector           data;
@@ -307,9 +307,10 @@ namespace rtpsr {
 		using callbacktype = void (*)(AsyncLooper const&);
 
 		template<class F>
-		void launch(F&& fn) {
+		auto launch(F&& fn) {
 			active = true;
 			future = std::async(std::launch::async, std::move(fn));
+			return future;
 		}
 		bool               halt();
 		bool               forceHalt();
@@ -325,7 +326,8 @@ namespace rtpsr {
 	struct RtpSRBase {
 		explicit RtpSRBase(RtpSRSetting const& s, std::ostream& logger = std::cerr);
 		~RtpSRBase();
-		virtual void launchLoop() = 0;
+		virtual void launchLoop()  = 0;
+		virtual bool isConnected() = 0;
 		AsyncLooper  asynclooper;
 		AsyncLooper  init_asyncloop;
 
@@ -338,6 +340,7 @@ namespace rtpsr {
 		AVPacket*                  packet;
 		AVFrame*                   frame;
 		std::ostream&              logger;
+		std::atomic<bool>          isconnected = false;
 	};
 
 }    // namespace rtpsr

@@ -17,6 +17,7 @@ namespace rtpsr {
 		// communication entrypoint between max
 		bool writeToInput(std::vector<sample_t> const& input);
 		bool writeToInput(std::vector<double> const& input);
+		bool isConnected() override;
 
 	private:
 		int64_t               timecount = 0;

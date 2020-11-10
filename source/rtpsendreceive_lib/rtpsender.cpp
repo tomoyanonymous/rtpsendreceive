@@ -6,7 +6,7 @@ namespace rtpsr {
 	: RtpSRBase(*s, logger)
 	, init_retry_rate(init_retry_rate)
 	, pollingrate(duration_type(static_cast<double>(s->framesize) * 0.5 * 48000 / s->samplerate)) {
-		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * 2);
+		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * 10.2);
 		auto option = std::make_unique<RtspOutOption>(url, setting_ref.samplerate, setting_ref.channels, setting_ref.framesize);
 		output      = std::make_unique<RtspOutFormat>(std::move(option));
 		this->codec = std::make_unique<Encoder>(*s, codec);
@@ -16,7 +16,7 @@ namespace rtpsr {
 	: RtpSRBase(*static_cast<RtpSRSetting*>(option.get()), logger)
 	, init_retry_rate(init_retry_rate) {
 		pollingrate = duration_type(static_cast<double>(setting_ref.framesize) * 0.5 * 48000 / setting_ref.samplerate);
-		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * 2);
+		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * 10.2);
 		output      = std::make_unique<RtpOutFormat>(std::move(option));
 		this->codec = std::make_unique<Encoder>(setting_ref, codec);
 		init();
@@ -27,7 +27,7 @@ namespace rtpsr {
 	: RtpSRBase(*static_cast<RtpSRSetting*>(option.get()), logger)
 	, init_retry_rate(init_retry_rate) {
 		pollingrate = duration_type(static_cast<double>(setting_ref.framesize) * 0.5 * 48000 / setting_ref.samplerate);
-		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * 2);
+		input       = std::make_unique<CustomCbAsyncInFormat>(setting_ref, setting_ref.framesize * 10.2);
 		output      = std::make_unique<RtspOutFormat>(std::move(option));
 		this->codec = std::make_unique<Encoder>(setting_ref, codec);
 		init();
@@ -38,7 +38,7 @@ namespace rtpsr {
 		bool res1 = init_asyncloop.halt();
 		bool res2 = asynclooper.halt();
 		if (res1 && res2) {
-			checkAvError( av_write_trailer(output->ctx));
+			checkAvError(av_write_trailer(output->ctx));
 
 			if (output->ctx->pb != nullptr) {
 				avio_close(output->ctx->pb);
@@ -67,6 +67,7 @@ namespace rtpsr {
 					break;
 				}
 			}
+			isconnected = true;
 			return true;    // return result;
 		});
 	}
@@ -82,7 +83,7 @@ namespace rtpsr {
 	}
 	bool RtpSender::fillFrame() {
 		auto*  asyncinput       = dynamic_cast<CustomCbAsyncInFormat*>(input.get());
-		size_t packet_framesize = frame->nb_samples* setting_ref.channels;
+		size_t packet_framesize = frame->nb_samples * setting_ref.channels;
 
 		framebuf.resize(packet_framesize);
 		bool res = asyncinput->tryPopRingBuffer(framebuf);
@@ -98,35 +99,13 @@ namespace rtpsr {
 		return false;
 	}
 	void RtpSender::sendData() {
-		//   av_read_frame(input->ctx, packet);
-		auto* encoder         = dynamic_cast<rtpsr::Encoder*>(codec.get());
-		frame->pts            = timecount;
-		frame->format         = AV_SAMPLE_FMT_S16;
-		frame->channels       = setting_ref.channels;
-		frame->channel_layout = codec->ctx->channel_layout;
-		bool hasinputframe    = fillFrame();
-		if (!hasinputframe) {
-			return;
-		}
-		timecount += setting_ref.framesize;
-		bool isfull = encoder->sendFrame(frame);
-		while (true) {
-			av_init_packet(packet);
-			bool isempty = encoder->receivePacket(packet);
-			if (isempty) {
-				av_packet_unref(packet);
-				break;    // frame is fully flushed, finish sending
-			}
-			packet->pos          = -1;
-			packet->stream_index = 0;
-			//   packet->duration = setting_ref.framesize;
-			auto itb = codec->ctx->time_base;
-			auto otb = output->ctx->streams[0]->time_base;
-			av_packet_rescale_ts(packet, otb, otb);    // maybe unnecessary
-			checkAvError(av_write_frame(output->ctx, packet));
-
-			av_packet_unref(packet);
-		}
+		packet->pos          = -1;
+		packet->stream_index = 0;
+		//   packet->duration = setting_ref.framesize;
+		auto itb = codec->ctx->time_base;
+		auto otb = output->ctx->streams[0]->time_base;
+		av_packet_rescale_ts(packet, otb, otb);    // maybe unnecessary
+		checkAvError(av_write_frame(output->ctx, packet));
 	}
 	void RtpSender::launchLoop() {
 		asynclooper.launch([&]() {
@@ -140,9 +119,34 @@ namespace rtpsr {
 						break;
 					}
 				}
+				auto* encoder         = dynamic_cast<rtpsr::Encoder*>(codec.get());
+				frame->format         = AV_SAMPLE_FMT_S16;
+				frame->channels       = setting_ref.channels;
+				frame->channel_layout = codec->ctx->channel_layout;
+				frame->nb_samples     = setting_ref.framesize;
 				while (asynclooper.isActive()) {
-					sendData();
-					std::this_thread::sleep_for(pollingrate);
+					bool hasinputframe = fillFrame();
+					if (!hasinputframe) { }
+					else {
+						frame->pts = timecount;
+						timecount += setting_ref.framesize;
+						bool isfull = encoder->sendFrame(frame);
+						if (isfull) {
+							logger << "sender encoder is full" << std::endl;
+						}
+						while (true) {
+							av_init_packet(packet);
+							bool isempty = encoder->receivePacket(packet);
+							if (isempty) {
+								av_packet_unref(packet);
+								break;    // frame is fully flushed, finish sending
+							}
+							sendData();
+						}
+					}
+
+
+					std::this_thread::sleep_for(duration_type(64));
 				}
 			}
 			catch (std::exception& e) {
@@ -152,4 +156,8 @@ namespace rtpsr {
 			return true;
 		});
 	}
+	bool RtpSender::isConnected() {
+		return isconnected.load();
+	}
+
 }    // namespace rtpsr
