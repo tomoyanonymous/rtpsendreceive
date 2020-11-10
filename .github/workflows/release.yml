@@ -37,13 +37,12 @@ jobs:
           - Release
         include:
           - os: windows-latest
-            zip_postfix: Windows
             vcpkg-target-triplet: x64-windows-static-rel
-            cache-path: ${{ github.workspace }}/vcpkg/installed
-          - os: macos-latest
-            zip_postfix: macOS
-            vcpkg-target-triplet: x64-osx-rel
             cache-path: ${{ github.workspace }}\vcpkg\installed
+          - os: macos-latest
+            vcpkg-target-triplet: x64-osx-rel
+            cache-path: ${{ github.workspace }}/vcpkg/installed
+
     steps:
       - uses: actions/checkout@v2
         with:
@@ -53,7 +52,7 @@ jobs:
         id: ffmpeg-cache
         with:
           path: ${{ matrix.cache-path }}
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg/ports/ffmpeg/CONTROL') }}
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg/ports/ffmpeg/CONTROL') }}-r
       - if: contains(matrix.os, 'windows')
         name: Install ffmpeg via vcpkg
         run: |
