@@ -52,8 +52,8 @@
 		</attribute>
 
 		<attribute name='port' get='1' set='1' type='long' size='1' >
-			<digest></digest>
-			<description></description>
+			<digest>Destination Main Port </digest>
+			<description>Destination Main Port </description>
 		</attribute>
 
 		<attribute name='max_port' get='1' set='1' type='long' size='1' >
@@ -72,8 +72,8 @@
 		</attribute>
 
 		<attribute name='address' get='1' set='1' type='symbol' size='1' >
-			<digest></digest>
-			<description></description>
+			<digest>Destination IP Address(can be a domain name) </digest>
+			<description>Destination IP Address(can be a domain name) </description>
 		</attribute>
 
 		<attribute name='reorder_queue_size' get='1' set='1' type='float64' size='1' >
