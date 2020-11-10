@@ -39,14 +39,12 @@ jobs:
           key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg/ports/ffmpeg/CONTROL') }}
           restore-keys: |
             ${{ runner.os }}-vcpkg-
-      - if: contains(matrix.os, 'windows') && (steps.ffmpeg-cache.outputs.cache-hit != 'true')
-        name: Install ffmpeg via vcpkg
+      - name: Install ffmpeg via vcpkg
         run: |
           cp .\vcpkg-helper\${{ matrix.vcpkg-target-triplet }}.cmake .\vcpkg\triplets\
           .\vcpkg\bootstrap-vcpkg.bat 
           .\vcpkg\vcpkg.exe install ffmpeg[avformat,avdevice,avcodec,core]:x64-windows-static-rel
-      - if: contains(matrix.os, 'macos') && (steps.ffmpeg-cache.outputs.cache-hit != 'true')
-        name: Install ffmpeg via vcpkg(macos)
+      - name: Install ffmpeg via vcpkg(macos)
         run: |
           cp ./vcpkg-helper/${{ matrix.vcpkg-target-triplet }}.cmake ./vcpkg/triplets/
           brew upgrade
