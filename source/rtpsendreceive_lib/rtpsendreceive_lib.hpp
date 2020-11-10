@@ -13,6 +13,7 @@
 #include <chrono>
 #include <memory>
 
+#include "libavutil/mem.h"
 
 #ifndef THREAD_SLEEP
 #define THREAD_SLEEP(s) std::this_thread::sleep_for(std::chrono::seconds(s));

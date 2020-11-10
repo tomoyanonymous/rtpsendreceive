@@ -105,9 +105,7 @@ void operator()(audio_bundle input, audio_bundle output) {
 	}
 	for (auto i = 0; i < output.frame_count(); i++) {
 		for (auto channel = 0; channel < chs; channel++) {
-			rtpsr::sample_t s          = iarray[i * chs + channel];
-			double          d          = rtpsr::convertSampleToDouble(s);
-			output.samples(channel)[i] = d;
+			output.samples(channel)[i] = rtpsr::convertSampleToDouble(iarray.at(i * channels.get() + channel));
 		}
 	}
 }
@@ -140,7 +138,7 @@ void resetReceiver(std::unique_ptr<rtpsr::RtspInOption> s) {
 	rtpreceiver.reset();
 	try {
 		s->port_range = getPortRange();
-		rtpreceiver = std::make_unique<rtpsr::RtpReceiver>(std::move(s), rtpsr::getCodecByName(codec.get()), cout);
+		rtpreceiver   = std::make_unique<rtpsr::RtpReceiver>(std::move(s), rtpsr::getCodecByName(codec.get()), cout);
 		rtpreceiver->launchLoop();
 	}
 	catch (std::exception& e) {
@@ -166,7 +164,7 @@ std::pair<int, int> getPortRange() {
 	if (min_port > max_port) {
 		min_port = max_port.get();
 	}
-	return std::pair(min_port.get(),max_port.get());
+	return std::pair(min_port.get(), max_port.get());
 }
 static long setOutChans(void* obj, long outletindex) {
 	auto chs = c74::max::object_attr_getlong(obj, c74::max::gensym("channels"));
