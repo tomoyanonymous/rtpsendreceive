@@ -49,12 +49,22 @@ endif ()
 ### PROJECT_SPECIFIC LIBRARY(FFMPEG)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
+if(NOT DEFINED VCPKG_TARGET_TRIPLET)
+if(APPLE)
+set(VCPKG_TARGET_TRIPLET x64-osx)
+elseif(WIN32)
+set(VCPKG_TARGET_TRIPLET x64-windows-static)
+endif()
+endif()
+
+set(VCPKG_PATH 
+${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/${VCPKG_TARGET_TRIPLET})
+message("vcpkg path: ${VCPKG_PATH}")
 find_package(FFmpeg 
-COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE SWRESAMPLE
 REQUIRED
 ) #add here the list of ffmpeg components required
 # memo: building barematal ffmpeg for macos
-#  ./configure --prefix=/usr/local/Cellar/ffmpeg/4.2.2_2debug  --disable-avfoundation --disable-iconv --disable-filters --disable-devices --disable-shared --enable-static  --disable-optimizations  --disable-mmx --disable-audiotoolbox --disable-videotoolbox --disable-stripping   --disable-appkit --disable-zlib --disable-coreimage  --disable-bzlib --disable-sdl2 --disable-securetransport --disable-encoder=opus --disable-decoder=opus  --pkg-config-flags=--static --cc=clang --cxx=clang++
+
 if(FFMPEG_FOUND)
 #  FFMPEG_INCLUDE_DIRS  - Include directory necessary for using the required components headers.
 #  FFMPEG_LIBRARIES     - Link these to use the required ffmpeg components.
@@ -63,15 +73,18 @@ if(FFMPEG_FOUND)
     message("FFMPEG_LIBRARIES = ${FFMPEG_LIBRARIES} ")
     message("FFMPEG_DEFINITIONS = ${FFMPEG_DEFINITIONS} ")
 endif()
-find_library(OPUS_LIB
-    NAMES libopus.a opus
-	PATHS "/usr/local/opt/opus/lib"
-    NO_DEFAULT_PATH
-    REQUIRED
-    )
-message("OPUS_LIB =${OPUS_LIB}")
+# find_library(OPUS_LIB
+#     NAMES libopus.a opus
+# 	PATHS /usr/lib /usr/local/lib /usr/local/opt/opus/lib C:/ProgramData/chocolatey/lib/opus-tools/tools/lib
+#     NO_DEFAULT_PATH
+#     # REQUIRED
+#     )
+# message("OPUS_LIB =${OPUS_LIB}")
 
-set(DEPENDENT_LIBS ${FFMPEG_LIBRARIES} ${OPUS_LIB})
+set(DEPENDENT_LIBS 
+${FFMPEG_LIBRARIES} 
+# ${OPUS_LIB}
+)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/source/rtpsendreceive_lib)
 

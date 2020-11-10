@@ -3,10 +3,17 @@
 namespace rtpsr {
 	void checkAvError(int error_code) {
 		if (error_code < 0) {
-			char str[4096];
-			av_make_error_string(str, 4096, error_code);
-			throw std::runtime_error(str);
+			throw std::runtime_error(avErrorString(error_code));
 		}
+	}
+	std::string avErrorString(int error_code){
+		if (error_code < 0) {
+			std::string res("",4096);
+			av_make_error_string(res.data(), 4096, error_code);
+			return res;
+		}
+			return "";
+
 	}
 	AVOptionBase::AVOptionBase(container_t&& init) {
 		for (auto& [key, val] : init) {
@@ -39,16 +46,17 @@ namespace rtpsr {
 	}
 	void RtpOptionsBase::generateOptions() {
 		dict.clear();
-		dict.emplace("reorder_queue_size", reorder_queue_size);
-		dict.emplace("packet_size", packet_size);
+		dict.emplace("reorder_queue_size", (int)reorder_queue_size);
+		dict.emplace("packet_size", (int)packet_size);
 	}
 	RtpOption::RtpOption(Url const& url, double samplerate, int channels, int buffersize)
 	: RtpOptionsBase(std::move(url))
-	, RtpSRSetting({samplerate, channels, buffersize})
-	, buffer_size(buffersize * channels * 4) { }
+	, RtpSRSetting({samplerate, channels, buffersize}) {
+		buffer_size = buffersize * channels * 4;
+	}
 	void RtpOption::generateOptions() {
 		RtpOptionsBase::generateOptions();
-		dict.emplace("buffer_size", buffer_size);
+		dict.emplace("buffer_size", (int)buffer_size);
 		// todo::filter_source;
 	}
 
@@ -173,20 +181,10 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 
 	// CustomCbAsyncFormat
 	bool CustomCbAsyncFormat::tryPushRingBuffer(std::vector<sample_t> const& input) {
-		auto size = input.size();
-		if (buffer.getWriteMargin() < size) {
-			return false;
-		}
-		buffer.writeRange(input, input.size());
-		return true;
+		return buffer.writeRange(input, input.size());
 	}
 	bool CustomCbAsyncFormat::tryPopRingBuffer(std::vector<sample_t>& dest) {
-		auto size = dest.size();
-		if (buffer.getReadMargin() < size) {
-			return false;
-		}
-		buffer.readRange(dest, dest.size());
-		return true;
+		return buffer.readRange(dest,  dest.size());
 	}
 	CustomCbAsyncInFormat::CustomCbAsyncInFormat(RtpSRSetting const& s, size_t buffer_size)
 	: InFormat()
@@ -321,7 +319,9 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 	Decoder::Decoder(RtpSRSetting const& s, Codec c)
 	: CodecBase(s, c, false) { }
 	Encoder::Encoder(RtpSRSetting const& s, Codec c)
-	: CodecBase(s, c, true) { }
+	: CodecBase(s, c, true) { 
+		ctx->frame_size = s.framesize;
+	}
 	bool Decoder::sendPacket(AVPacket* packet) {
 		return checkIsErrAgain(avcodec_send_packet(ctx, packet));
 	}
@@ -341,6 +341,10 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 			active = false;
 			wait();
 		}
+		return true;
+	}
+	bool AsyncLooper::forceHalt(){
+		active =false;
 		return true;
 	}
 	void AsyncLooper::wait() {

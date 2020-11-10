@@ -32,7 +32,7 @@ public:
 	// read from read_index to specified size. note that size should be length of
 	// array, not a byte size
 	bool readRange(std::vector<T>& res_array, size_t size) {
-		if (getReadMargin() < size) {
+		if (getReadMargin() <= size) {
 			return false;
 		}
 		size_t localread           = read_index;
@@ -49,7 +49,7 @@ public:
 		return true;
 	}
 	bool writeRange(const std::vector<T>& src_array, size_t size) {
-		if (getWriteMargin() < size) {
+		if (getWriteMargin() <= size) {
 			return false;
 		}
 		size_t localwrite          = write_index;
@@ -70,9 +70,9 @@ public:
 		size_t localread  = read_index;
 		size_t localwrite = write_index;
 
-		auto margin = localread - localwrite;
+		auto margin = localwrite - localread;
 		if (margin < 0) {
-			margin = buffer.size() - (localwrite - localread);
+			margin = buffer.size() - (localread - localwrite);
 		}
 		return margin;
 	}

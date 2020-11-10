@@ -1,9 +1,20 @@
 #pragma once
 
+extern "C" {
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
+#include "libavutil/avassert.h"
+#include "libavutil/avstring.h"
+#include "libavutil/intreadwrite.h"
+#include "libavutil/mathematics.h"
+#include "libavutil/opt.h"
+#include "libavutil/timestamp.h"
+}
+
 #include <variant>
 #include <unordered_map>
 #include <regex>
-
+#include <cassert>
 
 #include "rtpsendreceive_lib.hpp"
 #include "lockfree_ringbuffer.hpp"
@@ -13,7 +24,7 @@ namespace rtpsr {
 
 
 	void checkAvError(int error_code);
-
+	std::string avErrorString(int error_code);
 	struct SdpOpaque {
 		using Vector = std::vector<uint8_t>;
 		Vector           data;
@@ -70,13 +81,17 @@ namespace rtpsr {
 
 	struct RtpOptionsBase {
 		explicit RtpOptionsBase(Url const& url);
-		virtual ~RtpOptionsBase()=default;
+		virtual ~RtpOptionsBase() = default;
 		const Url url;
 
 		// number of packet of reorder queue
-		size_t                reorder_queue_size = 1000;
-		size_t                packet_size        = 1000;
-		virtual RtpFormatKind getKind()          = 0;
+		size_t reorder_queue_size = 1000;
+		size_t packet_size        = 1000;
+		// maximum reorder delay(in microseconds) to be set to audioformatcontext
+		int    max_delay = 500000;
+		size_t buffer_size;
+
+		virtual RtpFormatKind getKind() = 0;
 		virtual void          generateOptions();
 		AVDictionary**        getParam() {
             avoptions = std::make_unique<AVOptionBase>(std::move(dict));
@@ -92,10 +107,8 @@ namespace rtpsr {
 			return RtpFormatKind::RTP;
 		};
 		void generateOptions() override;
-		// maximum reorder delay(in microseconds) to be set to audioformatcontext
-		int    max_delay = 500000;
-		size_t buffer_size;
-		bool   filter_source = false;
+
+		bool filter_source = false;
 	};
 	class RtspOption : public RtpSRSetting, public RtpOptionsBase {
 	public:
@@ -106,8 +119,8 @@ namespace rtpsr {
 		};
 		void generateOptions() override;
 		enum class TransPortProtocol { UDP = 0, TCP, UDP_MULTICAST, HTTP, HTTPS } rtsp_transport = TransPortProtocol::UDP;
-		int                 listen_timeout                                                       = 5000;       // unit:seconds
-		int                 socket_timeout                                                       = 1000000;    // unit:microseconds
+		int                 listen_timeout                                                       = 1000;       // unit:seconds
+		int                 socket_timeout                                                       = 500000;    // unit:microseconds
 		std::pair<int, int> port_range                                                           = {5000, 65000};
 
 	private:
@@ -220,7 +233,9 @@ namespace rtpsr {
 	};
 	struct RtpInFormatBase : public InFormat, public RtpFormatBase {
 		RtpInFormatBase(std::unique_ptr<RtpOptionsBase> opt)
-		: RtpFormatBase(std::move(opt)) {};
+		: RtpFormatBase(std::move(opt)) {
+
+		};
 		virtual bool tryConnectInput() = 0;
 	};
 
@@ -292,11 +307,13 @@ namespace rtpsr {
 		using callbacktype = void (*)(AsyncLooper const&);
 
 		template<class F>
-		void launch(F&& fn) {
+		auto launch(F&& fn) {
 			active = true;
 			future = std::async(std::launch::async, std::move(fn));
+			return future;
 		}
 		bool               halt();
+		bool               forceHalt();
 		void               wait();
 		std::future_status wait_for(int mills);
 		bool               isActive() const;
@@ -309,7 +326,8 @@ namespace rtpsr {
 	struct RtpSRBase {
 		explicit RtpSRBase(RtpSRSetting const& s, std::ostream& logger = std::cerr);
 		~RtpSRBase();
-		virtual void launchLoop() = 0;
+		virtual void launchLoop()  = 0;
+		virtual bool isConnected() = 0;
 		AsyncLooper  asynclooper;
 		AsyncLooper  init_asyncloop;
 
@@ -322,6 +340,7 @@ namespace rtpsr {
 		AVPacket*                  packet;
 		AVFrame*                   frame;
 		std::ostream&              logger;
+		std::atomic<bool>          isconnected = false;
 	};
 
 }    // namespace rtpsr

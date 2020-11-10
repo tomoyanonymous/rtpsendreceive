@@ -20,5 +20,5 @@
 	},
 	"tags" : [ ],
 	"version" : "@GIT_VERSION_MAJ@.@GIT_VERSION_MIN@.@GIT_VERSION_SUB@",
-	"website" : "http://www.github.com/tomoya_nonymous/rtpsendreceive"
+	"website" : "https://github.com/tomoyanonymous/rtpsendreceive"
 }

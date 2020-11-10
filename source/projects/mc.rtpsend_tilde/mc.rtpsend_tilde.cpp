@@ -4,10 +4,10 @@
 ///	@license	Use of this source code is governed by the LGPL License
 /// found in the License.md file.
 
-#include <rtpsender.hpp>
 
 #include "c74_max.h"
 #include "c74_min.h"
+#include "rtpsender.hpp"
 
 using namespace c74::min;
 
@@ -27,7 +27,8 @@ public:
 		instance_count -= 1;
 	}
 	attribute<int, threadsafe::no, limit::clamp> channels {this, "channels", 1, range {1, 16}};
-	attribute<symbol>                            address {this, "address", "127.0.0.1"};
+	attribute<symbol>                            address {this, "address", "127.0.0.1",description {"Destination IP Address(can be a domain name)"}};
+	attribute<int>                               port {this, "port", 30000,description {"Destination Main Port"}};
 	attribute<symbol> codec {this, "codec", "pcm_s16be", setter {MIN_FUNCTION {auto c = rtpsr::getCodecByName(args[0]);
 	if (c == rtpsr::Codec::INVALID) {
 		cerr << "Invalid Codec Name.  Using pcm_s16be" << endl;
@@ -38,14 +39,20 @@ public:
 }
 }
 ;
-
-attribute<int>    port {this, "port", 30000};
+attribute<double> ringbuf_framenum {
+	this, "ringbuf_framenum", 4, range {1, 1000}, description {"Size of an internal ring buffer (multiplied with signal vector size.)"}};
 attribute<double> retry_rate {this, "retry_rate", 500.0, description {"Retry intervals in milliseconds at connection"}};
 attribute<double> reorder_queue_size {this, "reorder_queue_size", 500.0, description {"number of packets for reorder queue"}};
 attribute<bool>   use_rtsp {this,
     "use_rtsp",
     true,
     description {"if set to false, use raw rtp protocol instead of using rtsp mux/demuxer(Some options are ignored)."}};
+
+attribute<int, threadsafe::no, limit::clamp> min_port {
+	this, "min_port", 5000, range {0, 1000000}, description {"minimum port number used for rtsp internal transport"}};
+attribute<int, threadsafe::no, limit::clamp> max_port {
+	this, "max_port", 65000, range {0, 1000000}, description {"minimum port number used for rtsp internal transport"}};
+
 
 attribute<int> active {this, "active", 0, setter {MIN_FUNCTION {int res = args[0];
 if (m_initialized && rtpsender != nullptr) {
@@ -95,19 +102,21 @@ return {};
 
 void operator()(audio_bundle input, audio_bundle output) {
 
-	if (rtpsender != nullptr) {
-		int chs = std::min<int>(input.channel_count(), channels.get());
-		for (auto i = 0; i < input.frame_count(); i++) {
-			for (auto channel = 0; channel < chs; channel++) {
-				double  in {input.samples(channel)[i]};
-				int16_t s                 = rtpsr::convertDoubleToSample(in);
-				iarray[i * chs + channel] = s;
-			}
+	if (rtpsender == nullptr) {
+		return;
+	}
+	if (!rtpsender->isConnected()) {
+		return;
+	}
+	int chs = std::min<int>(input.channel_count(), channels.get());
+	for (auto i = 0; i < input.frame_count(); i++) {
+		for (auto channel = 0; channel < chs; channel++) {
+			iarray.at(i * chs + channel) = rtpsr::convertDoubleToSample(input.samples(channel)[i]);
 		}
-		bool write_success = rtpsender->writeToInput(iarray);
-		if (!write_success) {
-			// cerr << "ring buffer is full!" <<std::endl;
-		}
+	}
+	bool write_success = rtpsender->writeToInput(iarray);
+	if (!write_success) {
+		// cerr << "ring buffer is full!" << std::endl;
 	}
 }
 static long setDspState(void* obj, long state) {
@@ -123,10 +132,13 @@ void resetSender(double newvecsize) {
 
 		if (use_rtsp) {
 			auto option = std::make_unique<rtpsr::RtspOutOption>(rtpsr::Url {address.get(), port}, samplerate(), channels, (int)newvecsize);
+			option->port_range = getPortRange();
 			setOptions(*static_cast<rtpsr::RtpOptionsBase*>(option.get()));
+
 			rtpsender = std::make_unique<rtpsr::RtpSender>(std::move(option),
 				rtpsr::getCodecByName(c),
 				std::chrono::milliseconds((long long)retry_rate.get()),
+				ringbuf_framenum,
 				cout);
 		}
 		else {
@@ -135,6 +147,7 @@ void resetSender(double newvecsize) {
 			rtpsender = std::make_unique<rtpsr::RtpSender>(std::move(option),
 				rtpsr::getCodecByName(c),
 				std::chrono::milliseconds((long long)retry_rate.get()),
+				ringbuf_framenum,
 				cout);
 		}
 	}
@@ -145,6 +158,13 @@ void resetSender(double newvecsize) {
 void setOptions(rtpsr::RtpOptionsBase& opt) {
 	opt.reorder_queue_size = reorder_queue_size;
 }
+std::pair<int, int> getPortRange() {
+	if (min_port > max_port) {
+		min_port = max_port.get();
+	}
+	return std::pair(min_port.get(), max_port.get());
+}
+
 std::unique_ptr<rtpsr::RtpSender> rtpsender;
 std::vector<int16_t>              iarray;
 static int                        instance_count;
