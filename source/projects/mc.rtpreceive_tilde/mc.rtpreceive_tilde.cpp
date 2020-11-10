@@ -64,6 +64,7 @@ attribute<bool> use_rtsp {this,
 attribute<int, threadsafe::no, limit::clamp> channels {this, "channels", 1, range {1, 16}};
 inlet<>                                      input {this, "(int) toggle subscription"};
 outlet<>                                     m_output {this, "(multichannelsignal) received output", "multichannelsignal"};
+outlet<>                                     latency {this, "(double) current latency"};
 
 // post to max window == but only when the class is loaded the first time
 // message<> maxclass_setup {this, "maxclass_setup"};
@@ -94,6 +95,13 @@ return {};
 }
 }
 ;
+message<> getlatency {this, "getlatency", MIN_FUNCTION {if (rtpreceiver != nullptr) {latency.send(rtpreceiver->getLatency());
+}
+return {};
+}
+,description{"Outputs a packet latency in milliseconds at second outlet."}}
+;
+
 static long setDspState(void* obj, long state) {
 	c74::max::object_attr_setlong(obj, c74::max::gensym("active"), state);
 	return state;

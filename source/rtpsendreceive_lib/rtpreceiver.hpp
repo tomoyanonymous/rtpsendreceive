@@ -13,13 +13,15 @@ namespace rtpsr {
 		bool readFromOutput(std::vector<sample_t>& dest);
 		bool readFromOutput(std::vector<double>& dest);
 		static int timeoutCallback(void * opaque);
-		std::chrono::high_resolution_clock::time_point time_cache;
 		bool isConnected() override;
-
+		double getLatency() const {return latency.load();};
+		std::chrono::high_resolution_clock::time_point time_cache;
 	private:
 		std::vector<int16_t>      dtosbuffer;
 		std::vector<int16_t>      tmpbuf;
 		int64_t timecount;
+		std::atomic<double> latency;
+		double latency_cache;
 		void init();
 		bool                      pushToOutput();
 		bool                      receiveData();
