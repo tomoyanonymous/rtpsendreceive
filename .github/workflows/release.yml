@@ -22,6 +22,7 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false 
+
   build_and_upload:
     name: "Build and Release"
     needs: create_release
@@ -77,7 +78,7 @@ jobs:
       - name: install
         shell: bash
         run: | 
-          mkdir ${{github.workspace}}/rtpsendreceive_install/
+          mkdir ${{github.workspace}}/rtpsendreceive_install
           cp -a docs externals help CHANGELOG.md package-info.json ReadMe.md screenshot.jpg License.md ${{github.workspace}}/rtpsendreceive_install
 
       - name: Get the version
