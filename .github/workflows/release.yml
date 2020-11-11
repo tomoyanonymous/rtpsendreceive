@@ -75,10 +75,10 @@ jobs:
       - name: build
         run: cmake --build build --config ${{ matrix.config }} -v
         
-      - name: install(macos)
+      - name: install
         run: | 
-          mkdir mc.rtpsendreceive
-          cp -a docs externals help CHANGELOG.md package-info.json ReadMe.md screenshot.jpg License.md mc.rtpsendreceive
+          cmake -E make_directory mc.rtpsendreceive
+          cmake -E copy docs externals help CHANGELOG.md package-info.json ReadMe.md screenshot.jpg License.md mc.rtpsendreceive
 
       - name: Get the version
         id: get_version
