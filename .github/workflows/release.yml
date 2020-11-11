@@ -77,7 +77,7 @@ jobs:
         
       - name: install
         run: | 
-          cmake -E make_directory mc.rtpsendreceive
+          cmake -E make_directory mc.rtpsendreceive mc.rtpsendreceive/docs mc.rtpsendreceive/docs/help mc.rtpsendreceive/externals
           cmake -R copy_directory docs  mc.rtpsendreceive/docs
           cmake -R copy_directory externals  mc.rtpsendreceive/externals
           cmake -R copy_directory help  mc.rtpsendreceive/help
