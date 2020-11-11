@@ -78,9 +78,9 @@ jobs:
       - name: install
         run: | 
           cmake -E make_directory mc.rtpsendreceive mc.rtpsendreceive/docs mc.rtpsendreceive/docs/help mc.rtpsendreceive/externals
-          cmake -R copy docs  mc.rtpsendreceive/docs
-          cmake -R copy externals  mc.rtpsendreceive/externals
-          cmake -R copy help  mc.rtpsendreceive/help
+          cmake -E copy docs  mc.rtpsendreceive/docs
+          cmake -E copy externals  mc.rtpsendreceive/externals
+          cmake -E copy help  mc.rtpsendreceive/help
           cmake -E copy  CHANGELOG.md package-info.json ReadMe.md screenshot.jpg License.md mc.rtpsendreceive
 
       - name: Get the version
