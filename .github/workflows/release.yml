@@ -76,7 +76,6 @@ jobs:
         run: cmake --build build --config ${{ matrix.config }} -v
         
       - name: install(macos)
-        if: contains(matrix.os, 'macos') 
         run: | 
           mkdir mc.rtpsendreceive
           cp -a docs externals help CHANGELOG.md package-info.json ReadMe.md screenshot.jpg License.md mc.rtpsendreceive
