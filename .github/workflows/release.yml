@@ -75,11 +75,11 @@ jobs:
       - name: build
         run: cmake --build build --config ${{ matrix.config }} -v
         
-      - name: install
-        shell: bash
+      - name: install(macos)
+        if: contains(matrix.os, 'macos') 
         run: | 
-          mkdir ${{github.workspace}}/rtpsendreceive_install
-          cp -a docs externals help CHANGELOG.md package-info.json ReadMe.md screenshot.jpg License.md ${{github.workspace}}/rtpsendreceive_install
+          mkdir mc.rtpsendreceive
+          cp -a docs externals help CHANGELOG.md package-info.json ReadMe.md screenshot.jpg License.md mc.rtpsendreceive
 
       - name: Get the version
         id: get_version
@@ -88,7 +88,7 @@ jobs:
 
       - uses: papeloto/action-zip@v1
         with:
-          files: ${{github.workspace}}/rtpsendreceive_install
+          files: mc.rtpsendreceive
           dest: rtpsendreceive-${{ steps.get_version.outputs.VERSION }}-binary-${{ matrix.zip_postfix }}.zip
 
       - name: Upload Compiled Binary
