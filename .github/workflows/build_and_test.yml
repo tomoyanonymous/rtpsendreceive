@@ -42,7 +42,7 @@ jobs:
         run: |
           cp .\vcpkg-helper\${{ matrix.vcpkg-target-triplet }}.cmake .\vcpkg\triplets\
           .\vcpkg\bootstrap-vcpkg.bat 
-          .\vcpkg\vcpkg.exe install ffmpeg[avformat,avdevice,avcodec,core]:x64-windows-static-rel
+          .\vcpkg\vcpkg.exe install ffmpeg[avformat,avdevice,avcodec,core]
       - if: contains(matrix.os, 'macos')
         name: Install ffmpeg via vcpkg(macos)
         run: |
