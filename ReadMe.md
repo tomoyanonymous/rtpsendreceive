@@ -8,10 +8,10 @@ External objects for Cycling'74 Max to send MSP signal over network using rtp pr
 
 - Send mc audio signal through 16bit-integer PCM signals.
 - Sending signals over NAT (= Global Network) is not supported. Consider use VPN.
-- 
 
 ## notes & todos
 
+- **When use this external, in Max's "Audio Setting", "IO Vector Size" and "Signal Vector Size" must be the same. If signal vector size is too smaller than IO vector size, it fails to send audio correctly.**
 - Currently number of channels are fixed by an attribute "channels", an auto-adaptation depending on input channels is not available due to a limitation of min-api.
 - A codec is fixed to Linear PCM 16bit(Big Endian). For future, Opus will be added.
 
