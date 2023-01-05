@@ -28,15 +28,15 @@ jobs:
             cache-path: /vcpkg/installed
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - uses: ilammy/msvc-dev-cmd@v1
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         id: ffmpeg-cache
         with:
           path: ${{ github.workspace }}${{ matrix.cache-path }}
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg/ports/ffmpeg/CONTROL')}}
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg/ports/ffmpeg/vcpkg.json')}}
       - if: contains(matrix.os, 'windows')
         name: Install ffmpeg via vcpkg
         run: |
@@ -59,7 +59,7 @@ jobs:
         with:
           files: docs externals help CHANGELOG.md package-info.json ReadMe.md screenshot.jpg License.md
           dest: rtpsendreceive-${{matrix.os}}-${{matrix.config}}.zip
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         continue-on-error: true
         with:
           name: rtpsendreceive-${{matrix.os}}-${{matrix.config}}
