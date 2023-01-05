@@ -67,7 +67,7 @@ jobs:
         run: |
           cp ./vcpkg-helper/${{ matrix.vcpkg-target-triplet }}.cmake ./vcpkg/triplets/
           brew upgrade
-          brew install yasm
+          brew install yasm nasm
           ./vcpkg/bootstrap-vcpkg.sh
           ./vcpkg/vcpkg install ffmpeg[avformat,avdevice,avcodec,core]:${{ matrix.vcpkg-target-triplet }}
       - name: configure project
