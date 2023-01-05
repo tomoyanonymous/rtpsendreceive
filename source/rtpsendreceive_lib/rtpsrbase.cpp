@@ -277,13 +277,13 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 
 	bool RtpOutFormat::tryConnect() {
 		option->generateOptions();
-		auto  url_tmp           = getSdpUrl(option->url);
-		auto* fmt_output        = av_guess_format("rtp", url_tmp.c_str(), nullptr);
-		fmt_output->mime_type   = "audio/L16";
-		fmt_output->audio_codec = AV_CODEC_ID_PCM_S16BE;
-		fmt_output->data_codec  = AV_CODEC_ID_PCM_S16BE;
-		ctx->oformat            = fmt_output;
-		ctx->url                = (char*)av_malloc(url_tmp.size() + sizeof(char));
+		auto  url_tmp    = getSdpUrl(option->url);
+		const auto* fmt_output = av_guess_format("rtp", url_tmp.c_str(), "audio/L16");
+
+		auto codec_id       = av_guess_codec(fmt_output, "pcm_s16be", nullptr, "audio/L16", AVMEDIA_TYPE_AUDIO);
+		ctx->audio_codec_id = codec_id;
+		ctx->oformat        = fmt_output;
+		ctx->url            = static_cast<char*>(av_malloc(url_tmp.size() + sizeof(char)));
 		av_strlcpy(ctx->url, url_tmp.c_str(), url_tmp.size() + sizeof(char));
 		checkAvError(avformat_init_output(ctx, option->getParam()));
 		checkAvError(avio_open(&ctx->pb, ctx->url, AVIO_FLAG_WRITE));
@@ -300,8 +300,8 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 
 	CodecBase::CodecBase(RtpSRSetting const& s, Codec c, bool isencoder)
 	: codec(c) {
-		auto* avcodec = (isencoder) ? avcodec_find_encoder_by_name(getCodecName(codec).c_str())
-									: avcodec_find_decoder_by_name(getCodecName(codec).c_str());
+		auto* avcodec       = (isencoder) ? avcodec_find_encoder_by_name(getCodecName(codec).c_str())
+										  : avcodec_find_decoder_by_name(getCodecName(codec).c_str());
 		ctx                 = avcodec_alloc_context3(avcodec);
 		ctx->bit_rate       = bitrate;
 		ctx->sample_rate    = s.samplerate;
