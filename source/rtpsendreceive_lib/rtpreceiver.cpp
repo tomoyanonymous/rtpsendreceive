@@ -44,6 +44,7 @@ namespace rtpsr {
 	}
 
 	void RtpReceiver::init() {
+
 		auto* rtpinput = dynamic_cast<RtpInFormatBase*>(input.get());
 		tmpbuf.resize(frame->nb_samples * setting_ref.channels * 2);
 		dtosbuffer.resize(frame->nb_samples * setting_ref.channels);
@@ -70,7 +71,7 @@ namespace rtpsr {
 		}
 		auto* asyncoutput = dynamic_cast<CustomCbAsyncOutFormat*>(output.get());
 		auto* frameref    = av_frame_get_plane_buffer(frame, 0);
-		auto  size        = frame->nb_samples * frame->channels;
+		auto  size        = frame->nb_samples * frame->ch_layout.nb_channels;
 		tmpbuf.resize(size);
 		std::memcpy(tmpbuf.data(), frameref->data, size * sizeof(int16_t));
 		bool res = asyncoutput->tryPushRingBuffer(tmpbuf);
@@ -90,7 +91,6 @@ namespace rtpsr {
 
 	bool RtpReceiver::receiveData() {
 		time_cache = std::chrono::high_resolution_clock::now();
-		av_init_packet(packet);
 		int res = av_read_frame(input->ctx, packet);
 		if (res == AVERROR(ETIMEDOUT)) {
 			logger << avErrorString(res);

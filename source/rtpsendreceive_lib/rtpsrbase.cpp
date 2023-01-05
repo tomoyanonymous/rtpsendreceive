@@ -1,5 +1,7 @@
 #include "rtpsrbase.hpp"
 
+#include <utility>
+
 namespace rtpsr {
 	void checkAvError(int error_code) {
 		if (error_code < 0) {
@@ -36,10 +38,10 @@ namespace rtpsr {
 	std::string getSdpUrl(std::string const& address, int port) {
 		return "udp://" + address + ":" + std::to_string(port) + "/live.sdp";
 	}
-	std::string getSdpUrl(Url const& url) {
+	std::string getSdpUrl(Url url) {
 		return getSdpUrl(url.address, url.port);
 	}
-	RtpOptionsBase::RtpOptionsBase(Url const& url)
+	RtpOptionsBase::RtpOptionsBase(Url url)
 	: url(std::move(url)) {
 		dict.emplace("protocol_whitelist", "file,udp,rtp,tcp,rtsp");
 	}
@@ -48,7 +50,7 @@ namespace rtpsr {
 		dict.emplace("reorder_queue_size", (int)reorder_queue_size);
 		dict.emplace("packet_size", (int)packet_size);
 	}
-	RtpOption::RtpOption(Url const& url, double samplerate, int channels, int buffersize)
+	RtpOption::RtpOption(Url url, double samplerate, int channels, int buffersize)
 	: RtpOptionsBase(std::move(url))
 	, RtpSRSetting({samplerate, channels, buffersize}) {
 		buffer_size = buffersize * channels * 4;
@@ -59,7 +61,7 @@ namespace rtpsr {
 		// todo::filter_source;
 	}
 
-	RtspOption::RtspOption(Url const& url, double samplerate, int channels, int buffersize)
+	RtspOption::RtspOption(Url url, double samplerate, int channels, int buffersize)
 	: RtpOptionsBase(std::move(url))
 	, RtpSRSetting({samplerate, channels, buffersize}) {
 		// dict.emplace("allowed_media_types",nullptr);
@@ -131,9 +133,8 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 
 	// IO Format
 
-	IOFormat::IOFormat() {
-		ctx = avformat_alloc_context();
-	}
+	IOFormat::IOFormat()
+	: ctx(avformat_alloc_context()) { }
 	IOFormat::~IOFormat() {
 		avformat_free_context(ctx);
 	}
@@ -233,7 +234,7 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 	bool RtpInFormat::tryConnectInput() {
 		auto* opt = dynamic_cast<RtpInOption*>(option.get());
 		opt->generateOptions();
-		auto* ifmt       = av_find_input_format("sdp");
+		const auto* ifmt       = av_find_input_format("sdp");
 		auto  sdp        = opt->makeDummySdp();
 		sdp_opaque       = std::make_unique<SdpOpaque>();
 		sdp_opaque->data = SdpOpaque::Vector(sdp.c_str(), sdp.c_str() + strlen(sdp.c_str()));
@@ -277,7 +278,7 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 
 	bool RtpOutFormat::tryConnect() {
 		option->generateOptions();
-		auto  url_tmp    = getSdpUrl(option->url);
+		auto        url_tmp    = getSdpUrl(option->url);
 		const auto* fmt_output = av_guess_format("rtp", url_tmp.c_str(), "audio/L16");
 
 		auto codec_id       = av_guess_codec(fmt_output, "pcm_s16be", nullptr, "audio/L16", AVMEDIA_TYPE_AUDIO);
@@ -300,15 +301,16 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 
 	CodecBase::CodecBase(RtpSRSetting const& s, Codec c, bool isencoder)
 	: codec(c) {
-		auto* avcodec       = (isencoder) ? avcodec_find_encoder_by_name(getCodecName(codec).c_str())
-										  : avcodec_find_decoder_by_name(getCodecName(codec).c_str());
-		ctx                 = avcodec_alloc_context3(avcodec);
-		ctx->bit_rate       = bitrate;
-		ctx->sample_rate    = s.samplerate;
-		ctx->frame_size     = s.framesize;
-		ctx->channels       = s.channels;
-		ctx->channel_layout = av_get_default_channel_layout(s.channels);
-		ctx->sample_fmt     = AV_SAMPLE_FMT_S16;
+		auto* avcodec    = (isencoder) ? avcodec_find_encoder_by_name(getCodecName(codec).c_str())
+									   : avcodec_find_decoder_by_name(getCodecName(codec).c_str());
+		ctx              = avcodec_alloc_context3(avcodec);
+		ctx->bit_rate    = bitrate;
+		ctx->sample_rate = s.samplerate;
+		ctx->frame_size  = s.framesize;
+		AVChannelLayout ch_layout;
+		av_channel_layout_default(&ch_layout, s.channels);
+		ctx->ch_layout  = ch_layout;
+		ctx->sample_fmt = AV_SAMPLE_FMT_S16;
 		avcodec_open2(ctx, avcodec, nullptr);
 	}
 	bool CodecBase::checkIsErrAgain(int error_code) {

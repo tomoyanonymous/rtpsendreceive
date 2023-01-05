@@ -23,7 +23,7 @@ extern "C" {
 namespace rtpsr {
 
 
-	void checkAvError(int error_code);
+	void        checkAvError(int error_code);
 	std::string avErrorString(int error_code);
 	struct SdpOpaque {
 		using Vector = std::vector<uint8_t>;
@@ -63,7 +63,7 @@ namespace rtpsr {
 		int         port    = 30000;
 	};
 	std::string getSdpUrl(std::string const& address, int port);
-	std::string getSdpUrl(Url const& url);
+	std::string getSdpUrl(Url url);
 
 	enum class RtpFormatKind { RTP = 0, RTSP = 1 };
 
@@ -80,7 +80,7 @@ namespace rtpsr {
 	}
 
 	struct RtpOptionsBase {
-		explicit RtpOptionsBase(Url const& url);
+		explicit RtpOptionsBase(Url url);
 		virtual ~RtpOptionsBase() = default;
 		Url url;
 
@@ -102,7 +102,7 @@ namespace rtpsr {
 	};
 	class RtpOption : public RtpSRSetting, public RtpOptionsBase {
 	public:
-		explicit RtpOption(Url const& url, double samplerate, int channels, int buffersize);
+		explicit RtpOption(Url url, double samplerate, int channels, int buffersize);
 		RtpFormatKind getKind() override {
 			return RtpFormatKind::RTP;
 		};
@@ -112,14 +112,14 @@ namespace rtpsr {
 	};
 	class RtspOption : public RtpSRSetting, public RtpOptionsBase {
 	public:
-		explicit RtspOption(Url const& url, double samplerate, int channels, int buffersize);
+		explicit RtspOption(Url url, double samplerate, int channels, int buffersize);
 
 		RtpFormatKind getKind() override {
 			return RtpFormatKind::RTSP;
 		};
 		void generateOptions() override;
 		enum class TransPortProtocol { UDP = 0, TCP, UDP_MULTICAST, HTTP, HTTPS } rtsp_transport = TransPortProtocol::UDP;
-		int                 listen_timeout                                                       = 1000;       // unit:seconds
+		int                 listen_timeout                                                       = 1000;      // unit:seconds
 		int                 socket_timeout                                                       = 500000;    // unit:microseconds
 		std::pair<int, int> port_range                                                           = {5000, 65000};
 
@@ -128,7 +128,7 @@ namespace rtpsr {
 	};
 	class RtpInOption : public RtpOption {
 	public:
-		explicit RtpInOption(Url const& url, double samplerate, int channels, int buffersize)
+		explicit RtpInOption(Url url, double samplerate, int channels, int buffersize)
 		: RtpOption(url, samplerate, channels, buffersize) { }
 		std::string makeDummySdp();
 		static int  readDummySdp(void* userdata, uint8_t* avio_buf, int buf_size);
@@ -137,18 +137,18 @@ namespace rtpsr {
 	};
 	class RtpOutOption : public RtpOption {
 	public:
-		explicit RtpOutOption(Url const& url, double samplerate, int channels, int buffersize)
+		explicit RtpOutOption(Url url, double samplerate, int channels, int buffersize)
 		: RtpOption(url, samplerate, channels, buffersize) { }
 	};
 
 	class RtspOutOption : public RtspOption {
 	public:
-		explicit RtspOutOption(Url const& url, double samplerate, int channels, int buffersize)
+		explicit RtspOutOption(Url url, double samplerate, int channels, int buffersize)
 		: RtspOption(url, samplerate, channels, buffersize) { }
 	};
 	class RtspInOption : public RtspOption {
 	public:
-		explicit RtspInOption(Url const& url, double samplerate, int channels, int buffersize)
+		explicit RtspInOption(Url url, double samplerate, int channels, int buffersize)
 		: RtspOption(url, samplerate, channels, buffersize) { }
 		void generateOptions() override;
 	};
@@ -175,6 +175,7 @@ namespace rtpsr {
 	// Uses LockFreeRingbuffer. This does not uses libavformat. Data are assumed to be taken from avframe directly.
 	class CustomCbAsyncFormat {
 	public:
+		virtual ~CustomCbAsyncFormat() = default;
 		explicit CustomCbAsyncFormat(size_t buffer_size)
 		: buffer(buffer_size) { }
 		virtual bool tryPushRingBuffer(std::vector<sample_t> const& input);

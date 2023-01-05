@@ -120,11 +120,13 @@ namespace rtpsr {
 						break;
 					}
 				}
-				auto* encoder         = dynamic_cast<rtpsr::Encoder*>(codec.get());
-				frame->format         = AV_SAMPLE_FMT_S16;
-				frame->channels       = setting_ref.channels;
-				frame->channel_layout = codec->ctx->channel_layout;
-				frame->nb_samples     = setting_ref.framesize;
+				auto* encoder = dynamic_cast<rtpsr::Encoder*>(codec.get());
+				frame->format = AV_SAMPLE_FMT_S16;
+				AVChannelLayout ch_layout;
+				av_channel_layout_default(&ch_layout, setting_ref.channels);
+
+				frame->ch_layout  = ch_layout;
+				frame->nb_samples = setting_ref.framesize;
 				while (asynclooper.isActive()) {
 					bool hasinputframe = fillFrame();
 					if (!hasinputframe) { }
@@ -136,7 +138,6 @@ namespace rtpsr {
 							logger << "sender encoder is full" << std::endl;
 						}
 						while (true) {
-							av_init_packet(packet);
 							bool isempty = encoder->receivePacket(packet);
 							if (isempty) {
 								av_packet_unref(packet);
