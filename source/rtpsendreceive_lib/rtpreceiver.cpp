@@ -71,7 +71,7 @@ namespace rtpsr {
 		}
 		auto* asyncoutput = dynamic_cast<CustomCbAsyncOutFormat*>(output.get());
 		auto* frameref    = av_frame_get_plane_buffer(frame, 0);
-		auto  size        = frame->nb_samples * frame->ch_layout.nb_channels;
+		auto  size        = frame->nb_samples * frame->channels;
 		tmpbuf.resize(size);
 		std::memcpy(tmpbuf.data(), frameref->data, size * sizeof(int16_t));
 		bool res = asyncoutput->tryPushRingBuffer(tmpbuf);

@@ -1,5 +1,6 @@
 #include "rtpsrbase.hpp"
 
+
 #include <utility>
 
 namespace rtpsr {
@@ -234,8 +235,8 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 	bool RtpInFormat::tryConnectInput() {
 		auto* opt = dynamic_cast<RtpInOption*>(option.get());
 		opt->generateOptions();
-		const auto* ifmt       = av_find_input_format("sdp");
-		auto  sdp        = opt->makeDummySdp();
+		const auto* ifmt = av_find_input_format("sdp");
+		auto        sdp  = opt->makeDummySdp();
 		sdp_opaque       = std::make_unique<SdpOpaque>();
 		sdp_opaque->data = SdpOpaque::Vector(sdp.c_str(), sdp.c_str() + strlen(sdp.c_str()));
 		sdp_opaque->pos  = sdp_opaque->data.begin();
@@ -301,16 +302,15 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 
 	CodecBase::CodecBase(RtpSRSetting const& s, Codec c, bool isencoder)
 	: codec(c) {
-		auto* avcodec    = (isencoder) ? avcodec_find_encoder_by_name(getCodecName(codec).c_str())
-									   : avcodec_find_decoder_by_name(getCodecName(codec).c_str());
-		ctx              = avcodec_alloc_context3(avcodec);
-		ctx->bit_rate    = bitrate;
-		ctx->sample_rate = s.samplerate;
-		ctx->frame_size  = s.framesize;
-		AVChannelLayout ch_layout;
-		av_channel_layout_default(&ch_layout, s.channels);
-		ctx->ch_layout  = ch_layout;
-		ctx->sample_fmt = AV_SAMPLE_FMT_S16;
+		auto* avcodec       = (isencoder) ? avcodec_find_encoder_by_name(getCodecName(codec).c_str())
+										  : avcodec_find_decoder_by_name(getCodecName(codec).c_str());
+		ctx                 = avcodec_alloc_context3(avcodec);
+		ctx->bit_rate       = bitrate;
+		ctx->sample_rate    = s.samplerate;
+		ctx->frame_size     = s.framesize;
+		ctx->channels       = s.channels;
+		ctx->channel_layout = av_get_default_channel_layout(s.channels);
+		ctx->sample_fmt     = AV_SAMPLE_FMT_S16;
 		avcodec_open2(ctx, avcodec, nullptr);
 	}
 	bool CodecBase::checkIsErrAgain(int error_code) {

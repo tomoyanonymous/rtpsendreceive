@@ -9,6 +9,7 @@ extern "C" {
 #include "libavutil/mathematics.h"
 #include "libavutil/opt.h"
 #include "libavutil/timestamp.h"
+#include "libavutil/channel_layout.h"
 }
 
 #include <variant>
