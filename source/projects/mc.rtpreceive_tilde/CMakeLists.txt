@@ -27,7 +27,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}/../../rtpsendreceive_lib
 )
 set(RTPSR_LIB "rtpsendreceive")
 
-message(STATUS testlib!${RTPSR_LIB})
+message(STATUS testlib!${RTPSR_LIB})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${RTPSR_LIB})
 target_link_libraries(${PROJECT_NAME} PUBLIC  ${FFMPEG_LIBRARIES})
 
