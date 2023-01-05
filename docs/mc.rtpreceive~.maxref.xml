@@ -6,8 +6,8 @@
 
 <c74object name='mc.rtpreceive~' category='Audio'>
 
-	<digest>receive audio stream via rtp protocol </digest>
-	<description>receive audio stream via rtp protocol </description>
+	<digest>Receive audio stream via rtp protocol</digest>
+	<description>Receive audio stream via rtp protocol. </description>
 
 
 	<!--METADATA-->
@@ -107,7 +107,7 @@
 	<!--RELATED-->
 
 	<seealsolist>
-		<seealso name='rtpsend_tilde' />
+		<seealso name='mc.rtpsend_tilde' />
 	</seealsolist>
 
 
