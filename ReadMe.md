@@ -2,6 +2,8 @@
 
 master:[![build & test](https://github.com/tomoyanonymous/rtpsendreceive/workflows/build%20&%20test/badge.svg?branch=master)](https://github.com/tomoyanonymous/rtpsendreceive/actions?query=workflow%3A%22build+%26+test%22) dev: [![build & test](https://github.com/tomoyanonymous/rtpsendreceive/workflows/build%20&%20test/badge.svg?branch=dev)](https://github.com/tomoyanonymous/rtpsendreceive/actions?query=workflow%3A%22build+%26+test%22)
 
+*2022/01/06: This project is not actively maintained. [jit.ndi](https://github.com/pixsper/jit.ndi) also supports the transmission of uncompressed audio over local network and it should be more stable now. If you want to continue to maintain or develop this project, I will support. Just send PR or contact me.*
+
 External objects for Cycling'74 Max to send MSP signal over network using rtp protocol. An modern alternative to legacy `netsend~` & `netreceive~` objects.
 
 ![](./screenshot.jpg)
