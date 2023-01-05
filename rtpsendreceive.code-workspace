@@ -118,7 +118,7 @@
 			{
 				"label": "build before send_debug",
 				"type": "shell",
-				"command": "/usr/local/bin/cmake",
+				"command": "cmake",
 				"args": [
 					"--build",
 					"${workspaceFolder}/build",
@@ -138,7 +138,7 @@
 			{
 				"label": "build before receive_debug",
 				"type": "shell",
-				"command": "/usr/local/bin/cmake",
+				"command": "cmake",
 				"args": [
 					"--build",
 					"${workspaceFolder}/build",
