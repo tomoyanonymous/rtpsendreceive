@@ -18,7 +18,7 @@ public:
 	MIN_DESCRIPTION {"send audio stream via rtp protocol"};
 	MIN_TAGS {"Audio"};
 	MIN_AUTHOR {"Tomoya Matsuura"};
-	MIN_RELATED {"rtpreceive_tilde"};
+	MIN_RELATED {"mc.rtpreceive_tilde"};
 	rtpsend_tilde(const atoms& args = {}) {
 		instance_count += 1;
 		m_initialized = true;
@@ -27,8 +27,8 @@ public:
 		instance_count -= 1;
 	}
 	attribute<int, threadsafe::no, limit::clamp> channels {this, "channels", 1, range {1, 16}};
-	attribute<symbol>                            address {this, "address", "127.0.0.1",description {"Destination IP Address(can be a domain name)"}};
-	attribute<int>                               port {this, "port", 30000,description {"Destination Main Port"}};
+	attribute<symbol> address {this, "address", "127.0.0.1", description {"Destination IP Address(can be a domain name)"}};
+	attribute<int>    port {this, "port", 30000, description {"Destination Main Port"}};
 	attribute<symbol> codec {this, "codec", "pcm_s16be", setter {MIN_FUNCTION {auto c = rtpsr::getCodecByName(args[0]);
 	if (c == rtpsr::Codec::INVALID) {
 		cerr << "Invalid Codec Name.  Using pcm_s16be" << endl;

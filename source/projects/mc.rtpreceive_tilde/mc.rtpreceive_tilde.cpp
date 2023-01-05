@@ -20,7 +20,7 @@ public:
 	MIN_DESCRIPTION {"Receive audio stream via rtp protocol."};
 	MIN_TAGS {"Audio"};
 	MIN_AUTHOR {"Tomoya Matsuura"};
-	MIN_RELATED {"rtpsend_tilde"};
+	MIN_RELATED {"mc.rtpsend_tilde"};
 	rtpreceive_tilde(const atoms& args = {}) {
 		// resetReceiver();
 
