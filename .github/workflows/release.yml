@@ -13,7 +13,7 @@ jobs:
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Create Source Release
         id: create_release
         uses: actions/create-release@v1.0.0
@@ -47,15 +47,15 @@ jobs:
             zip_postfix: macOS
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - uses: ilammy/msvc-dev-cmd@v1
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         id: ffmpeg-cache
         with:
           path: ${{ github.workspace }}${{ matrix.cache-path }}
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg/ports/ffmpeg/CONTROL') }}
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg/ports/ffmpeg/vcpkg.json') }}
       - if: contains(matrix.os, 'windows')
         name: Install ffmpeg via vcpkg
         run: |
