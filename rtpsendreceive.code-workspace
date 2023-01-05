@@ -23,6 +23,9 @@
 				// "traceResponse": true
 			}
 		},
+		"cmake.configureSettings": {
+			"CMAKE_TOOLCHAIN_FILE": "./vcpkg/scripts/buildsystems/vcpkg.cmake"
+		},
 		"clangd.checkUpdates": true
 	},
 	"launch": {
