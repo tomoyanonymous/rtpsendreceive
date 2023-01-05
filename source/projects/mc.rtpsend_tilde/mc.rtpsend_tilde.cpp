@@ -57,6 +57,7 @@ attribute<int, threadsafe::no, limit::clamp> max_port {
 attribute<int> active {this, "active", 0, setter {MIN_FUNCTION {int res = args[0];
 if (m_initialized && rtpsender != nullptr) {
 	if (res <= 0) {
+		rtpsender->init_asyncloop.halt();
 		rtpsender->asynclooper.halt();
 	}
 	else {

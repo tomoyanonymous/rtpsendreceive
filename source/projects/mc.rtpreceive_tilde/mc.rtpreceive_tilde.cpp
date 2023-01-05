@@ -16,7 +16,8 @@ private:
 	bool m_initialized {false};
 
 public:
-	MIN_DESCRIPTION {"receive audio stream via rtp protocol"};
+
+	MIN_DESCRIPTION {"Receive audio stream via rtp protocol."};
 	MIN_TAGS {"Audio"};
 	MIN_AUTHOR {"Tomoya Matsuura"};
 	MIN_RELATED {"rtpsend_tilde"};

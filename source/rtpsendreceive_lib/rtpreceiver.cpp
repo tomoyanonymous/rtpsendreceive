@@ -1,27 +1,27 @@
 #include "rtpreceiver.hpp"
 
 namespace rtpsr {
-	RtpReceiver::RtpReceiver(std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec,double ringbuf_multiple, std::ostream& logger)
+	RtpReceiver::RtpReceiver(std::unique_ptr<RtpSRSetting> s, Url const& url, Codec codec, double ringbuf_multiple, std::ostream& logger)
 	: RtpSRBase(*s, logger) {
 		auto option = std::make_unique<RtspInOption>(url, setting_ref.samplerate, setting_ref.channels, setting_ref.framesize);
 		input       = std::make_unique<RtspInFormat>(std::move(option));
-		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples *ringbuf_multiple);
+		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * ringbuf_multiple);
 		this->codec = std::make_unique<Decoder>(setting_ref, codec);
 		init();
 	}
-	RtpReceiver::RtpReceiver(std::unique_ptr<RtpInOption> s, Codec codec,double ringbuf_multiple, std::ostream& logger)
+	RtpReceiver::RtpReceiver(std::unique_ptr<RtpInOption> s, Codec codec, double ringbuf_multiple, std::ostream& logger)
 	: RtpSRBase(*s, logger) {
 		input       = std::make_unique<RtpInFormat>(std::move(s));
-		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples *ringbuf_multiple);
+		output      = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * ringbuf_multiple);
 		this->codec = std::make_unique<Decoder>(setting_ref, codec);
 		init();
 	}
-	RtpReceiver::RtpReceiver(std::unique_ptr<RtspInOption> s, Codec codec,double ringbuf_multiple, std::ostream& logger)
+	RtpReceiver::RtpReceiver(std::unique_ptr<RtspInOption> s, Codec codec, double ringbuf_multiple, std::ostream& logger)
 	: RtpSRBase(*s, logger) {
 		input                          = std::make_unique<RtspInFormat>(std::move(s));
 		time_cache                     = std::chrono::high_resolution_clock::now();
 		input->ctx->interrupt_callback = AVIOInterruptCB {&RtpReceiver::timeoutCallback, this};
-		output                         = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples *ringbuf_multiple);
+		output                         = std::make_unique<CustomCbAsyncOutFormat>(setting_ref, frame->nb_samples * ringbuf_multiple);
 		this->codec                    = std::make_unique<Decoder>(setting_ref, codec);
 		init();
 	}
@@ -36,8 +36,8 @@ namespace rtpsr {
 
 	RtpReceiver::~RtpReceiver() {
 		std::cerr << "rtpreceiver destructor called" << std::endl;
-		bool res1 = init_asyncloop.halt();
-		asynclooper.wait_for(10000);
+		bool res1   = init_asyncloop.halt();
+		auto status = asynclooper.wait_for(10000);
 		if (res1) {
 			avformat_close_input(&input->ctx);
 		}
@@ -65,6 +65,9 @@ namespace rtpsr {
 	}
 	// return value:stopped_index;
 	bool RtpReceiver::pushToOutput() {
+		if (frame == nullptr) {
+			return false;
+		}
 		auto* asyncoutput = dynamic_cast<CustomCbAsyncOutFormat*>(output.get());
 		auto* frameref    = av_frame_get_plane_buffer(frame, 0);
 		auto  size        = frame->nb_samples * frame->channels;

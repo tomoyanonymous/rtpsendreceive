@@ -82,7 +82,7 @@ namespace rtpsr {
 	struct RtpOptionsBase {
 		explicit RtpOptionsBase(Url const& url);
 		virtual ~RtpOptionsBase() = default;
-		const Url url;
+		Url url;
 
 		// number of packet of reorder queue
 		size_t reorder_queue_size = 1000;

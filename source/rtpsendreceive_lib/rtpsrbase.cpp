@@ -6,14 +6,13 @@ namespace rtpsr {
 			throw std::runtime_error(avErrorString(error_code));
 		}
 	}
-	std::string avErrorString(int error_code){
+	std::string avErrorString(int error_code) {
 		if (error_code < 0) {
-			std::string res("",4096);
+			std::string res("", 4096);
 			av_make_error_string(res.data(), 4096, error_code);
 			return res;
 		}
-			return "";
-
+		return "";
 	}
 	AVOptionBase::AVOptionBase(container_t&& init) {
 		for (auto& [key, val] : init) {
@@ -184,7 +183,7 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		return buffer.writeRange(input, input.size());
 	}
 	bool CustomCbAsyncFormat::tryPopRingBuffer(std::vector<sample_t>& dest) {
-		return buffer.readRange(dest,  dest.size());
+		return buffer.readRange(dest, dest.size());
 	}
 	CustomCbAsyncInFormat::CustomCbAsyncInFormat(RtpSRSetting const& s, size_t buffer_size)
 	: InFormat()
@@ -209,11 +208,15 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 
 		auto* ifmt = av_find_input_format("rtsp");
 		auto  res  = avformat_open_input(&ctx, getSdpUrl(option->url).c_str(), ifmt, option->getParam());
-		if (res == -60 || res == -61 || res == -22) {
-			return false;
-		}
 		if (res < 0) {
-			checkAvError(res);
+			try {
+				checkAvError(res);
+			}
+			catch (std::exception& e) {
+				std::cerr << e.what() << "\nFailed to launch server at Specified address, wait connection at 127.0.0.1..." << std::endl;
+				option->url = rtpsr::Url {"127.0.0.1", option->url.port};
+			}
+			return false;
 		}
 		return true;
 	}
@@ -319,7 +322,7 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 	Decoder::Decoder(RtpSRSetting const& s, Codec c)
 	: CodecBase(s, c, false) { }
 	Encoder::Encoder(RtpSRSetting const& s, Codec c)
-	: CodecBase(s, c, true) { 
+	: CodecBase(s, c, true) {
 		ctx->frame_size = s.framesize;
 	}
 	bool Decoder::sendPacket(AVPacket* packet) {
@@ -343,8 +346,8 @@ a=rtpmap:97 L16/$samplerate$/$channels$)";
 		}
 		return true;
 	}
-	bool AsyncLooper::forceHalt(){
-		active =false;
+	bool AsyncLooper::forceHalt() {
+		active = false;
 		return true;
 	}
 	void AsyncLooper::wait() {
