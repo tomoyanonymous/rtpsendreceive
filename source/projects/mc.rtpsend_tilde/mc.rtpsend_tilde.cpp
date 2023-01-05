@@ -86,7 +86,8 @@ return {};
 }
 }
 ;
-message<> setup {this, "setup", MIN_FUNCTION {double newvecsize = args[1];
+message<> setup {this, "setup", MIN_FUNCTION {
+	// double newvecsize = args[1];
 return {};
 }
 }
