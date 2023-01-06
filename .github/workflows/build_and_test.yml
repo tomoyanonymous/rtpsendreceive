@@ -21,7 +21,7 @@ jobs:
           - Release
         include:
           - os: windows-latest
-            vcpkg-target-triplet: x64-windows-static-md
+            vcpkg-target-triplet: x64-windows-rel
             cache-path: \vcpkg\installed
           - os: macos-latest
             vcpkg-target-triplet: x64-osx-rel
